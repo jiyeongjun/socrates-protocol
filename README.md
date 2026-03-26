@@ -101,17 +101,90 @@ Or install globally:
 
 ### Codex
 
-`$socrates Clarify this task before coding`
+Copy-paste prompts:
 
-`$socrates Convert request into alignment contract, then implement`
+```text
+$socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
+$socrates Convert my request into a short alignment contract, then implement against it.
+```
 
 ---
 
 ### Claude Code
 
-`/socrates Clarify before coding`
+Copy-paste prompts:
 
-`/socrates Align on scope, then implement`
+```text
+/socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
+/socrates Convert my request into a short alignment contract, then implement against it.
+```
+
+Claude Code system prompt snippet:
+
+```text
+Use Socrates behavior for important coding work:
+- restate the request in implementation terms
+- ask at most 1-3 load-bearing clarification questions when ambiguity would materially change implementation
+- write a compact alignment contract
+- only then implement
+```
+
+---
+
+## How Socrates Responds
+
+Socrates does not argue about vague quality words.
+It turns them into explicit decision criteria, then proceeds.
+
+### Example 1: Defining "elegant"
+
+User:
+
+```text
+Write this function elegantly
+```
+
+Socrates:
+
+```text
+What does "elegant" mean in this context?
+- concise
+- readable
+- idiomatic
+- performance-oriented
+- other (define)
+```
+
+User:
+
+```text
+concise and readable
+```
+
+Socrates:
+
+```text
+Proceeds with implementation using concise and readable code as the contract.
+```
+
+### Example 2: Defining "good"
+
+User:
+
+```text
+Design a good API
+```
+
+Socrates:
+
+```text
+What does "good" mean here?
+- minimal surface area
+- scalability
+- developer experience
+- performance
+- other (define)
+```
 
 ---
 

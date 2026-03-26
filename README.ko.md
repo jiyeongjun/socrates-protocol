@@ -101,17 +101,90 @@ Socrates는 이런 오버헤드를 제거합니다.
 
 ### Codex
 
-`$socrates 코딩 전에 이 작업부터 명확히 해줘`
+바로 복붙할 수 있는 프롬프트:
 
-`$socrates 요청을 alignment contract로 바꾼 뒤 구현해줘`
+```text
+$socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
+$socrates Convert my request into a short alignment contract, then implement against it.
+```
 
 ---
 
 ### Claude Code
 
-`/socrates 구현 전에 먼저 명확히 해줘`
+바로 복붙할 수 있는 프롬프트:
 
-`/socrates 범위를 정렬한 다음 구현해줘`
+```text
+/socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
+/socrates Convert my request into a short alignment contract, then implement against it.
+```
+
+Claude Code 시스템 프롬프트에 넣을 스니펫:
+
+```text
+Use Socrates behavior for important coding work:
+- restate the request in implementation terms
+- ask at most 1-3 load-bearing clarification questions when ambiguity would materially change implementation
+- write a compact alignment contract
+- only then implement
+```
+
+---
+
+## Socrates의 응답 방식
+
+Socrates는 모호한 품질 표현을 두고 추상적으로 논쟁하지 않습니다.
+그 표현을 결정 가능한 기준으로 바꾼 다음 진행합니다.
+
+### 예시 1: "elegant"를 정의하기
+
+사용자:
+
+```text
+이 함수를 elegant하게 작성해줘
+```
+
+Socrates:
+
+```text
+여기서 "elegant"는 무엇을 의미하나요?
+- concise
+- readable
+- idiomatic
+- performance-oriented
+- other (define)
+```
+
+사용자:
+
+```text
+concise and readable
+```
+
+Socrates:
+
+```text
+그 기준을 계약으로 삼아 concise하고 readable한 방향으로 구현을 진행합니다.
+```
+
+### 예시 2: "good"을 정의하기
+
+사용자:
+
+```text
+좋은 API를 설계해줘
+```
+
+Socrates:
+
+```text
+여기서 "good"은 무엇을 뜻하나요?
+- minimal surface area
+- scalability
+- developer experience
+- performance
+- other (define)
+```
 
 ---
 
