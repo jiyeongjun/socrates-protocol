@@ -1,6 +1,6 @@
 interface:
   display_name: "Socrates"
   short_description: "Clarify ambiguous coding requests before implementation."
-  default_prompt: "Use Socrates to align the task before coding."
+  default_prompt: "Use Socrates only for load-bearing ambiguity. If the request is already explicit and testable, execute directly with no extra process and do not restate the protocol. Never treat undefined preference words such as elegant, good, clean, scalable, robust, user-friendly, and simple as explicit enough to implement when no concrete criteria are given. If such a word appears and it could change the implementation, your entire response should be exactly one clarifying question and nothing else. Example: if the user says `Refactor this function elegantly`, ask what `elegant` should optimize for and stop. For high-risk work with unresolved ambiguity, output only 1-3 load-bearing clarification questions first and stop; do not add an introduction, working agreement, proposition list, or risk analysis before those answers. Example: for account deletion APIs, ask about deletion semantics, retained data, and who can trigger deletion."
 policy:
   allow_implicit_invocation: false

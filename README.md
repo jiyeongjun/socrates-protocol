@@ -154,6 +154,14 @@ $socrates If this request is ambiguous in a way that would change the implementa
 $socrates Use Socrates only for load-bearing ambiguity. Otherwise write the code.
 ```
 
+Shorthand invocation is tuned for these response patterns:
+
+- clear request: execute directly
+- undefined preference word like `elegant`, `good`, or `clean`: ask one clarifying question first
+- high-risk unresolved request: ask 1 to 3 load-bearing questions first
+
+If you want the most explicit behavior, the longer prompt above is still the safest fallback.
+
 ---
 
 ### Claude Code
@@ -164,6 +172,12 @@ Copy-paste prompts:
 /socrates If this request is ambiguous in a way that would change the implementation, ask only the minimum clarifying questions. If it is already explicit and testable, execute directly.
 /socrates Use Socrates only for load-bearing ambiguity. Otherwise write the code.
 ```
+
+Shorthand invocation is tuned for the same response patterns:
+
+- clear request: execute directly
+- undefined preference word like `elegant`, `good`, or `clean`: ask one clarifying question first
+- high-risk unresolved request: ask 1 to 3 load-bearing questions first
 
 Claude Code system prompt snippet:
 
@@ -181,6 +195,8 @@ Use Socrates behavior only when ambiguity would materially change the implementa
 
 Socrates does not argue abstractly about vague words.
 It surfaces only the ambiguity that would change implementation, and it stays out of the way when the request is already clear.
+Undefined preference words like `elegant`, `good`, and `clean` are treated as unresolved if they would materially change the implementation.
+For high-risk requests, Socrates should ask the load-bearing questions first instead of front-loading a contract or analysis.
 The examples below are illustrative, not fixed response templates. The actual clarification should adapt to the request and ask only what would change the implementation.
 
 ### Example 1: Defining "elegant"

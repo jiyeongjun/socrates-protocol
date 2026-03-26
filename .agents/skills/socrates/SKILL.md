@@ -36,12 +36,17 @@ They do require checking whether risk-critical constraints are still undecidable
 - the change is formatting-only
 - the request is already explicit and testable
 
+A request that uses undefined preference words is not explicit yet if those words would change the implementation.
+Examples include: elegant, good, clean, scalable, robust, user-friendly, simple.
+
 ## Fast Path
 If the request is already specific enough to implement and verify:
 - do not ask clarification questions
 - do not emit a long contract
 - do not turn the task into a planning exercise
 - execute directly against the stated constraints
+
+Requests that rely on undefined preference words are not on the fast path unless the preference is already operationalized into testable criteria.
 
 Use the protocol only when ambiguity would materially change the implementation.
 
@@ -75,6 +80,7 @@ If any high-impact point fails validation:
 - do not continue reasoning
 - ask 1 to 3 minimal clarification questions
 - ask only questions that change implementation
+- for undefined preference words, prefer a single question that asks what the preference should optimize for
 
 If no high-impact point fails validation:
 - do not ask questions
@@ -92,6 +98,7 @@ Use these headings:
 - Open risks and assumptions
 
 Only produce this contract when material ambiguity remains after validation.
+If 1 to 3 clarification questions are enough to decide the implementation, ask those questions first and stop there.
 
 ### 5. Execute precisely
 Implement only after the contract is sufficient.
@@ -106,6 +113,19 @@ Do not silently choose high-impact assumptions.
 - On clear requests, optimize for correct execution, not ceremony.
 - The protocol must reduce implementation risk, not add avoidable latency.
 - For state-changing APIs and workflows, explicitly check retry safety, duplicate execution, and side-effect boundaries when those concerns are not already decided.
+- On clear requests, do not restate propositions, workflow steps, or fast-path status unless the user asked for that reasoning.
+- For undefined preference words, output only the clarifying question first and stop. Do not propose implementations, branch analyses, or example rewrites before the user answers.
+- For high-risk requests with unresolved ambiguity, output only the 1 to 3 load-bearing questions first and stop. Do not emit the alignment contract, proposition lists, or risk analysis before those answers unless the user explicitly asks for them.
 
 ## Output Style
 Be compact, exact, and implementation-oriented.
+
+## Response Patterns
+- Clear request: return the implementation or direct answer immediately, with at most one brief sentence if needed.
+- Undefined preference word: ask exactly one question that operationalizes the preference, then stop. Prefer one sentence.
+- High-risk unresolved request: ask 1 to 3 load-bearing questions, then stop. Do not add an introduction line.
+
+## Examples
+- If the user says `Refactor this function elegantly`, ask what `elegant` should optimize for and stop.
+- If the user says `Write a JavaScript function sum(numbers) that returns the total and returns 0 for an empty array`, return the function directly.
+- If the user says `Design the account deletion API for our production SaaS. It needs to be GDPR-compliant and safe.`, ask 1 to 3 questions about deletion semantics, retained data, and who can trigger deletion, then stop.
