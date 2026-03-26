@@ -75,25 +75,43 @@ Do NOT use for:
 
 ### Codex
 
-Place in your repository:
+Run from this repository root and copy-paste one of these:
 
-`.agents/skills/socrates/SKILL.md`
+```bash
+mkdir -p ~/.codex/skills/socrates
+cp .agents/skills/socrates/SKILL.md ~/.codex/skills/socrates/SKILL.md
+mkdir -p ~/.codex/skills/socrates/agents
+cp .agents/skills/socrates/agents/openai.yaml ~/.codex/skills/socrates/agents/openai.yaml
+```
 
-This repository also includes:
+Install into another repository:
 
-`.agents/skills/socrates/openai.yaml`
+```bash
+TARGET_REPO=/absolute/path/to/your/repo
+mkdir -p "$TARGET_REPO/.agents/skills/socrates"
+cp .agents/skills/socrates/SKILL.md "$TARGET_REPO/.agents/skills/socrates/SKILL.md"
+mkdir -p "$TARGET_REPO/.agents/skills/socrates/agents"
+cp .agents/skills/socrates/agents/openai.yaml "$TARGET_REPO/.agents/skills/socrates/agents/openai.yaml"
+```
 
 ---
 
 ### Claude Code
 
-Place in your repository:
+Run from this repository root and copy-paste one of these:
 
-`.claude/skills/socrates/SKILL.md`
+```bash
+mkdir -p ~/.claude/skills/socrates
+cp .claude/skills/socrates/SKILL.md ~/.claude/skills/socrates/SKILL.md
+```
 
-Or install globally:
+Install into another repository:
 
-`~/.claude/skills/socrates/`
+```bash
+TARGET_REPO=/absolute/path/to/your/repo
+mkdir -p "$TARGET_REPO/.claude/skills/socrates"
+cp .claude/skills/socrates/SKILL.md "$TARGET_REPO/.claude/skills/socrates/SKILL.md"
+```
 
 ---
 

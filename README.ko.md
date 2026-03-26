@@ -75,25 +75,43 @@ Socrates는 이런 오버헤드를 제거합니다.
 
 ### Codex
 
-리포지토리에 아래 경로로 배치합니다.
+이 저장소 루트에서 아래 둘 중 하나를 그대로 복붙하세요.
 
-`.agents/skills/socrates/SKILL.md`
+```bash
+mkdir -p ~/.codex/skills/socrates
+cp .agents/skills/socrates/SKILL.md ~/.codex/skills/socrates/SKILL.md
+mkdir -p ~/.codex/skills/socrates/agents
+cp .agents/skills/socrates/agents/openai.yaml ~/.codex/skills/socrates/agents/openai.yaml
+```
 
-이 저장소에는 다음 메타 파일도 포함되어 있습니다.
+다른 리포지토리에 설치:
 
-`.agents/skills/socrates/openai.yaml`
+```bash
+TARGET_REPO=/absolute/path/to/your/repo
+mkdir -p "$TARGET_REPO/.agents/skills/socrates"
+cp .agents/skills/socrates/SKILL.md "$TARGET_REPO/.agents/skills/socrates/SKILL.md"
+mkdir -p "$TARGET_REPO/.agents/skills/socrates/agents"
+cp .agents/skills/socrates/agents/openai.yaml "$TARGET_REPO/.agents/skills/socrates/agents/openai.yaml"
+```
 
 ---
 
 ### Claude Code
 
-리포지토리에 아래 경로로 배치합니다.
+이 저장소 루트에서 아래 둘 중 하나를 그대로 복붙하세요.
 
-`.claude/skills/socrates/SKILL.md`
+```bash
+mkdir -p ~/.claude/skills/socrates
+cp .claude/skills/socrates/SKILL.md ~/.claude/skills/socrates/SKILL.md
+```
 
-또는 전역 설치:
+다른 리포지토리에 설치:
 
-`~/.claude/skills/socrates/`
+```bash
+TARGET_REPO=/absolute/path/to/your/repo
+mkdir -p "$TARGET_REPO/.claude/skills/socrates"
+cp .claude/skills/socrates/SKILL.md "$TARGET_REPO/.claude/skills/socrates/SKILL.md"
+```
 
 ---
 
@@ -104,8 +122,8 @@ Socrates는 이런 오버헤드를 제거합니다.
 바로 복붙할 수 있는 프롬프트:
 
 ```text
-$socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
-$socrates Convert my request into a short alignment contract, then implement against it.
+$socrates 코딩을 시작하기 전에 이 작업을 먼저 명확하게 정리해줘. 구현이 달라지는 최소한의 질문만 해.
+$socrates 내 요청을 짧은 정렬 계약으로 바꾼 다음, 그 계약에 맞춰 구현해.
 ```
 
 ---
@@ -115,18 +133,18 @@ $socrates Convert my request into a short alignment contract, then implement aga
 바로 복붙할 수 있는 프롬프트:
 
 ```text
-/socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
-/socrates Convert my request into a short alignment contract, then implement against it.
+/socrates 코딩을 시작하기 전에 이 작업을 먼저 명확하게 정리해줘. 구현이 달라지는 최소한의 질문만 해.
+/socrates 내 요청을 짧은 정렬 계약으로 바꾼 다음, 그 계약에 맞춰 구현해.
 ```
 
 Claude Code 시스템 프롬프트에 넣을 스니펫:
 
 ```text
-Use Socrates behavior for important coding work:
-- restate the request in implementation terms
-- ask at most 1-3 load-bearing clarification questions when ambiguity would materially change implementation
-- write a compact alignment contract
-- only then implement
+중요한 코딩 작업에서는 Socrates 방식으로 동작해:
+- 요청을 구현 기준으로 다시 정리한다
+- 모호함이 구현을 실제로 바꿀 때만 핵심적인 명확화 질문을 1~3개까지 한다
+- 짧고 명확한 정렬 계약을 작성한다
+- 그 다음에만 구현한다
 ```
 
 ---
