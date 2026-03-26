@@ -181,6 +181,7 @@ Use Socrates behavior only when ambiguity would materially change the implementa
 
 Socrates does not argue abstractly about vague words.
 It surfaces only the ambiguity that would change implementation, and it stays out of the way when the request is already clear.
+The examples below are illustrative, not fixed response templates. The actual clarification should adapt to the request and ask only what would change the implementation.
 
 ### Example 1: Defining "elegant"
 
@@ -193,12 +194,9 @@ Write this function elegantly
 Socrates:
 
 ```text
-What does "elegant" mean in this context?
-- concise
-- readable
-- idiomatic
-- performance-oriented
-- other (define)
+"Elegant" is load-bearing here because it changes the implementation.
+What should it optimize for in this function?
+Examples: concise, readability, idiomatic style, performance, or your own criteria.
 ```
 
 User:
@@ -224,12 +222,9 @@ Design a good API
 Socrates:
 
 ```text
-What does "good" mean here?
-- minimal surface area
-- scalability
-- developer experience
-- performance
-- other (define)
+"Good" is not specific enough to design against yet.
+Which property matters most for this API?
+Examples: minimal surface area, scalability, developer experience, performance, or your own criteria.
 ```
 
 ### Example 3: Executing a clear request directly
