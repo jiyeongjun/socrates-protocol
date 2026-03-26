@@ -8,6 +8,7 @@ description: Use for high-impact coding and design work when ambiguity could cha
 ## Core Rule
 Only apply reasoning where truth can be decided.
 If a proposition is not decidable yet, stop and clarify.
+If the request is already explicit and testable, execute directly.
 
 ## Use This Skill When
 - requirements are ambiguous
@@ -20,6 +21,15 @@ If a proposition is not decidable yet, stop and clarify.
 - the task is trivial
 - the change is formatting-only
 - the request is already explicit and testable
+
+## Fast Path
+If the request is already specific enough to implement and verify:
+- do not ask clarification questions
+- do not emit a long contract
+- do not turn the task into a planning exercise
+- execute directly against the stated constraints
+
+Use the protocol only when ambiguity would materially change the implementation.
 
 ## Required Workflow
 
@@ -45,6 +55,11 @@ If any high-impact point fails validation:
 - ask 1 to 3 minimal clarification questions
 - ask only questions that change implementation
 
+If no high-impact point fails validation:
+- do not ask questions
+- do not emit the alignment contract by default
+- proceed directly to implementation
+
 ### 4. Produce an alignment contract
 Use these headings:
 - Goal
@@ -54,6 +69,8 @@ Use these headings:
 - Deliverable
 - Acceptance criteria
 - Open risks and assumptions
+
+Only produce this contract when material ambiguity remains after validation.
 
 ### 5. Execute precisely
 Implement only after the contract is sufficient.
@@ -65,6 +82,8 @@ Do not silently choose high-impact assumptions.
 - Do not justify claims that cannot be evaluated.
 - If multiple branches are valid, name them explicitly.
 - Keep the contract short and operational.
+- On clear requests, optimize for correct execution, not ceremony.
+- The protocol must reduce implementation risk, not add avoidable latency.
 
 ## Output Style
 Be compact, exact, and implementation-oriented.

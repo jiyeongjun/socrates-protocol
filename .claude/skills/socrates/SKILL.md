@@ -12,6 +12,16 @@ Use this skill for important coding work where ambiguity could materially change
 ## Core Rule
 Only reason about propositions whose truth can be decided.
 If a point is not decidable yet, stop and clarify.
+If the request is already explicit and testable, execute directly.
+
+## Fast Path
+If the request is already specific enough to implement and verify:
+- do not ask clarification questions
+- do not emit a long contract
+- do not turn the task into a planning exercise
+- execute directly against the stated constraints
+
+Use the protocol only when ambiguity would materially change the implementation.
 
 ## Workflow
 
@@ -33,6 +43,11 @@ If a point is not decidable yet, stop and clarify.
    - ask only questions that change the implementation
    - avoid cosmetic or speculative questions
 
+   If no material point fails validation:
+   - do not ask questions
+   - do not emit the alignment contract by default
+   - proceed directly to implementation
+
 4. After answers arrive, write a compact alignment contract:
    - Goal
    - In scope
@@ -42,6 +57,8 @@ If a point is not decidable yet, stop and clarify.
    - Acceptance criteria
    - Risks and assumptions
 
+   Only produce this contract when material ambiguity remains after validation.
+
 5. Only then proceed with design or code.
 
 ## Rules
@@ -50,3 +67,5 @@ If a point is not decidable yet, stop and clarify.
 - Treat taste as preference, not truth.
 - Do not defend claims that cannot be evaluated.
 - Keep the contract brief and operational.
+- On clear requests, optimize for correct execution, not ceremony.
+- The protocol must reduce implementation risk, not add avoidable latency.

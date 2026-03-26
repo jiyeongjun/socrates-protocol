@@ -2,19 +2,20 @@
 
 [한국어](./README.ko.md)
 
-A cognitive resource allocation protocol for software development.
+A coding skill that steps in only when ambiguity would change the implementation.
 
 ---
 
 ## Overview
 
-Socrates is a human-in-the-loop coding skill designed for high-impact work.
+Socrates is a human-in-the-loop coding skill for work where ambiguity could materially change the implementation.
 
 It enforces one rule:
 
 > Only apply reasoning where truth can be decided.
 
-Before writing code, it eliminates ambiguity by converting requests into explicit, testable contracts.
+When ambiguity is load-bearing, it turns the request into an explicit, testable working agreement before coding.
+When the request is already clear, it should stay out of the way and execute directly.
 
 It is most useful when the cost of rework is higher than the cost of clarification.
 
@@ -41,21 +42,24 @@ Socrates reduces that overhead so you can:
 - avoid changing the success criteria halfway through review
 - agree on what "done" means before implementation starts
 - reduce the risk of starting important changes from bad assumptions
+- implement already-clear requests without unnecessary process
 
 ---
 
 ## What it does
 
-1. Converts requests into explicit propositions
-2. Validates:
+1. Checks whether the request is already specific enough to implement
+2. Validates important claims for:
    - definability
    - observability
    - evaluability
    - reproducibility
-3. If any condition fails:
+3. If a material point fails validation:
    - stops reasoning
    - asks minimal clarification
-4. Once aligned:
+4. If material ambiguity remains:
+   - writes a short working agreement
+5. If the request is already clear or the agreement is sufficient:
    - executes precisely
 
 ---
@@ -75,6 +79,7 @@ Do NOT use for:
 - trivial edits
 - formatting
 - clearly specified tasks
+- tasks that only need one direct question to recover a missing artifact or file
 
 ### Common failure modes Socrates prevents
 
@@ -88,7 +93,7 @@ Do NOT use for:
 
 ### Codex
 
-Run from this repository root and copy-paste one of these:
+Run from this repository root and copy-paste this:
 
 ```bash
 mkdir -p ~/.codex/skills/socrates
@@ -111,7 +116,7 @@ cp .agents/skills/socrates/agents/openai.yaml "$TARGET_REPO/.agents/skills/socra
 
 ### Claude Code
 
-Run from this repository root and copy-paste one of these:
+Run from this repository root and copy-paste this:
 
 ```bash
 mkdir -p ~/.claude/skills/socrates
@@ -135,8 +140,8 @@ cp .claude/skills/socrates/SKILL.md "$TARGET_REPO/.claude/skills/socrates/SKILL.
 Copy-paste prompts:
 
 ```text
-$socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
-$socrates Convert my request into a short alignment contract, then implement against it.
+$socrates If this request is ambiguous in a way that would change the implementation, ask only the minimum clarifying questions. If it is already explicit and testable, execute directly.
+$socrates Use Socrates only for load-bearing ambiguity. Otherwise write the code.
 ```
 
 ---
@@ -146,26 +151,26 @@ $socrates Convert my request into a short alignment contract, then implement aga
 Copy-paste prompts:
 
 ```text
-/socrates Clarify this task before coding. Ask only the minimum questions that change implementation.
-/socrates Convert my request into a short alignment contract, then implement against it.
+/socrates If this request is ambiguous in a way that would change the implementation, ask only the minimum clarifying questions. If it is already explicit and testable, execute directly.
+/socrates Use Socrates only for load-bearing ambiguity. Otherwise write the code.
 ```
 
 Claude Code system prompt snippet:
 
 ```text
-Use Socrates behavior for important coding work:
-- restate the request in implementation terms
-- ask at most 1-3 load-bearing clarification questions when ambiguity would materially change implementation
-- write a compact alignment contract
-- only then implement
+Use Socrates behavior only when ambiguity would materially change the implementation:
+- if the request is already explicit and testable, execute directly
+- ask at most 1-3 load-bearing clarification questions when ambiguity would change the implementation
+- write a compact working agreement only when material ambiguity remains
+- do not add process to clear requests
 ```
 
 ---
 
 ## How Socrates Responds
 
-Socrates does not argue about vague quality words.
-It turns them into explicit decision criteria, then proceeds.
+Socrates does not argue abstractly about vague words.
+It surfaces only the ambiguity that would change implementation, and it stays out of the way when the request is already clear.
 
 ### Example 1: Defining "elegant"
 
@@ -217,6 +222,22 @@ What does "good" mean here?
 - other (define)
 ```
 
+### Example 3: Executing a clear request directly
+
+User:
+
+```text
+Write a JavaScript function `sum(numbers)` that returns the total and returns 0 for an empty array.
+```
+
+Socrates:
+
+```text
+function sum(numbers) {
+  return numbers.reduce((total, n) => total + n, 0);
+}
+```
+
 ---
 
 ## Design Principles
@@ -225,15 +246,16 @@ What does "good" mean here?
 - No fake precision
 - No unnecessary justification
 - Minimal questions, maximum clarity
-- Execution after alignment
+- Direct execution on clear requests
+- Alignment first only when ambiguity is material
 
 ---
 
 ## Philosophy
 
-Socrates is not meant to make you think more.
+Socrates is not meant to add process to every task.
 
-It is meant to separate where reasoning is useful from where alignment is required first.
+It is meant to stop only where ambiguity is load-bearing, and to execute directly when the request is already clear.
 
 The practical benefit is:
 
