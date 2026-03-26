@@ -238,7 +238,7 @@ It is meant to separate where reasoning is useful from where alignment is requir
 The practical benefit is:
 
 - less implementation built on undefined terms
-- fewer situations where people use the same words but mean different things
+- earlier detection when the user and the agent are using the same words with different meanings
 - earlier agreement on decision criteria instead of retroactive justification
 - lower failure cost on high-impact changes because assumptions are forced into the open first
 
