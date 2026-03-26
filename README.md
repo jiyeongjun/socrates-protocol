@@ -16,6 +16,8 @@ It enforces one rule:
 
 Before writing code, it eliminates ambiguity by converting requests into explicit, testable contracts.
 
+It is most useful when the cost of rework is higher than the cost of clarification.
+
 ---
 
 ## Core Principle
@@ -33,7 +35,12 @@ Most wasted time in engineering comes from:
 - debating non-decidable questions
 - trying to justify choices that cannot be proven
 
-Socrates removes that overhead.
+Socrates reduces that overhead so teams can:
+
+- cut rework caused by misunderstood requirements
+- avoid changing the success criteria halfway through review
+- agree on what "done" means before implementation starts
+- reduce the risk of starting important changes from bad assumptions
 
 ---
 
@@ -68,6 +75,12 @@ Do NOT use for:
 - trivial edits
 - formatting
 - clearly specified tasks
+
+### Typical failure modes Socrates prevents
+
+- implementing against words like "clean", "good", or "scalable" without agreed criteria
+- discovering in review that the stakeholder meant something materially different
+- locking in assumptions too early and starting a high-impact change in the wrong direction
 
 ---
 
@@ -218,11 +231,16 @@ What does "good" mean here?
 
 ## Philosophy
 
-Socrates is not a thinking engine.
+Socrates is not meant to make you think more.
 
-It is a boundary.
+It is meant to separate where reasoning is useful from where alignment is required first.
 
-It prevents reasoning where reasoning should not exist.
+The practical benefit is:
+
+- less implementation built on undefined terms
+- fewer situations where people use the same words but mean different things
+- earlier agreement on decision criteria instead of retroactive justification
+- lower failure cost on high-impact changes because assumptions are forced into the open first
 
 ---
 
