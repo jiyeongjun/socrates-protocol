@@ -35,7 +35,7 @@ Most wasted time in engineering comes from:
 - debating non-decidable questions
 - trying to justify choices that cannot be proven
 
-Socrates reduces that overhead so teams can:
+Socrates reduces that overhead so you can:
 
 - cut rework caused by misunderstood requirements
 - avoid changing the success criteria halfway through review
@@ -76,7 +76,7 @@ Do NOT use for:
 - formatting
 - clearly specified tasks
 
-### Typical failure modes Socrates prevents
+### Common failure modes Socrates prevents
 
 - implementing against words like "clean", "good", or "scalable" without agreed criteria
 - discovering in review that the stakeholder meant something materially different
@@ -241,10 +241,3 @@ The practical benefit is:
 - earlier detection when the user and the agent are using the same words with different meanings
 - earlier agreement on decision criteria instead of retroactive justification
 - lower failure cost on high-impact changes because assumptions are forced into the open first
-
----
-
-## One-line Definition
-
-> Think freely.  
-> Decide only where truth is testable.
