@@ -9,6 +9,20 @@ allowed-tools: Read, Grep, Glob, Edit, Bash
 
 Use this skill for important coding work where ambiguity could materially change the implementation.
 
+## High-Risk Signals
+Treat these as signals to validate constraints more explicitly before implementing:
+- production systems
+- real user data
+- personal data / PII
+- billing, payments, or financial reporting
+- auth, permissions, or security boundaries
+- public APIs or backward compatibility
+- migrations, data deletion, or retention rules
+- legal or regulatory obligations
+
+These signals do not automatically require a long contract.
+They do require checking whether risk-critical constraints are still undecidable.
+
 ## Core Rule
 Only reason about propositions whose truth can be decided.
 If a point is not decidable yet, stop and clarify.
@@ -37,6 +51,13 @@ Use the protocol only when ambiguity would materially change the implementation.
    - observable
    - evaluable
    - reproducible
+
+   If high-risk signals are present, also validate whether these constraints are decided enough to implement:
+   - data sensitivity and handling requirements
+   - legal or regulatory obligations
+   - auditability and observability expectations
+   - rollback and migration constraints
+   - idempotency and side-effect boundaries for state-changing behavior
 
 3. If any material point fails validation:
    - ask at most 1 to 3 load-bearing questions
@@ -69,3 +90,4 @@ Use the protocol only when ambiguity would materially change the implementation.
 - Keep the contract brief and operational.
 - On clear requests, optimize for correct execution, not ceremony.
 - The protocol must reduce implementation risk, not add avoidable latency.
+- For state-changing APIs and workflows, explicitly check retry safety, duplicate execution, and side-effect boundaries when those concerns are not already decided.

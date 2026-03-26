@@ -17,6 +17,20 @@ If the request is already explicit and testable, execute directly.
 - rollout risk is high
 - acceptance criteria are not yet testable
 
+## High-Risk Signals
+Treat these as signals to validate constraints more explicitly before implementing:
+- production systems
+- real user data
+- personal data / PII
+- billing, payments, or financial reporting
+- auth, permissions, or security boundaries
+- public APIs or backward compatibility
+- migrations, data deletion, or retention rules
+- legal or regulatory obligations
+
+These signals do not automatically require a long contract.
+They do require checking whether risk-critical constraints are still undecidable.
+
 ## Do Not Use This Skill When
 - the task is trivial
 - the change is formatting-only
@@ -48,6 +62,13 @@ Check whether each important claim is:
 - observable
 - evaluable
 - reproducible
+
+If high-risk signals are present, also validate whether these constraints are decided enough to implement:
+- data sensitivity and handling requirements
+- legal or regulatory obligations
+- auditability and observability expectations
+- rollback and migration constraints
+- idempotency and side-effect boundaries for state-changing behavior
 
 ### 3. Stop on undecidable points
 If any high-impact point fails validation:
@@ -84,6 +105,7 @@ Do not silently choose high-impact assumptions.
 - Keep the contract short and operational.
 - On clear requests, optimize for correct execution, not ceremony.
 - The protocol must reduce implementation risk, not add avoidable latency.
+- For state-changing APIs and workflows, explicitly check retry safety, duplicate execution, and side-effect boundaries when those concerns are not already decided.
 
 ## Output Style
 Be compact, exact, and implementation-oriented.

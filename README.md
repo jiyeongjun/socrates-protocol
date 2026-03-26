@@ -54,6 +54,7 @@ Socrates reduces that overhead so you can:
    - observability
    - evaluability
    - reproducibility
+   - and, for high-risk work, constraints like legal obligations, auditability, rollback, and idempotency
 3. If a material point fails validation:
    - stops reasoning
    - asks minimal clarification
@@ -73,6 +74,15 @@ Use Socrates for:
 - API design
 - schema changes
 - high-risk changes
+
+Pay extra attention when prompts mention signals like:
+
+- production systems
+- real user data
+- auth or permissions
+- billing or financial flows
+- migrations or deletion
+- legal or regulatory obligations
 
 Do NOT use for:
 
