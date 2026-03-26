@@ -1,0 +1,6 @@
+interface:
+  display_name: "Socrates"
+  short_description: "Clarify ambiguous coding requests before implementation."
+  default_prompt: "Use Socrates to align the task before coding."
+policy:
+  allow_implicit_invocation: false
