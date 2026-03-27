@@ -76,7 +76,7 @@ Claude setup notes:
 Minimal prompt:
 
 ```text
-$socrates If a required artifact is missing, recover it from the codebase if discoverable; otherwise ask for it first. If high-risk constraints are unresolved, ask the most safety-critical question first. If a rename crosses a compatibility boundary, ask one migration-strategy question first. If one path is clearly implied or dominant, execute directly.
+$socrates If a required artifact is missing, first check whether you can recover it from the codebase; only ask me if you can't. On high-risk work, ask the most safety-critical question first. If a rename crosses a compatibility boundary, confirm the migration strategy before treating it as mechanical. If one implementation path is already clear or clearly dominant, execute directly.
 ```
 
 ### Claude Code
@@ -84,7 +84,7 @@ $socrates If a required artifact is missing, recover it from the codebase if dis
 Minimal prompt:
 
 ```text
-/socrates If a required artifact is missing, recover it from the codebase if discoverable; otherwise ask for it first. If high-risk constraints are unresolved, ask the most safety-critical question first. If a rename crosses a compatibility boundary, ask one migration-strategy question first. If one path is clearly implied or dominant, execute directly.
+/socrates If a required artifact is missing, first check whether you can recover it from the codebase; only ask me if you can't. On high-risk work, ask the most safety-critical question first. If a rename crosses a compatibility boundary, confirm the migration strategy before treating it as mechanical. If one implementation path is already clear or clearly dominant, execute directly.
 ```
 
 ## Expected Responses
