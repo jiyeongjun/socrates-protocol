@@ -126,7 +126,7 @@ Use these headings:
 - Acceptance criteria
 - Open risks and assumptions
 
-Only produce this contract when material ambiguity remains after validation.
+Only produce this contract when material ambiguity remains after validation and 1 to 3 clarification questions are not enough to decide the implementation.
 If 1 to 3 clarification questions are enough to decide the implementation, ask those questions first and stop there.
 
 ### 5. Execute precisely
