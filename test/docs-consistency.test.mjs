@@ -31,6 +31,8 @@ test("README documents shared context lifecycle and quick install", async () => 
 
   assert.match(readme, /^## Quick Install/m);
   assert.match(readme, /^## How Shared Context Works/m);
+  assert.match(readme, /Explicit invocation example:/);
+  assert.match(readme, /Auto-load example:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
   assert.match(readme, /VERSION=main/);
   assert.match(readme, /automatically deletes `SOCRATES_CONTEXT\.md`/);
@@ -50,6 +52,8 @@ test("Korean README documents shared context lifecycle", async () => {
 
   assert.match(readme, /^## 빠른 설치/m);
   assert.match(readme, /^## 공유 맥락 문서 동작 방식/m);
+  assert.match(readme, /명시적 호출 예시:/);
+  assert.match(readme, /자동 개입 예시:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
   assert.match(readme, /VERSION=main/);
   assert.match(readme, /성공적으로 끝나면.*자동으로 삭제/);

@@ -75,10 +75,16 @@ mkdir -p "$TARGET_REPO/.agents/skills/socrates/agents"
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/agents/openai.yaml -o "$TARGET_REPO/.agents/skills/socrates/agents/openai.yaml"
 ```
 
-최소 프롬프트:
+명시적 호출 예시:
 
 ```text
-$socrates 구현이 실제로 바뀔 때만 질문해줘. 여러 턴에 걸친 공유 맥락이 정말 필요할 때만 SOCRATES_CONTEXT.md를 쓰고, 작업이 성공하면 삭제해줘.
+$socrates 프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
+```
+
+자동 개입 예시:
+
+```text
+프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
 ```
 
 Codex/OpenAI 참고:
@@ -105,10 +111,16 @@ mkdir -p "$TARGET_REPO/.claude/skills/socrates"
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.claude/skills/socrates/SKILL.md -o "$TARGET_REPO/.claude/skills/socrates/SKILL.md"
 ```
 
-최소 프롬프트:
+명시적 호출 예시:
 
 ```text
-/socrates 구현이 실제로 바뀔 때만 질문해줘. 여러 턴에 걸친 공유 맥락이 정말 필요할 때만 SOCRATES_CONTEXT.md를 쓰고, 작업이 성공하면 삭제해줘.
+/socrates 프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
+```
+
+자동 개입 예시:
+
+```text
+프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
 ```
 
 Claude 참고:

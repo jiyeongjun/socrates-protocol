@@ -75,10 +75,16 @@ mkdir -p "$TARGET_REPO/.agents/skills/socrates/agents"
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/agents/openai.yaml -o "$TARGET_REPO/.agents/skills/socrates/agents/openai.yaml"
 ```
 
-Minimal prompt:
+Explicit invocation example:
 
 ```text
-$socrates Clarify only when ambiguity would materially change the implementation. Use SOCRATES_CONTEXT.md only when shared context across turns is truly needed, and delete it on success.
+$socrates Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
+```
+
+Auto-load example:
+
+```text
+Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
 ```
 
 Codex/OpenAI note:
@@ -105,10 +111,16 @@ mkdir -p "$TARGET_REPO/.claude/skills/socrates"
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.claude/skills/socrates/SKILL.md -o "$TARGET_REPO/.claude/skills/socrates/SKILL.md"
 ```
 
-Minimal prompt:
+Explicit invocation example:
 
 ```text
-/socrates Clarify only when ambiguity would materially change the implementation. Use SOCRATES_CONTEXT.md only when shared context across turns is truly needed, and delete it on success.
+/socrates Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
+```
+
+Auto-load example:
+
+```text
+Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
 ```
 
 Claude setup notes:
