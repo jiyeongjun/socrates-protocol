@@ -1,5 +1,6 @@
 # Socrates Protocol
 
+[![Version](https://img.shields.io/github/v/tag/jiyeongjun/socrates-protocol?label=version)](https://github.com/jiyeongjun/socrates-protocol/tags)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -53,14 +54,14 @@ Use it as a risk-reduction aid, not as a guarantee that every load-bearing ambig
 
 ## Quick Install
 
-These examples currently track `main` until the first tagged release that includes the shared-context workflow is published.
+These examples are pinned to the current tagged version: `v0.2.0`.
 
 ### Codex
 
 Install globally:
 
 ```bash
-VERSION=main
+VERSION=v0.2.0
 mkdir -p ~/.codex/skills/socrates
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/SKILL.md -o ~/.codex/skills/socrates/SKILL.md
 mkdir -p ~/.codex/skills/socrates/agents
@@ -70,7 +71,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSI
 Install into a repository:
 
 ```bash
-VERSION=main
+VERSION=v0.2.0
 TARGET_REPO=/absolute/path/to/your/repo
 mkdir -p "$TARGET_REPO/.agents/skills/socrates"
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/SKILL.md -o "$TARGET_REPO/.agents/skills/socrates/SKILL.md"
@@ -100,7 +101,7 @@ Codex/OpenAI note:
 Install globally:
 
 ```bash
-VERSION=main
+VERSION=v0.2.0
 mkdir -p ~/.claude/skills/socrates
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.claude/skills/socrates/SKILL.md -o ~/.claude/skills/socrates/SKILL.md
 ```
@@ -108,7 +109,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSI
 Install into a repository:
 
 ```bash
-VERSION=main
+VERSION=v0.2.0
 TARGET_REPO=/absolute/path/to/your/repo
 mkdir -p "$TARGET_REPO/.claude/skills/socrates"
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.claude/skills/socrates/SKILL.md -o "$TARGET_REPO/.claude/skills/socrates/SKILL.md"
@@ -134,11 +135,9 @@ Claude setup notes:
 ## Versioning
 
 Socrates Protocol uses SemVer-style tags.
-Start with `v0.1.0` while the behavior and prompt contract are still evolving.
+The current tagged version is `v0.2.0`.
 
-- pin installs to a release tag for reproducible behavior
-- until the first shared-context release is published, the quick-install examples intentionally use `VERSION=main`
-- switch back to a release tag as soon as that release exists for reproducible installs
+- the quick-install examples pin to the same tag shown above for reproducible installs
 - treat `0.x` releases as unstable contracts that may still change between minor versions
 
 ### Context File Format

@@ -21,7 +21,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.1.0");
+  assert.equal(pkg.version, "0.2.0");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
 });
@@ -31,10 +31,12 @@ test("README documents shared context lifecycle and quick install", async () => 
 
   assert.match(readme, /^## Quick Install/m);
   assert.match(readme, /^## How Shared Context Works/m);
+  assert.match(readme, /github\/v\/tag\/jiyeongjun\/socrates-protocol/);
   assert.match(readme, /Explicit invocation example:/);
   assert.match(readme, /Auto-load example:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=main/);
+  assert.match(readme, /VERSION=v0\.2\.0/);
+  assert.match(readme, /current tagged version: `v0\.2\.0`/i);
   assert.match(readme, /automatically deletes `SOCRATES_CONTEXT\.md`/);
   assert.match(readme, /If you decline twice/);
   assert.match(readme, /already exists for the same task, Socrates reads it first/);
@@ -52,10 +54,12 @@ test("Korean README documents shared context lifecycle", async () => {
 
   assert.match(readme, /^## 빠른 설치/m);
   assert.match(readme, /^## 공유 맥락 문서 동작 방식/m);
+  assert.match(readme, /github\/v\/tag\/jiyeongjun\/socrates-protocol/);
   assert.match(readme, /명시적 호출 예시:/);
   assert.match(readme, /자동 개입 예시:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=main/);
+  assert.match(readme, /VERSION=v0\.2\.0/);
+  assert.match(readme, /현재 태그 버전은 `v0\.2\.0`입니다/);
   assert.match(readme, /성공적으로 끝나면.*자동으로 삭제/);
   assert.match(readme, /두 번 연속 거부/);
   assert.match(readme, /같은 작업을 가리키는 `SOCRATES_CONTEXT\.md`가 이미 있으면 먼저 읽고 계속 갱신합니다/);
