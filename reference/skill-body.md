@@ -1,12 +1,3 @@
----
-name: socrates
-description: Use for ambiguous or high-impact coding work when continued clarification across turns may materially change the implementation. Keep shared context only in SOCRATES_CONTEXT.md when it is truly needed.
-user-invocable: true
-allowed-tools: Read, Grep, Glob, Edit, Bash
----
-
-<!-- Generated from reference/skill-body.md. Edit the shared source instead. -->
-
 # Socrates Protocol
 
 ## Purpose
