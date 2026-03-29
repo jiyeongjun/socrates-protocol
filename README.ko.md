@@ -78,7 +78,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSI
 최소 프롬프트:
 
 ```text
-$socrates 필수 아티팩트가 없으면 먼저 코드베이스에서 찾을 수 있는지 확인하고, 찾을 수 없을 때만 물어봐. 고위험 작업이면 가장 안전에 큰 영향을 주는 질문부터 먼저 해줘. 여러 턴에 걸친 맥락 유지가 실제 구현을 바꿀 것 같다면 워크스페이스 루트에 SOCRATES_CONTEXT.md를 만들기 전에 먼저 물어봐. 내가 거절하면 짧게 이유를 설명하고 한 번만 더 물어봐. 두 번 연속 거부하면 파일 없이 진행하되 턴 간 맥락 보장은 없다고 경고해줘. 작업이 성공하면 SOCRATES_CONTEXT.md를 자동으로 삭제해줘.
+$socrates 구현이 실제로 바뀔 때만 질문해줘. 여러 턴에 걸친 공유 맥락이 정말 필요할 때만 SOCRATES_CONTEXT.md를 쓰고, 작업이 성공하면 삭제해줘.
 ```
 
 Codex/OpenAI 참고:
@@ -108,7 +108,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSI
 최소 프롬프트:
 
 ```text
-/socrates 필수 아티팩트가 없으면 먼저 코드베이스에서 찾을 수 있는지 확인하고, 찾을 수 없을 때만 물어봐. 고위험 작업이면 가장 안전에 큰 영향을 주는 질문부터 먼저 해줘. 여러 턴에 걸친 맥락 유지가 실제 구현을 바꿀 것 같다면 워크스페이스 루트에 SOCRATES_CONTEXT.md를 만들기 전에 먼저 물어봐. 내가 거절하면 짧게 이유를 설명하고 한 번만 더 물어봐. 두 번 연속 거부하면 파일 없이 진행하되 턴 간 맥락 보장은 없다고 경고해줘. 작업이 성공하면 SOCRATES_CONTEXT.md를 자동으로 삭제해줘.
+/socrates 구현이 실제로 바뀔 때만 질문해줘. 여러 턴에 걸친 공유 맥락이 정말 필요할 때만 SOCRATES_CONTEXT.md를 쓰고, 작업이 성공하면 삭제해줘.
 ```
 
 Claude 참고:

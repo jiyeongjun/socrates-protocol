@@ -78,7 +78,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSI
 Minimal prompt:
 
 ```text
-$socrates If a required artifact is missing, first check whether you can recover it from the codebase; only ask me if you can't. On high-risk work, ask the most safety-critical question first. If continued context across turns would materially change the implementation, ask before creating SOCRATES_CONTEXT.md at the workspace root. If I decline, explain the tradeoff briefly and ask once more. If I decline a second time, continue without the file and warn that cross-turn context is not guaranteed. When the task succeeds, delete SOCRATES_CONTEXT.md automatically.
+$socrates Clarify only when ambiguity would materially change the implementation. Use SOCRATES_CONTEXT.md only when shared context across turns is truly needed, and delete it on success.
 ```
 
 Codex/OpenAI note:
@@ -108,7 +108,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSI
 Minimal prompt:
 
 ```text
-/socrates If a required artifact is missing, first check whether you can recover it from the codebase; only ask me if you can't. On high-risk work, ask the most safety-critical question first. If continued context across turns would materially change the implementation, ask before creating SOCRATES_CONTEXT.md at the workspace root. If I decline, explain the tradeoff briefly and ask once more. If I decline a second time, continue without the file and warn that cross-turn context is not guaranteed. When the task succeeds, delete SOCRATES_CONTEXT.md automatically.
+/socrates Clarify only when ambiguity would materially change the implementation. Use SOCRATES_CONTEXT.md only when shared context across turns is truly needed, and delete it on success.
 ```
 
 Claude setup notes:
