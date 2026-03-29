@@ -1,5 +1,8 @@
 # Socrates Protocol
 
+[![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+
 [한국어](./README.ko.md)
 
 A coding skill for cases where ambiguity, risk, or implementation branch choice would materially change the result.

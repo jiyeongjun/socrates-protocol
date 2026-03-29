@@ -1,5 +1,8 @@
 # Socrates Protocol
 
+[![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+
 [English](./README.md)
 
 모호함, 리스크, 구현 분기가 결과를 실제로 바꿀 때 개입하는 코딩 스킬입니다.
