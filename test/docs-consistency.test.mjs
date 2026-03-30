@@ -21,7 +21,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.2.1");
+  assert.equal(pkg.version, "0.2.2");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
 });
@@ -35,14 +35,16 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /Explicit invocation example:/);
   assert.match(readme, /Auto-load example:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.2\.1/);
-  assert.match(readme, /current tagged version: `v0\.2\.1`/i);
+  assert.match(readme, /VERSION=v0\.2\.2/);
+  assert.match(readme, /current tagged version: `v0\.2\.2`/i);
   assert.match(readme, /automatically deletes `SOCRATES_CONTEXT\.md`/);
   assert.match(readme, /If you decline twice/);
   assert.match(readme, /already exists for the same task, Socrates reads it first/);
   assert.match(readme, /implicit invocation when the host supports it/);
   assert.match(readme, /Optional Codex hook:/);
   assert.match(readme, /\.codex\/hooks\.json/);
+  assert.match(readme, /SOCRATES_INSTALL_RUN=1 node --input-type=module -/);
+  assert.match(readme, /--enable-codex-hooks/);
   assert.match(readme, /codex_hooks = true/);
   assert.match(readme, /not by per-skill activation/);
   assert.match(readme, /scripts\/install\.mjs/);
@@ -53,6 +55,7 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /Optional Stop hook:/);
   assert.match(readme, /--feature stop-hook/);
   assert.match(readme, /default install does not add a `Stop` hook/);
+  assert.match(readme, /Want the Stop hook from the start:/);
   assert.match(readme, /\.claude\/settings\.json/);
   assert.match(readme, /not a task manager/i);
   assert.match(readme, /canonical machine-readable state/);
@@ -71,14 +74,16 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /명시적 호출 예시:/);
   assert.match(readme, /자동 개입 예시:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.2\.1/);
-  assert.match(readme, /현재 태그 버전은 `v0\.2\.1`입니다/);
+  assert.match(readme, /VERSION=v0\.2\.2/);
+  assert.match(readme, /현재 태그 버전은 `v0\.2\.2`입니다/);
   assert.match(readme, /성공적으로 끝나면.*자동으로 삭제/);
   assert.match(readme, /두 번 연속 거부/);
   assert.match(readme, /같은 작업을 가리키는 `SOCRATES_CONTEXT\.md`가 이미 있으면 먼저 읽고 계속 갱신합니다/);
   assert.match(readme, /implicit invocation을 켜 둡니다/);
   assert.match(readme, /선택적 Codex hook:/);
   assert.match(readme, /\.codex\/hooks\.json/);
+  assert.match(readme, /SOCRATES_INSTALL_RUN=1 node --input-type=module -/);
+  assert.match(readme, /--enable-codex-hooks/);
   assert.match(readme, /codex_hooks = true/);
   assert.match(readme, /스킬별 활성화가 아니라/);
   assert.match(readme, /scripts\/install\.mjs/);
@@ -89,6 +94,7 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /선택적 Stop hook:/);
   assert.match(readme, /--feature stop-hook/);
   assert.match(readme, /기본 설치에는 `Stop` hook이 포함되지 않습니다/);
+  assert.match(readme, /처음부터 Stop hook까지 포함해서 설치:/);
   assert.match(readme, /\.claude\/settings\.json/);
   assert.match(readme, /task manager가 아니라/);
   assert.match(readme, /canonical machine-readable state/);

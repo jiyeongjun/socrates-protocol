@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import {
   installSocrates,
+  mergeCodexHooksFeature,
   mergeSessionStartHookDocument,
   parseArgs,
   removeSessionStartHookDocument,
@@ -317,13 +318,13 @@ test("parseArgs accepts the recommended repo install shape", () => {
     "--target-repo",
     "/tmp/example",
     "--version",
-    "v0.2.1",
+    "v0.2.2",
   ]);
 
   assert.equal(parsed.platform, "both");
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
-  assert.equal(parsed.version, "v0.2.1");
+  assert.equal(parsed.version, "v0.2.2");
 });
 
 test("parseArgs accepts optional stop-hook features", () => {
@@ -341,12 +342,46 @@ test("parseArgs accepts optional stop-hook features", () => {
   assert.deepEqual(parsed.features, ["stop-hook"]);
 });
 
+test("parseArgs accepts --enable-codex-hooks for Codex installs", () => {
+  const parsed = parseArgs([
+    "--platform",
+    "codex",
+    "--scope",
+    "global",
+    "--enable-codex-hooks",
+  ]);
+
+  assert.equal(parsed.enableCodexHooks, true);
+});
+
 test("parseArgs rejects invalid combinations", () => {
   assert.throws(() => parseArgs(["--platform", "nope"]), /--platform must be one of/);
   assert.throws(() => parseArgs(["--scope", "repo"]), /--target-repo is required/);
   assert.throws(() => parseArgs(["--scope", "planet"]), /--scope must be one of/);
   assert.throws(() => parseArgs(["--mode", "destroy"]), /--mode must be one of/);
   assert.throws(() => parseArgs(["--feature", "mystery"]), /--feature must be one of/);
+  assert.throws(
+    () => parseArgs(["--platform", "claude", "--enable-codex-hooks"]),
+    /requires --platform codex or --platform both/
+  );
+  assert.throws(
+    () => parseArgs(["--mode", "uninstall", "--platform", "codex", "--enable-codex-hooks"]),
+    /can only be used with --mode install/
+  );
+});
+
+test("mergeCodexHooksFeature appends a features section when absent", () => {
+  assert.equal(
+    mergeCodexHooksFeature("[sandbox]\nmode = \"workspace-write\"\n"),
+    "[sandbox]\nmode = \"workspace-write\"\n\n[features]\ncodex_hooks = true\n"
+  );
+});
+
+test("mergeCodexHooksFeature updates an existing features section in place", () => {
+  assert.equal(
+    mergeCodexHooksFeature("[features]\ncodex_hooks = false\nverbose = true\n"),
+    "[features]\ncodex_hooks = true\nverbose = true\n"
+  );
 });
 
 test("fresh repo install writes both platforms from an empty directory", async () => {
@@ -532,6 +567,151 @@ test("global install writes into the provided home directory", async () => {
   await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".codex", "hooks", "_socrates_context_doc.mjs"), "utf8")
   );
+});
+
+test("install can enable Codex hooks in config.toml", async () => {
+  const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-enable-hooks-"));
+
+  await installSocrates({
+    platform: "codex",
+    scope: "global",
+    sourceRoot: repoRoot,
+    homeDir: fakeHome,
+    enableCodexHooks: true,
+  });
+
+  const config = await readFile(path.join(fakeHome, ".codex", "config.toml"), "utf8");
+  assert.match(config, /\[features\]/);
+  assert.match(config, /codex_hooks = true/);
+});
+
+test("importing install.mjs from a stdin module does not auto-run the installer", async () => {
+  const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-import-stdin-"));
+  const child = spawn(
+    process.execPath,
+    ["--input-type=module", "-"],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        HOME: fakeHome,
+      },
+      stdio: ["pipe", "pipe", "pipe"],
+    }
+  );
+
+  let stdout = "";
+  let stderr = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+
+  await new Promise((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`stdin import failed: ${stderr}`));
+        return;
+      }
+      resolve();
+    });
+
+    child.stdin.end('import "./scripts/install.mjs";\nconsole.log("import ok");\n');
+  });
+
+  assert.match(stdout, /import ok/);
+  await assertMissing(path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(fakeHome, ".claude", "skills", "socrates", "SKILL.md"));
+});
+
+test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
+  const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-stdin-run-"));
+  const script = await readFile(path.join(repoRoot, "scripts", "install.mjs"), "utf8");
+
+  const child = spawn(
+    process.execPath,
+    [
+      "--input-type=module",
+      "-",
+      "--platform",
+      "codex",
+      "--scope",
+      "global",
+      "--source-root",
+      repoRoot,
+      "--version",
+      "v0.2.2",
+      "--enable-codex-hooks",
+    ],
+    {
+      cwd: repoRoot,
+      env: {
+        ...process.env,
+        HOME: fakeHome,
+        SOCRATES_INSTALL_RUN: "1",
+      },
+      stdio: ["pipe", "pipe", "pipe"],
+    }
+  );
+
+  let stdout = "";
+  let stderr = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+
+  await new Promise((resolve, reject) => {
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`stdin install failed: ${stderr}`));
+        return;
+      }
+      resolve();
+    });
+
+    child.stdin.end(script);
+  });
+
+  assert.match(stdout, /Installed Socrates to:/);
+  await assert.doesNotReject(() =>
+    readFile(path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md"), "utf8")
+  );
+  const config = await readFile(path.join(fakeHome, ".codex", "config.toml"), "utf8");
+  assert.match(config, /codex_hooks = true/);
+});
+
+test("install preserves other Codex config entries when enabling hooks", async () => {
+  const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-enable-hooks-merge-"));
+  await mkdir(path.join(fakeHome, ".codex"), { recursive: true });
+  await writeFile(
+    path.join(fakeHome, ".codex", "config.toml"),
+    "[features]\nverbose = true\ncodex_hooks = false\n\n[sandbox]\nmode = \"workspace-write\"\n",
+    "utf8"
+  );
+
+  await installSocrates({
+    platform: "codex",
+    scope: "global",
+    sourceRoot: repoRoot,
+    homeDir: fakeHome,
+    enableCodexHooks: true,
+  });
+
+  const config = await readFile(path.join(fakeHome, ".codex", "config.toml"), "utf8");
+  assert.match(config, /verbose = true/);
+  assert.match(config, /codex_hooks = true/);
+  assert.match(config, /\[sandbox\]\nmode = "workspace-write"/);
 });
 
 test("codex-only install does not create Claude files", async () => {

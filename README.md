@@ -54,14 +54,54 @@ Use it as a risk-reduction aid, not as a guarantee that every load-bearing ambig
 
 ## Quick Install
 
-These examples are pinned to the current tagged version: `v0.2.1`.
+These examples are pinned to the current tagged version: `v0.2.2`.
 
 ### Codex
 
 Recommended quick install:
 
 ```bash
-VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform codex --scope global --version "$VERSION"
+VERSION=v0.2.2 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION" --enable-codex-hooks
+```
+
+Want the Stop hook from the start:
+
+```bash
+VERSION=v0.2.2 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
+```
+
+Codex hook activation:
+
+- the recommended install command above already enables `codex_hooks = true` in `~/.codex/config.toml`
+- if you installed earlier without `--enable-codex-hooks`, the skill still works, but the `SessionStart` and optional `Stop` hooks do not run until you enable that feature flag
+- you can fix an existing install by rerunning the installer with `--enable-codex-hooks`, or by running this one-time fallback command:
+
+```bash
+mkdir -p ~/.codex && node --input-type=module - <<'EOF'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import path from "node:path";
+
+const configPath = path.join(homedir(), ".codex", "config.toml");
+mkdirSync(path.dirname(configPath), { recursive: true });
+const existing = existsSync(configPath) ? readFileSync(configPath, "utf8") : "";
+const featuresPattern = /^\[features\]\s*$(?:\n(?!\[).*)*/m;
+
+let next = existing;
+if (!featuresPattern.test(existing)) {
+  next = `${existing.trimEnd()}\n\n[features]\ncodex_hooks = true\n`.trimStart();
+} else {
+  next = existing.replace(featuresPattern, (section) => {
+    if (/^\s*codex_hooks\s*=.*$/m.test(section)) {
+      return section.replace(/^\s*codex_hooks\s*=.*$/m, "codex_hooks = true");
+    }
+    return `${section}\ncodex_hooks = true`;
+  });
+}
+
+writeFileSync(configPath, next.endsWith("\n") ? next : `${next}\n`, "utf8");
+console.log(`Updated ${configPath}`);
+EOF
 ```
 
 Update in place:
@@ -72,13 +112,13 @@ Update in place:
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform codex --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.2/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.2.1 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.2.2 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION" --enable-codex-hooks
 ```
 
 Explicit invocation example:
@@ -107,12 +147,7 @@ Optional Codex hook:
 - the included hook script is therefore intentionally a no-op unless it finds `SOCRATES_CONTEXT.md`
 - the search walks upward only until the nearest git root, so a nested repo does not accidentally adopt a parent repo's `SOCRATES_CONTEXT.md`
 - the quick-install command above installs both the skill files and the Socrates `SessionStart` hook, merging into any existing `hooks.json`
-- to enable it, turn on hooks in `~/.codex/config.toml`:
-
-```toml
-[features]
-codex_hooks = true
-```
+- the recommended Codex install command above also enables the required `codex_hooks = true` feature flag for you
 
 Optional Stop hook:
 
@@ -125,13 +160,13 @@ Optional Stop hook:
 Install the optional Codex Stop hook:
 
 ```bash
-VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook
+VERSION=v0.2.2 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
 ```
 
 Remove only the optional Codex Stop hook:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.2/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
 ```
 
 ### Claude Code
@@ -139,8 +174,20 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1
 Recommended quick install:
 
 ```bash
-VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform claude --scope global --version "$VERSION"
+VERSION=v0.2.2 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
 ```
+
+Want the Stop hook from the start:
+
+```bash
+VERSION=v0.2.2 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
+```
+
+Claude hook behavior:
+
+- the recommended install command already installs the Socrates skill and the conservative `SessionStart` hook
+- the default install does not add the stronger `Stop` hook
+- the second command above adds that stronger `Stop` hook from the start
 
 Update in place:
 
@@ -150,13 +197,13 @@ Update in place:
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform claude --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.2/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.2.1 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.2.2 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Explicit invocation example:
@@ -191,20 +238,18 @@ Optional Claude Stop hook:
 
 Install the optional Claude Stop hook:
 
-```bash
-VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
-```
+- same command as the quick note above
 
 Remove only the optional Claude Stop hook:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.2/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
 ```
 
 ## Versioning
 
 Socrates Protocol uses SemVer-style tags.
-The current tagged version is `v0.2.1`.
+The current tagged version is `v0.2.2`.
 
 - the quick-install examples pin to the same tag shown above for reproducible installs
 - treat `0.x` releases as unstable contracts that may still change between minor versions

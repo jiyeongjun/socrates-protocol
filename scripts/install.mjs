@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_VERSION = "v0.2.1";
+const DEFAULT_VERSION = "v0.2.2";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];
@@ -38,6 +38,7 @@ export function parseArgs(argv) {
     sourceRoot: inferLocalSourceRoot(),
     version: DEFAULT_VERSION,
     features: [],
+    enableCodexHooks: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -72,6 +73,9 @@ export function parseArgs(argv) {
       case "--feature":
         options.features.push(...parseFeatureValue(requireValue(current, next)));
         index += 1;
+        break;
+      case "--enable-codex-hooks":
+        options.enableCodexHooks = true;
         break;
       case "--help":
       case "-h":
@@ -117,6 +121,17 @@ function validateArgs(options) {
     throw new Error("--target-repo is required when --scope repo is used");
   }
 
+  if (options.enableCodexHooks) {
+    if (options.mode !== "install") {
+      throw new Error("--enable-codex-hooks can only be used with --mode install");
+    }
+    if (!["codex", "both"].includes(options.platform)) {
+      throw new Error(
+        "--enable-codex-hooks requires --platform codex or --platform both"
+      );
+    }
+  }
+
   const invalidFeatures = (options.features ?? []).filter(
     (feature) => !OPTIONAL_FEATURES.includes(feature)
   );
@@ -156,6 +171,10 @@ export async function installSocrates(rawOptions = {}) {
     }
   }
 
+  if (options.enableCodexHooks) {
+    summary.push(await enableCodexHooks(options));
+  }
+
   return summary;
 }
 
@@ -192,6 +211,7 @@ function normalizeOptions(rawOptions) {
     version: rawOptions.version ?? DEFAULT_VERSION,
     homeDir: rawOptions.homeDir ?? homedir(),
     features: [...new Set(rawOptions.features ?? [])],
+    enableCodexHooks: rawOptions.enableCodexHooks ?? false,
   };
 }
 
@@ -472,6 +492,36 @@ async function uninstallClaude(options) {
   ];
 }
 
+async function enableCodexHooks(options) {
+  const configPath = path.join(options.homeDir, ".codex", "config.toml");
+  const existing = (await readTextFileIfExists(configPath)) ?? "";
+  await writeTextFile(configPath, mergeCodexHooksFeature(existing));
+  return configPath;
+}
+
+export function mergeCodexHooksFeature(toml) {
+  const normalized = toml.replace(/\r\n/g, "\n");
+  const featuresPattern = /^\[features\]\s*$(?:\n(?!\[).*)*/m;
+
+  if (!featuresPattern.test(normalized)) {
+    const prefix = normalized.trimEnd();
+    const next =
+      prefix === ""
+        ? "[features]\ncodex_hooks = true\n"
+        : `${prefix}\n\n[features]\ncodex_hooks = true\n`;
+    return ensureTrailingNewline(next);
+  }
+
+  const next = normalized.replace(featuresPattern, (section) => {
+    if (/^\s*codex_hooks\s*=.*$/m.test(section)) {
+      return section.replace(/^\s*codex_hooks\s*=.*$/m, "codex_hooks = true");
+    }
+    return `${section}\ncodex_hooks = true`;
+  });
+
+  return ensureTrailingNewline(next);
+}
+
 function getCodexTargets(options) {
   const root =
     options.scope === "repo"
@@ -693,6 +743,10 @@ function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function ensureTrailingNewline(value) {
+  return value.endsWith("\n") ? value : `${value}\n`;
+}
+
 async function readJsonFileOrDefault(target, fallback) {
   const parsed = await readJsonFileIfExists(target);
   return parsed === null ? structuredClone(fallback) : parsed;
@@ -706,6 +760,17 @@ async function readJsonFileIfExists(target) {
       throw new Error(`${target} must contain a top-level JSON object`);
     }
     return parsed;
+  } catch (error) {
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function readTextFileIfExists(target) {
+  try {
+    return await readFile(target, "utf8");
   } catch (error) {
     if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
       return null;
@@ -752,6 +817,7 @@ Options:
   --source-root /absolute/path/to/local/repo
   --version git-ref-or-tag
   --feature ${OPTIONAL_FEATURES.join("|")}
+  --enable-codex-hooks
 `;
 }
 
@@ -771,13 +837,14 @@ export async function main(argv = process.argv.slice(2)) {
   process.stdout.write(`${verb}:\n${changed.map((entry) => `- ${entry}`).join("\n")}\n`);
 }
 
-const isStdinModule = process.argv[1] === "-";
 const isFileModule =
   process.argv[1] &&
   import.meta.url.startsWith("file:") &&
   fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+const isExplicitStdinInstall =
+  process.argv[1] === "-" && process.env.SOCRATES_INSTALL_RUN === "1";
 
-if (isStdinModule || isFileModule) {
+if (isExplicitStdinInstall || isFileModule) {
   try {
     await main();
   } catch (error) {
