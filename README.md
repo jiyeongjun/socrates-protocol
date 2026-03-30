@@ -54,29 +54,31 @@ Use it as a risk-reduction aid, not as a guarantee that every load-bearing ambig
 
 ## Quick Install
 
-These examples are pinned to the current tagged version: `v0.2.0`.
+These examples are pinned to the current tagged version: `v0.2.1`.
 
 ### Codex
 
-Install globally:
+Recommended quick install:
 
 ```bash
-VERSION=v0.2.0
-mkdir -p ~/.codex/skills/socrates
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/SKILL.md -o ~/.codex/skills/socrates/SKILL.md
-mkdir -p ~/.codex/skills/socrates/agents
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/agents/openai.yaml -o ~/.codex/skills/socrates/agents/openai.yaml
+VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform codex --scope global --version "$VERSION"
+```
+
+Update in place:
+
+- rerun the same install command with the version you want
+- the installer overwrites stale Socrates files, keeps unrelated hook entries, and installs the hook support files needed for self-contained execution
+
+Uninstall:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform codex --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.2.0
-TARGET_REPO=/absolute/path/to/your/repo
-mkdir -p "$TARGET_REPO/.agents/skills/socrates"
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/SKILL.md -o "$TARGET_REPO/.agents/skills/socrates/SKILL.md"
-mkdir -p "$TARGET_REPO/.agents/skills/socrates/agents"
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.agents/skills/socrates/agents/openai.yaml -o "$TARGET_REPO/.agents/skills/socrates/agents/openai.yaml"
+VERSION=v0.2.1 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Explicit invocation example:
@@ -96,23 +98,65 @@ Codex/OpenAI note:
 - the generated agent metadata enables implicit invocation when the host supports it
 - explicit `$socrates` remains the most deterministic path when you want to force the skill
 
-### Claude Code
+Optional Codex hook:
 
-Install globally:
+- this repo also ships a conservative repo-local hook at `.codex/hooks.json`
+- it only runs on `SessionStart` and only adds context when `SOCRATES_CONTEXT.md` already exists
+- it helps resumed Socrates tasks recover their shared context without changing fast-path tasks
+- Codex hooks are configured by `hooks.json` layers, not by per-skill activation, so this hook file is loaded whenever the repo hook layer is active
+- the included hook script is therefore intentionally a no-op unless it finds `SOCRATES_CONTEXT.md`
+- the search walks upward only until the nearest git root, so a nested repo does not accidentally adopt a parent repo's `SOCRATES_CONTEXT.md`
+- the quick-install command above installs both the skill files and the Socrates `SessionStart` hook, merging into any existing `hooks.json`
+- to enable it, turn on hooks in `~/.codex/config.toml`:
+
+```toml
+[features]
+codex_hooks = true
+```
+
+Optional Stop hook:
+
+- the default install does not add a `Stop` hook
+- install it separately only if you want Socrates to keep pushing one more clarification turn while `SOCRATES_CONTEXT.md` remains in `clarifying`
+- this hook is stronger than `SessionStart`: it can continue a turn instead of just restoring context
+- because hooks are config-scoped rather than skill-scoped, it may still affect non-Socrates work in the same repo if the current assistant message overlaps enough with the clarifying task
+- the included implementation is conservative: it requires a canonical `SOCRATES_CONTEXT.md`, `status: "clarifying"`, a pending `next_question`, and relevant overlap with the last assistant message
+
+Install the optional Codex Stop hook:
 
 ```bash
-VERSION=v0.2.0
-mkdir -p ~/.claude/skills/socrates
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.claude/skills/socrates/SKILL.md -o ~/.claude/skills/socrates/SKILL.md
+VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook
+```
+
+Remove only the optional Codex Stop hook:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
+```
+
+### Claude Code
+
+Recommended quick install:
+
+```bash
+VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform claude --scope global --version "$VERSION"
+```
+
+Update in place:
+
+- rerun the same install command with the version you want
+- the installer overwrites stale Socrates files, keeps unrelated settings, and installs the hook support files needed for self-contained execution
+
+Uninstall:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform claude --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.2.0
-TARGET_REPO=/absolute/path/to/your/repo
-mkdir -p "$TARGET_REPO/.claude/skills/socrates"
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/.claude/skills/socrates/SKILL.md -o "$TARGET_REPO/.claude/skills/socrates/SKILL.md"
+VERSION=v0.2.1 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Explicit invocation example:
@@ -131,11 +175,36 @@ Claude setup notes:
 
 - skill path: `.claude/skills/<skill-name>/SKILL.md`
 - current repo version supports explicit `/socrates` use and auto-load when relevant
+- this repo also ships a conservative project hook at `.claude/settings.json`
+- it only runs on `SessionStart` and only adds context when `SOCRATES_CONTEXT.md` already exists
+- Claude hooks are configured by settings layers, not by per-skill activation, so the included hook is intentionally a no-op unless it finds the shared context doc
+- the search walks upward only until the nearest git root, so a nested repo does not accidentally adopt a parent repo's `SOCRATES_CONTEXT.md`
+- the quick-install command above installs both the skill file and the Socrates `SessionStart` hook, merging into any existing `.claude/settings.json`
+
+Optional Claude Stop hook:
+
+- the default install does not add a `Stop` hook
+- install it separately only if you want Socrates to keep pushing one more clarification turn while `SOCRATES_CONTEXT.md` remains in `clarifying`
+- this hook is stronger than `SessionStart`: it can continue a turn instead of just restoring context
+- because hooks are config-scoped rather than skill-scoped, it may still affect non-Socrates work in the same project when the last assistant message overlaps with the clarifying task
+- the included implementation is conservative: it requires a canonical `SOCRATES_CONTEXT.md`, `status: "clarifying"`, a pending `next_question`, and relevant overlap with the last assistant message
+
+Install the optional Claude Stop hook:
+
+```bash
+VERSION=v0.2.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
+```
+
+Remove only the optional Claude Stop hook:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.2.1/scripts/install.mjs | node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
+```
 
 ## Versioning
 
 Socrates Protocol uses SemVer-style tags.
-The current tagged version is `v0.2.0`.
+The current tagged version is `v0.2.1`.
 
 - the quick-install examples pin to the same tag shown above for reproducible installs
 - treat `0.x` releases as unstable contracts that may still change between minor versions
@@ -168,6 +237,7 @@ Socrates only proposes `SOCRATES_CONTEXT.md` when continued context across turns
 - When the task successfully ends, Socrates automatically deletes `SOCRATES_CONTEXT.md`.
 - If the task stops incomplete or blocked, Socrates asks whether to keep or delete it.
 - This is a shared current-context file, not a task manager.
+- If you enable the optional Codex repo hook, it only restores context on session start when `SOCRATES_CONTEXT.md` already exists.
 
 The file shape is fixed:
 

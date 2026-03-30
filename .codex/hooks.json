@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$(git rev-parse --show-toplevel)/.codex/hooks/session_start_socrates_context.mjs\"",
+            "statusMessage": "Loading Socrates shared context"
+          }
+        ]
+      }
+    ]
+  }
+}
