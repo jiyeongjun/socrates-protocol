@@ -17,7 +17,7 @@ When the same ambiguous task needs continued context across turns, it can keep o
 Core behavior:
 
 - clear request: execute directly
-- missing artifact or target: recover it from the codebase if discoverable; otherwise ask for it
+- missing artifact or target: look for it in the codebase first; otherwise ask for it
 - high-risk unresolved work: ask the most safety-critical question first
 - multiple valid implementation branches: surface the main tradeoff before coding
 - continued multi-turn context: ask before creating `SOCRATES_CONTEXT.md`
@@ -30,6 +30,41 @@ Typical triggers:
 - requests that still allow multiple materially different implementations
 - renames of env vars, config keys, public APIs, or persisted fields
 - tasks likely to require several clarification rounds across turns
+
+## How It Flows
+
+Socrates is one router skill.
+It tries the lightest safe path first instead of asking questions by default.
+
+```mermaid
+flowchart TD
+    A["User request"] --> B{"Clear and single-path?"}
+    B -- "Yes" --> C["Do the work directly"]
+    B -- "No" --> D{"What kind of blocker is it?"}
+
+    D -- "Missing file, symbol, test, or target" --> E["Look in the codebase first"]
+    D -- "Risky change or external contract" --> F["Ask one safety-critical question or give a short plan"]
+    D -- "One unresolved choice changes the result" --> G["Ask one load-bearing question"]
+    D -- "Same task needs context across turns" --> H["Offer SOCRATES_CONTEXT.md"]
+
+    E --> I["Implement"]
+    F --> I
+    G --> I
+    H --> I
+
+    I --> J["Run the smallest useful check first"]
+    J --> K{"Finished cleanly?"}
+    K -- "Yes" --> L["Delete SOCRATES_CONTEXT.md if it was used"]
+    K -- "No" --> M["Repair, or ask the one missing question"]
+```
+
+In short:
+
+- clear request: do the work
+- missing target: search first, ask later
+- risky change: stop and clarify the safety decision
+- shared context: use one file, `SOCRATES_CONTEXT.md`
+- after changes: verify narrowly before widening scope
 
 ## Limitations
 
