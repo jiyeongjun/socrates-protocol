@@ -44,7 +44,7 @@ flowchart TD
 
     D -- "Missing file, symbol, test, or target" --> E["Look in the codebase first"]
     D -- "Risky change or external contract" --> F["Ask one safety-critical question or give a short plan"]
-    D -- "One unresolved choice changes the result" --> G["Ask one load-bearing question"]
+    D -- "A key choice is still open" --> G["Ask one load-bearing question"]
     D -- "Same task needs context across turns" --> H["Offer SOCRATES_CONTEXT.md"]
 
     E --> I["Implement"]
