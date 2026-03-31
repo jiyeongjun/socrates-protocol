@@ -38,9 +38,9 @@ Socrates는 하나의 라우터 스킬입니다.
 
 ```mermaid
 flowchart TB
-    classDef decision fill:#ffffff,stroke:#334155,stroke-width:1.4px,color:#111827;
-    classDef action fill:#ffffff,stroke:#94a3b8,stroke-width:1.1px,color:#111827;
-    classDef emphasis fill:#f8fafc,stroke:#475569,stroke-width:1.3px,color:#111827;
+    classDef decision fill:#ffffff,stroke:#374151,stroke-width:1.4px,color:#111827;
+    classDef action fill:#ffffff,stroke:#9ca3af,stroke-width:1.1px,color:#111827;
+    classDef emphasis fill:#ffffff,stroke:#111827,stroke-width:1.3px,color:#111827;
 
     subgraph T["1. 판단"]
         direction TB
