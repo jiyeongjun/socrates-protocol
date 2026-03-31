@@ -37,11 +37,10 @@ Socrates is one router skill.
 It tries the lightest safe path first instead of asking questions by default.
 
 ```mermaid
-flowchart LR
-    classDef decision fill:#fff7ed,stroke:#f59e0b,color:#7c2d12;
-    classDef action fill:#ffffff,stroke:#475569,color:#0f172a;
-    classDef done fill:#ecfdf5,stroke:#10b981,color:#065f46;
-    classDef repair fill:#fef2f2,stroke:#ef4444,color:#7f1d1d;
+flowchart TB
+    classDef decision fill:#ffffff,stroke:#334155,stroke-width:1.4px,color:#111827;
+    classDef action fill:#ffffff,stroke:#94a3b8,stroke-width:1.1px,color:#111827;
+    classDef emphasis fill:#f8fafc,stroke:#475569,stroke-width:1.3px,color:#111827;
 
     subgraph T["1. Triage"]
         direction TB
@@ -62,8 +61,8 @@ flowchart LR
         direction TB
         I[Implement]:::action --> J[Run the smallest<br/>useful check first]:::action
         J --> K{Finished cleanly?}:::decision
-        K -- Yes --> L([Complete and clean up]):::done
-        K -- No --> M[Repair, or ask one<br/>missing question]:::repair
+        K -- Yes --> L([Complete and clean up]):::emphasis
+        K -- No --> M[Repair, or ask one<br/>missing question]:::emphasis
     end
 
     D -- Missing file / symbol / test / target --> E
@@ -77,7 +76,7 @@ flowchart LR
     G --> I
     H --> I
     M --> I
-```
+``` 
 
 In short:
 

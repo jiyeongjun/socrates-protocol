@@ -37,11 +37,10 @@ Socrates는 하나의 라우터 스킬입니다.
 질문부터 하는 대신, 가장 가벼우면서도 안전한 경로를 먼저 고릅니다.
 
 ```mermaid
-flowchart LR
-    classDef decision fill:#fff7ed,stroke:#f59e0b,color:#7c2d12;
-    classDef action fill:#ffffff,stroke:#475569,color:#0f172a;
-    classDef done fill:#ecfdf5,stroke:#10b981,color:#065f46;
-    classDef repair fill:#fef2f2,stroke:#ef4444,color:#7f1d1d;
+flowchart TB
+    classDef decision fill:#ffffff,stroke:#334155,stroke-width:1.4px,color:#111827;
+    classDef action fill:#ffffff,stroke:#94a3b8,stroke-width:1.1px,color:#111827;
+    classDef emphasis fill:#f8fafc,stroke:#475569,stroke-width:1.3px,color:#111827;
 
     subgraph T["1. 판단"]
         direction TB
@@ -62,8 +61,8 @@ flowchart LR
         direction TB
         I[구현]:::action --> J[가장 작은 검증부터<br/>실행]:::action
         J --> K{문제 없이 끝났는가?}:::decision
-        K -- 예 --> L([완료 후 정리]):::done
-        K -- 아니오 --> M[수정하거나, 부족한<br/>질문 1개만 다시 확인]:::repair
+        K -- 예 --> L([완료 후 정리]):::emphasis
+        K -- 아니오 --> M[수정하거나, 부족한<br/>질문 1개만 다시 확인]:::emphasis
     end
 
     D -- 파일 / 심볼 / 테스트 / 대상 누락 --> E
