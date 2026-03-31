@@ -37,25 +37,46 @@ Socrates는 하나의 라우터 스킬입니다.
 질문부터 하는 대신, 가장 가벼우면서도 안전한 경로를 먼저 고릅니다.
 
 ```mermaid
-flowchart TD
-    A["사용자 요청"] --> B{"명확하고 단일 경로인가?"}
-    B -- "예" --> C["바로 작업 실행"]
-    B -- "아니오" --> D{"막히는 이유는 무엇인가?"}
+flowchart LR
+    classDef decision fill:#fff7ed,stroke:#f59e0b,color:#7c2d12;
+    classDef action fill:#ffffff,stroke:#475569,color:#0f172a;
+    classDef done fill:#ecfdf5,stroke:#10b981,color:#065f46;
+    classDef repair fill:#fef2f2,stroke:#ef4444,color:#7f1d1d;
 
-    D -- "파일, 심볼, 테스트, 대상 누락" --> E["먼저 코드베이스에서 찾아보기"]
-    D -- "위험한 변경 또는 외부 계약 영향" --> F["안전 질문 1개 또는 짧은 계획"]
-    D -- "결과를 바꾸는 핵심 선택지가 남아 있음" --> G["핵심 질문 1개만"]
-    D -- "같은 작업에 턴 간 맥락이 필요" --> H["SOCRATES_CONTEXT.md 사용 여부 확인"]
+    subgraph T["1. 판단"]
+        direction TB
+        A([사용자 요청]):::action --> B{명확하고<br/>단일 경로인가?}:::decision
+        B -- 예 --> C[바로 작업 실행]:::action
+        B -- 아니오 --> D{핵심 걸림돌}:::decision
+    end
 
-    E --> I["구현"]
+    subgraph R["2. 필요한 것만 해결"]
+        direction TB
+        E[먼저 코드베이스에서<br/>찾아보기]:::action
+        F[안전 질문 1개 또는<br/>짧은 계획]:::action
+        G[핵심 질문 1개만]:::action
+        H[SOCRATES_CONTEXT.md<br/>사용 여부 확인]:::action
+    end
+
+    subgraph X["3. 구현과 검증"]
+        direction TB
+        I[구현]:::action --> J[가장 작은 검증부터<br/>실행]:::action
+        J --> K{문제 없이 끝났는가?}:::decision
+        K -- 예 --> L([완료 후 정리]):::done
+        K -- 아니오 --> M[수정하거나, 부족한<br/>질문 1개만 다시 확인]:::repair
+    end
+
+    D -- 파일 / 심볼 / 테스트 / 대상 누락 --> E
+    D -- 위험한 변경 / 외부 계약 영향 --> F
+    D -- 결과를 바꾸는 핵심 선택지가 남아 있음 --> G
+    D -- 같은 작업에 턴 간 맥락이 필요 --> H
+
+    C --> J
+    E --> I
     F --> I
     G --> I
     H --> I
-
-    I --> J["가장 작은 검증부터 실행"]
-    J --> K{"문제 없이 끝났는가?"}
-    K -- "예" --> L["사용했다면 SOCRATES_CONTEXT.md 삭제"]
-    K -- "아니오" --> M["수정하거나, 부족한 질문 1개만 다시 확인"]
+    M --> I
 ```
 
 짧게 요약하면:

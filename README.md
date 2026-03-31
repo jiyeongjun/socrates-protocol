@@ -37,25 +37,46 @@ Socrates is one router skill.
 It tries the lightest safe path first instead of asking questions by default.
 
 ```mermaid
-flowchart TD
-    A["User request"] --> B{"Clear and single-path?"}
-    B -- "Yes" --> C["Do the work directly"]
-    B -- "No" --> D{"What kind of blocker is it?"}
+flowchart LR
+    classDef decision fill:#fff7ed,stroke:#f59e0b,color:#7c2d12;
+    classDef action fill:#ffffff,stroke:#475569,color:#0f172a;
+    classDef done fill:#ecfdf5,stroke:#10b981,color:#065f46;
+    classDef repair fill:#fef2f2,stroke:#ef4444,color:#7f1d1d;
 
-    D -- "Missing file, symbol, test, or target" --> E["Look in the codebase first"]
-    D -- "Risky change or external contract" --> F["Ask one safety-critical question or give a short plan"]
-    D -- "A key choice is still open" --> G["Ask one load-bearing question"]
-    D -- "Same task needs context across turns" --> H["Offer SOCRATES_CONTEXT.md"]
+    subgraph T["1. Triage"]
+        direction TB
+        A([User request]):::action --> B{Clear and<br/>single-path?}:::decision
+        B -- Yes --> C[Execute directly]:::action
+        B -- No --> D{Primary blocker}:::decision
+    end
 
-    E --> I["Implement"]
+    subgraph R["2. Resolve Only What Matters"]
+        direction TB
+        E[Look in the<br/>codebase first]:::action
+        F[Ask one safety-critical<br/>question or short plan]:::action
+        G[Ask one load-bearing<br/>question]:::action
+        H[Offer<br/>SOCRATES_CONTEXT.md]:::action
+    end
+
+    subgraph X["3. Execute And Verify"]
+        direction TB
+        I[Implement]:::action --> J[Run the smallest<br/>useful check first]:::action
+        J --> K{Finished cleanly?}:::decision
+        K -- Yes --> L([Complete and clean up]):::done
+        K -- No --> M[Repair, or ask one<br/>missing question]:::repair
+    end
+
+    D -- Missing file / symbol / test / target --> E
+    D -- Risky change / external contract --> F
+    D -- Key choice still open --> G
+    D -- Cross-turn context needed --> H
+
+    C --> J
+    E --> I
     F --> I
     G --> I
     H --> I
-
-    I --> J["Run the smallest useful check first"]
-    J --> K{"Finished cleanly?"}
-    K -- "Yes" --> L["Delete SOCRATES_CONTEXT.md if it was used"]
-    K -- "No" --> M["Repair, or ask the one missing question"]
+    M --> I
 ```
 
 In short:
