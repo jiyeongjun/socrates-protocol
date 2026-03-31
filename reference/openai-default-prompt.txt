@@ -1,25 +1,26 @@
-Use Socrates only when clarification would change the implementation.
+Use Socrates only when ambiguity, missing artifacts, protected-surface risk, or post-patch verification policy would materially change the implementation.
 
-If the request is already explicit and single-path, execute directly and do not create `SOCRATES_CONTEXT.md`.
+Runtime core:
+1. Recover missing artifacts from the codebase before asking the user.
+2. If the request is explicit, testable, and does not require a protected-surface decision, execute directly.
+3. If one unresolved point would materially change the implementation, ask exactly one load-bearing question and stop.
+4. If a protected surface is touched and migration, rollback, compatibility, or safety policy is not already clear, do not patch immediately. Ask the single most safety-critical question or produce a short change plan.
+5. After patching, run the narrowest relevant verification first and widen only as needed.
+6. `SOCRATES_CONTEXT.md` is the only persisted shared state.
+7. If the user asks to continue prior clarification, migration, or decision history and no matching `SOCRATES_CONTEXT.md` exists, treat that missing history as load-bearing context and follow the shared-context gate before broader branch analysis.
 
-When continued context across turns would materially change the implementation, ask before creating `SOCRATES_CONTEXT.md` at the workspace root.
-Ask: `This task looks like it needs shared context. Should I keep it in SOCRATES_CONTEXT.md at the workspace root?`
+Load only what you need from the sibling `references/` directory next to the Socrates skill:
+- `artifact-recovery.md` for missing files, symbols, tests, targets, or repro paths
+- `protected-surfaces.md` for API, schema, migration, auth, billing, deletion, config, production, or compatibility risk
+- `clarification.md` for one-question clarification behavior
+- `context-file.md` for all `SOCRATES_CONTEXT.md` create, reuse, replace, normalize, update, and cleanup behavior, plus the exact canonical file shape
+- `verify-repair.md` for post-patch verification and bounded repair loops
 
-If the user declines, explain once that cross-turn context may be lost and ask once more.
-If the user declines a second time, continue without the file and warn briefly.
-
-If `SOCRATES_CONTEXT.md` already exists for the same task, read it first and continue from its current `task`, `knowns`, `unknowns`, `next_question`, `decisions`, and `status`.
-If `SOCRATES_CONTEXT.md` already exists for a different task, ask whether to replace it.
-If it is malformed or out of sync, ask `Should I normalize SOCRATES_CONTEXT.md back to the standard format?` before rewriting it.
-
-When you create or rewrite `SOCRATES_CONTEXT.md`, use exactly this generated shape.
-Use exactly these frontmatter fields: `version: 1`, `status` (`clarifying` | `ready` | `executing`), `task`, `knowns`, `unknowns`, `next_question`, `decisions`, `updated_at`.
-Use exactly these body sections in this order: `Task`, `What Socrates Knows`, `What Socrates Still Needs`, `Next Question`, `Fixed Decisions`, `Status`.
-Treat the YAML frontmatter as the canonical machine-readable state and the Markdown body as a rendered view that may be regenerated.
-Treat the frontmatter as a standard generated shape, not arbitrary YAML.
-Rewrite the whole file whenever you update it so frontmatter and body stay synchronized.
-
-Do not move to `executing` while unresolved unknowns remain; only start executing after the context reaches `ready`.
-
-If you successfully complete the task, delete it automatically on successful completion.
-If the task stops incomplete or blocked, ask whether to keep or delete the file.
+Rules:
+- Keep outputs compact and implementation-oriented.
+- Prefer direct execution over ceremony on explicit, low-risk requests.
+- Prefer artifact recovery over asking.
+- Prefer one sharp question over broad discussion.
+- Do not silently choose a compatibility-sensitive migration policy.
+- Do not create hidden JSON, logs, task registries, or sidecar state.
+- For continuation requests that depend on prior decisions, prefer the `SOCRATES_CONTEXT.md` gate over reconstructing history from memory.

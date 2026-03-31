@@ -1,9 +1,16 @@
 import { readFile } from "node:fs/promises";
 import {
+  agentTargetPath,
   buildOpenAIYaml,
   buildSkillDocument,
+  claudeAgentNames,
+  claudeAgentTargets,
   readAgentPromptSource,
+  readClaudeAgentSource,
   readSkillBody,
+  readSkillReferenceSource,
+  skillReferenceNames,
+  skillReferenceTargets,
   skillTargets,
 } from "./skill-generator.mjs";
 
@@ -24,9 +31,34 @@ for (const [name, target] of Object.entries(skillTargets)) {
   }
 }
 
-const agentPath = new URL("../.agents/skills/socrates/agents/openai.yaml", import.meta.url);
+for (const [platform, targets] of Object.entries(skillReferenceTargets)) {
+  for (const name of skillReferenceNames) {
+    const expected = `${await readSkillReferenceSource(name)}\n`;
+    const actual = await readFile(targets[name], "utf8");
+
+    if (actual !== expected) {
+      hasMismatch = true;
+      console.error(
+        `${platform} skill reference ${name} is out of sync with reference/skill-references/${name}`
+      );
+    }
+  }
+}
+
+for (const name of claudeAgentNames) {
+  const expected = `${await readClaudeAgentSource(name)}\n`;
+  const actual = await readFile(claudeAgentTargets[name], "utf8");
+
+  if (actual !== expected) {
+    hasMismatch = true;
+    console.error(
+      `claude subagent ${name} is out of sync with reference/claude-agents/${name}`
+    );
+  }
+}
+
 const expectedAgent = buildOpenAIYaml({ promptSource });
-const actualAgent = await readFile(agentPath, "utf8");
+const actualAgent = await readFile(agentTargetPath, "utf8");
 
 if (actualAgent !== expectedAgent) {
   hasMismatch = true;

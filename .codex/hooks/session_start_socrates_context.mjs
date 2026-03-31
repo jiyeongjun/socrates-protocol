@@ -4,14 +4,23 @@ import { access, readFile } from "node:fs/promises";
 
 const DOC_FILENAME = "SOCRATES_CONTEXT.md";
 const HANDLED_SOURCES = new Set(["startup", "resume"]);
-const { analyzeContextDoc } = await loadModule(
-  "./_socrates_context_doc.mjs",
-  "../../reference/context-doc.mjs"
-);
-const { findNearestContextDoc, parseJson, readStdin } = await loadModule(
-  "./_socrates_hook_utils.mjs",
-  "../../reference/hook-utils.mjs"
-);
+let analyzeContextDoc;
+let findNearestContextDoc;
+let parseJson;
+let readStdin;
+
+try {
+  ({ analyzeContextDoc } = await loadModule(
+    "./_socrates_context_doc.mjs",
+    "../../reference/context-doc.mjs"
+  ));
+  ({ findNearestContextDoc, parseJson, readStdin } = await loadModule(
+    "./_socrates_hook_utils.mjs",
+    "../../reference/hook-utils.mjs"
+  ));
+} catch {
+  process.exit(0);
+}
 
 async function main() {
   const input = await readStdin();

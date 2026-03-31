@@ -1,0 +1,14 @@
+{
+  "skillReferences": [
+    "artifact-recovery.md",
+    "protected-surfaces.md",
+    "clarification.md",
+    "verify-repair.md",
+    "context-file.md"
+  ],
+  "claudeAgents": [
+    "socrates-explore.md",
+    "socrates-plan.md",
+    "socrates-verify.md"
+  ]
+}

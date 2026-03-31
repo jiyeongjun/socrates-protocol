@@ -318,13 +318,13 @@ test("parseArgs accepts the recommended repo install shape", () => {
     "--target-repo",
     "/tmp/example",
     "--version",
-    "v0.2.2",
+    "v0.3.0",
   ]);
 
   assert.equal(parsed.platform, "both");
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
-  assert.equal(parsed.version, "v0.2.2");
+  assert.equal(parsed.version, "v0.3.0");
 });
 
 test("parseArgs accepts optional stop-hook features", () => {
@@ -409,7 +409,36 @@ test("fresh repo install writes both platforms from an empty directory", async (
     readFile(path.join(root, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
   );
   await assert.doesNotReject(() =>
+    readFile(
+      path.join(
+        root,
+        ".agents",
+        "skills",
+        "socrates",
+        "references",
+        "artifact-recovery.md"
+      ),
+      "utf8"
+    )
+  );
+  await assert.doesNotReject(() =>
     readFile(path.join(root, ".claude", "skills", "socrates", "SKILL.md"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(
+      path.join(
+        root,
+        ".claude",
+        "skills",
+        "socrates",
+        "references",
+        "context-file.md"
+      ),
+      "utf8"
+    )
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".claude", "agents", "socrates-explore.md"), "utf8")
   );
   await assertMissing(path.join(root, ".codex", "hooks", "stop_socrates_clarifying.mjs"));
   await assertMissing(path.join(root, ".claude", "hooks", "stop_socrates_clarifying.mjs"));
@@ -562,6 +591,19 @@ test("global install writes into the provided home directory", async () => {
     readFile(path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md"), "utf8")
   );
   await assert.doesNotReject(() =>
+    readFile(
+      path.join(
+        fakeHome,
+        ".codex",
+        "skills",
+        "socrates",
+        "references",
+        "artifact-recovery.md"
+      ),
+      "utf8"
+    )
+  );
+  await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".codex", "hooks", "_socrates_hook_utils.mjs"), "utf8")
   );
   await assert.doesNotReject(() =>
@@ -645,7 +687,7 @@ test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
       "--source-root",
       repoRoot,
       "--version",
-      "v0.2.2",
+      "v0.3.0",
       "--enable-codex-hooks",
     ],
     {
@@ -857,6 +899,12 @@ test("install fails fast when an existing config file contains invalid JSON", as
       }),
     /Unexpected token|JSON/
   );
+
+  await assertMissing(path.join(root, ".claude", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".claude", "agents", "socrates-explore.md"));
+  await assertMissing(
+    path.join(root, ".claude", "hooks", "session_start_socrates_context.mjs")
+  );
 });
 
 test("install fails when hooks has an invalid schema", async () => {
@@ -875,6 +923,11 @@ test("install fails when hooks has an invalid schema", async () => {
       }),
     /hooks field must be a JSON object/
   );
+
+  await assertMissing(path.join(root, ".agents", "skills", "socrates", "SKILL.md"));
+  await assertMissing(
+    path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs")
+  );
 });
 
 test("install fails when SessionStart exists but is not an array", async () => {
@@ -892,8 +945,13 @@ test("install fails when SessionStart exists but is not an array", async () => {
         scope: "repo",
         targetRepo: root,
         sourceRoot: repoRoot,
-    }),
+      }),
     /SessionStart hook list must be an array/
+  );
+
+  await assertMissing(path.join(root, ".agents", "skills", "socrates", "SKILL.md"));
+  await assertMissing(
+    path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs")
   );
 });
 
@@ -902,8 +960,23 @@ test("install falls back to fetch when local source assets are unavailable", asy
   const originalFetch = globalThis.fetch;
   const requested = [];
   const assetMap = new Map([
+    ["reference/skill-layout.json", await readFile(path.join(repoRoot, "reference/skill-layout.json"), "utf8")],
     [".agents/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/SKILL.md"), "utf8")],
     [".agents/skills/socrates/agents/openai.yaml", await readFile(path.join(repoRoot, ".agents/skills/socrates/agents/openai.yaml"), "utf8")],
+    [".agents/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/artifact-recovery.md"), "utf8")],
+    [".agents/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/protected-surfaces.md"), "utf8")],
+    [".agents/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/clarification.md"), "utf8")],
+    [".agents/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/verify-repair.md"), "utf8")],
+    [".agents/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/context-file.md"), "utf8")],
+    [".claude/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/SKILL.md"), "utf8")],
+    [".claude/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/artifact-recovery.md"), "utf8")],
+    [".claude/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/protected-surfaces.md"), "utf8")],
+    [".claude/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/clarification.md"), "utf8")],
+    [".claude/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/verify-repair.md"), "utf8")],
+    [".claude/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/context-file.md"), "utf8")],
+    [".claude/agents/socrates-explore.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-explore.md"), "utf8")],
+    [".claude/agents/socrates-plan.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-plan.md"), "utf8")],
+    [".claude/agents/socrates-verify.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-verify.md"), "utf8")],
     [".codex/hooks/session_start_socrates_context.mjs", await readFile(path.join(repoRoot, ".codex/hooks/session_start_socrates_context.mjs"), "utf8")],
     [".codex/hooks/stop_socrates_clarifying.mjs", await readFile(path.join(repoRoot, ".codex/hooks/stop_socrates_clarifying.mjs"), "utf8")],
     ["reference/hook-utils.mjs", await readFile(path.join(repoRoot, "reference/hook-utils.mjs"), "utf8")],
@@ -942,7 +1015,7 @@ test("install falls back to fetch when local source assets are unavailable", asy
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 5);
+  assert.equal(requested.length, 11);
   await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".codex", "hooks.json"), "utf8")
   );
@@ -1143,7 +1216,28 @@ test("uninstall removes Socrates files and deletes empty config files on a clean
   await assertMissing(path.join(root, ".codex", "hooks.json"));
   await assertMissing(path.join(root, ".claude", "settings.json"));
   await assertMissing(path.join(root, ".agents", "skills", "socrates", "SKILL.md"));
+  await assertMissing(
+    path.join(
+      root,
+      ".agents",
+      "skills",
+      "socrates",
+      "references",
+      "artifact-recovery.md"
+    )
+  );
   await assertMissing(path.join(root, ".claude", "skills", "socrates", "SKILL.md"));
+  await assertMissing(
+    path.join(
+      root,
+      ".claude",
+      "skills",
+      "socrates",
+      "references",
+      "context-file.md"
+    )
+  );
+  await assertMissing(path.join(root, ".claude", "agents", "socrates-explore.md"));
   await assertMissing(path.join(root, ".codex", "hooks", "_socrates_hook_utils.mjs"));
   await assertMissing(path.join(root, ".claude", "hooks", "_socrates_context_doc.mjs"));
 });
@@ -1179,6 +1273,17 @@ test("feature uninstall removes stop-hook only and keeps the base install", asyn
   assert.equal(claudeSettings.hooks.Stop, undefined);
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(
+      path.join(
+        root,
+        ".claude",
+        "agents",
+        "socrates-plan.md"
+      ),
+      "utf8"
+    )
   );
   await assertMissing(path.join(root, ".codex", "hooks", "stop_socrates_clarifying.mjs"));
   await assertMissing(path.join(root, ".claude", "hooks", "stop_socrates_clarifying.mjs"));
@@ -1305,6 +1410,7 @@ test("platform-specific uninstall removes only the requested platform", async ()
 
   await assertMissing(path.join(root, ".claude", "settings.json"));
   await assertMissing(path.join(root, ".claude", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".claude", "agents", "socrates-explore.md"));
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".codex", "hooks.json"), "utf8")
   );

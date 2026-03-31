@@ -4,10 +4,17 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  agentTargetPath,
   buildOpenAIYaml,
   buildSkillDocument,
+  claudeAgentNames,
+  claudeAgentTargets,
   readAgentPromptSource,
+  readClaudeAgentSource,
   readSkillBody,
+  readSkillReferenceSource,
+  skillReferenceNames,
+  skillReferenceTargets,
   skillTargets,
 } from "../reference/skill-generator.mjs";
 
@@ -21,7 +28,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.2.2");
+  assert.equal(pkg.version, "0.3.0");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
 });
@@ -35,8 +42,8 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /Explicit invocation example:/);
   assert.match(readme, /Auto-load example:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.2\.2/);
-  assert.match(readme, /current tagged version: `v0\.2\.2`/i);
+  assert.match(readme, /VERSION=v0\.3\.0/);
+  assert.match(readme, /current tagged version: `v0\.3\.0`/i);
   assert.match(readme, /automatically deletes `SOCRATES_CONTEXT\.md`/);
   assert.match(readme, /If you decline twice/);
   assert.match(readme, /already exists for the same task, Socrates reads it first/);
@@ -57,6 +64,8 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /default install does not add a `Stop` hook/);
   assert.match(readme, /Want the Stop hook from the start:/);
   assert.match(readme, /\.claude\/settings\.json/);
+  assert.match(readme, /\.claude\/agents\//);
+  assert.match(readme, /mirrored `references\/` files/);
   assert.match(readme, /not a task manager/i);
   assert.match(readme, /canonical machine-readable state/);
   assert.match(readme, /may be regenerated/);
@@ -74,8 +83,8 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /명시적 호출 예시:/);
   assert.match(readme, /자동 개입 예시:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.2\.2/);
-  assert.match(readme, /현재 태그 버전은 `v0\.2\.2`입니다/);
+  assert.match(readme, /VERSION=v0\.3\.0/);
+  assert.match(readme, /현재 태그 버전은 `v0\.3\.0`입니다/);
   assert.match(readme, /성공적으로 끝나면.*자동으로 삭제/);
   assert.match(readme, /두 번 연속 거부/);
   assert.match(readme, /같은 작업을 가리키는 `SOCRATES_CONTEXT\.md`가 이미 있으면 먼저 읽고 계속 갱신합니다/);
@@ -96,6 +105,8 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /기본 설치에는 `Stop` hook이 포함되지 않습니다/);
   assert.match(readme, /처음부터 Stop hook까지 포함해서 설치:/);
   assert.match(readme, /\.claude\/settings\.json/);
+  assert.match(readme, /\.claude\/agents\//);
+  assert.match(readme, /미러된 `references\/` 파일들/);
   assert.match(readme, /task manager가 아니라/);
   assert.match(readme, /canonical machine-readable state/);
   assert.match(readme, /다시 생성될 수 있습니다/);
@@ -106,8 +117,8 @@ test("Korean README documents shared context lifecycle", async () => {
 
 test("Codex and Claude skills are generated from the shared skill body source", async () => {
   const body = await readSkillBody();
-  const codex = await readRepoFile(".agents/skills/socrates/SKILL.md");
-  const claude = await readRepoFile(".claude/skills/socrates/SKILL.md");
+  const codex = await readFile(skillTargets.codex.path, "utf8");
+  const claude = await readFile(skillTargets.claude.path, "utf8");
 
   assert.equal(
     codex,
@@ -125,9 +136,30 @@ test("Codex and Claude skills are generated from the shared skill body source", 
   );
 });
 
-test("OpenAI agent prompt stays aligned with the shared context lifecycle", async () => {
+test("Skill references are mirrored from the shared source without nested reference links", async () => {
+  for (const name of skillReferenceNames) {
+    const expected = `${await readSkillReferenceSource(name)}\n`;
+    const source = expected.trim();
+    const codex = await readFile(skillReferenceTargets.codex[name], "utf8");
+    const claude = await readFile(skillReferenceTargets.claude[name], "utf8");
+
+    assert.equal(codex, expected);
+    assert.equal(claude, expected);
+    assert.doesNotMatch(source, /references\/[^)\s]+\.md/);
+  }
+});
+
+test("Claude subagents are generated from the shared source", async () => {
+  for (const name of claudeAgentNames) {
+    const expected = `${await readClaudeAgentSource(name)}\n`;
+    const actual = await readFile(claudeAgentTargets[name], "utf8");
+    assert.equal(actual, expected);
+  }
+});
+
+test("OpenAI agent prompt stays aligned with the router and on-demand references", async () => {
   const promptSource = await readAgentPromptSource();
-  const prompt = await readRepoFile(".agents/skills/socrates/agents/openai.yaml");
+  const prompt = await readFile(agentTargetPath, "utf8");
 
   assert.equal(
     prompt,
@@ -136,11 +168,10 @@ test("OpenAI agent prompt stays aligned with the shared context lifecycle", asyn
     })
   );
   assert.match(prompt, /allow_implicit_invocation: true/);
-  assert.match(prompt, /already exists for the same task, read it first/);
-  assert.match(prompt, /Use exactly these frontmatter fields:/);
-  assert.match(prompt, /version: 1/);
-  assert.match(prompt, /status` \(`clarifying` \| `ready` \| `executing`\)/);
-  assert.match(prompt, /Use exactly these body sections in this order:/);
-  assert.match(prompt, /What Socrates Knows/);
-  assert.match(prompt, /standard generated shape, not arbitrary YAML/);
+  assert.match(prompt, /artifact-recovery\.md/);
+  assert.match(prompt, /protected-surfaces\.md/);
+  assert.match(prompt, /context-file\.md/);
+  assert.match(prompt, /verify-repair\.md/);
+  assert.match(prompt, /SOCRATES_CONTEXT\.md/);
+  assert.match(prompt, /Do not create hidden JSON/);
 });

@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_VERSION = "v0.2.2";
+const DEFAULT_VERSION = "v0.3.0";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];
@@ -17,12 +17,22 @@ const STOP_MATCH_ALL = "";
 const CODEX_HOOK_STATUS = "Loading Socrates shared context";
 const CODEX_STOP_HOOK_STATUS = "Checking Socrates clarification state";
 
+function buildRelativeAssetMap(baseDir, names) {
+  return Object.fromEntries(
+    names.map((name) => [name, `${baseDir}/${name}`])
+  );
+}
+
 const ASSETS = {
+  skillLayout: "reference/skill-layout.json",
   codexSkill: ".agents/skills/socrates/SKILL.md",
   codexAgent: ".agents/skills/socrates/agents/openai.yaml",
+  codexReferencesDir: ".agents/skills/socrates/references",
   codexHookScript: ".codex/hooks/session_start_socrates_context.mjs",
   codexStopHookScript: ".codex/hooks/stop_socrates_clarifying.mjs",
   claudeSkill: ".claude/skills/socrates/SKILL.md",
+  claudeReferencesDir: ".claude/skills/socrates/references",
+  claudeAgentsDir: ".claude/agents",
   claudeHookScript: ".claude/hooks/session_start_socrates_context.mjs",
   claudeStopHookScript: ".claude/hooks/stop_socrates_clarifying.mjs",
   hookUtils: "reference/hook-utils.mjs",
@@ -158,16 +168,17 @@ export async function installSocrates(rawOptions = {}) {
 
   const summary = [];
   const assetLoader = createAssetLoader(options);
+  const skillLayout = await loadSkillLayout(assetLoader);
   const platforms = resolvePlatforms(options.platform);
 
   for (const platform of platforms) {
     if (platform === "codex") {
-      summary.push(...(await installCodex(options, assetLoader)));
+      summary.push(...(await installCodex(options, assetLoader, skillLayout)));
       continue;
     }
 
     if (platform === "claude") {
-      summary.push(...(await installClaude(options, assetLoader)));
+      summary.push(...(await installClaude(options, assetLoader, skillLayout)));
     }
   }
 
@@ -183,16 +194,18 @@ export async function uninstallSocrates(rawOptions = {}) {
   validateArgs(options);
 
   const summary = [];
+  const assetLoader = createAssetLoader(options);
+  const skillLayout = await loadSkillLayout(assetLoader);
   const platforms = resolvePlatforms(options.platform);
 
   for (const platform of platforms) {
     if (platform === "codex") {
-      summary.push(...(await uninstallCodex(options)));
+      summary.push(...(await uninstallCodex(options, skillLayout)));
       continue;
     }
 
     if (platform === "claude") {
-      summary.push(...(await uninstallClaude(options)));
+      summary.push(...(await uninstallClaude(options, skillLayout)));
     }
   }
 
@@ -245,23 +258,22 @@ function createAssetLoader(options) {
   };
 }
 
-async function installCodex(options, loadAsset) {
+async function installCodex(options, loadAsset, skillLayout) {
   const {
     repoInstall,
     skillPath,
     agentPath,
+    referencePaths,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
     stopHookScriptPath,
     hooksConfigPath,
-  } = getCodexTargets(options);
-
-  await writeTextFile(skillPath, await loadAsset(ASSETS.codexSkill));
-  await writeTextFile(agentPath, await loadAsset(ASSETS.codexAgent));
-  await writeTextFile(hookScriptPath, await loadAsset(ASSETS.codexHookScript));
-  await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
-  await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
+  } = getCodexTargets(options, skillLayout);
+  const referenceAssets = buildRelativeAssetMap(
+    ASSETS.codexReferencesDir,
+    skillLayout.skillReferences
+  );
 
   const hookConfig = await readJsonFileOrDefault(hooksConfigPath, {});
   let merged = mergeSessionStartHookDocument(hookConfig, {
@@ -276,10 +288,6 @@ async function installCodex(options, loadAsset) {
   });
 
   if (options.features.includes("stop-hook")) {
-    await writeTextFile(
-      stopHookScriptPath,
-      await loadAsset(ASSETS.codexStopHookScript)
-    );
     merged = mergeStopHookDocument(merged, {
       matcher: STOP_MATCH_ALL,
       handler: {
@@ -292,11 +300,31 @@ async function installCodex(options, loadAsset) {
     });
   }
 
+  await writeTextFile(skillPath, await loadAsset(ASSETS.codexSkill));
+  await writeTextFile(agentPath, await loadAsset(ASSETS.codexAgent));
+  for (const name of skillLayout.skillReferences) {
+    await writeTextFile(
+      referencePaths[name],
+      await loadAsset(referenceAssets[name])
+    );
+  }
+  await writeTextFile(hookScriptPath, await loadAsset(ASSETS.codexHookScript));
+  await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
+  await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
+
+  if (options.features.includes("stop-hook")) {
+    await writeTextFile(
+      stopHookScriptPath,
+      await loadAsset(ASSETS.codexStopHookScript)
+    );
+  }
+
   await writeJsonFile(hooksConfigPath, merged);
 
   return [
     skillPath,
     agentPath,
+    ...Object.values(referencePaths),
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -305,25 +333,27 @@ async function installCodex(options, loadAsset) {
   ];
 }
 
-async function installClaude(options, loadAsset) {
+async function installClaude(options, loadAsset, skillLayout) {
   const {
     repoInstall,
     skillPath,
+    referencePaths,
+    agentPaths,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
     stopHookScriptPath,
     settingsPath,
   } =
-    getClaudeTargets(options);
-
-  await writeTextFile(skillPath, await loadAsset(ASSETS.claudeSkill));
-  await writeTextFile(
-    hookScriptPath,
-    await loadAsset(ASSETS.claudeHookScript)
+    getClaudeTargets(options, skillLayout);
+  const referenceAssets = buildRelativeAssetMap(
+    ASSETS.claudeReferencesDir,
+    skillLayout.skillReferences
   );
-  await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
-  await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
+  const claudeAgentAssets = buildRelativeAssetMap(
+    ASSETS.claudeAgentsDir,
+    skillLayout.claudeAgents
+  );
 
   const settings = await readJsonFileOrDefault(settingsPath, {});
   let merged = mergeSessionStartHookDocument(settings, {
@@ -337,10 +367,6 @@ async function installClaude(options, loadAsset) {
   });
 
   if (options.features.includes("stop-hook")) {
-    await writeTextFile(
-      stopHookScriptPath,
-      await loadAsset(ASSETS.claudeStopHookScript)
-    );
     merged = mergeStopHookDocument(merged, {
       matcher: STOP_MATCH_ALL,
       handler: {
@@ -352,10 +378,39 @@ async function installClaude(options, loadAsset) {
     });
   }
 
+  await writeTextFile(skillPath, await loadAsset(ASSETS.claudeSkill));
+  for (const name of skillLayout.skillReferences) {
+    await writeTextFile(
+      referencePaths[name],
+      await loadAsset(referenceAssets[name])
+    );
+  }
+  for (const name of skillLayout.claudeAgents) {
+    await writeTextFile(
+      agentPaths[name],
+      await loadAsset(claudeAgentAssets[name])
+    );
+  }
+  await writeTextFile(
+    hookScriptPath,
+    await loadAsset(ASSETS.claudeHookScript)
+  );
+  await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
+  await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
+
+  if (options.features.includes("stop-hook")) {
+    await writeTextFile(
+      stopHookScriptPath,
+      await loadAsset(ASSETS.claudeStopHookScript)
+    );
+  }
+
   await writeJsonFile(settingsPath, merged);
 
   return [
     skillPath,
+    ...Object.values(referencePaths),
+    ...Object.values(agentPaths),
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -364,23 +419,27 @@ async function installClaude(options, loadAsset) {
   ];
 }
 
-async function uninstallCodex(options) {
+async function uninstallCodex(options, skillLayout) {
   const {
     repoInstall,
     skillPath,
     agentPath,
+    referencePaths,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
     stopHookScriptPath,
     hooksConfigPath,
-  } = getCodexTargets(options);
+  } = getCodexTargets(options, skillLayout);
 
   const removeOptionalOnly = options.features.length > 0;
 
   if (!removeOptionalOnly) {
     await deleteFile(skillPath);
     await deleteFile(agentPath);
+    for (const target of Object.values(referencePaths)) {
+      await deleteFile(target);
+    }
     await deleteFile(hookScriptPath);
     await deleteFile(hookUtilsPath);
     await deleteFile(hookContextDocPath);
@@ -422,6 +481,7 @@ async function uninstallCodex(options) {
   return [
     skillPath,
     agentPath,
+    ...Object.values(referencePaths),
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -430,22 +490,30 @@ async function uninstallCodex(options) {
   ];
 }
 
-async function uninstallClaude(options) {
+async function uninstallClaude(options, skillLayout) {
   const {
     repoInstall,
     skillPath,
+    referencePaths,
+    agentPaths,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
     stopHookScriptPath,
     settingsPath,
   } =
-    getClaudeTargets(options);
+    getClaudeTargets(options, skillLayout);
 
   const removeOptionalOnly = options.features.length > 0;
 
   if (!removeOptionalOnly) {
     await deleteFile(skillPath);
+    for (const target of Object.values(referencePaths)) {
+      await deleteFile(target);
+    }
+    for (const target of Object.values(agentPaths)) {
+      await deleteFile(target);
+    }
     await deleteFile(hookScriptPath);
     await deleteFile(hookUtilsPath);
     await deleteFile(hookContextDocPath);
@@ -484,6 +552,8 @@ async function uninstallClaude(options) {
 
   return [
     skillPath,
+    ...Object.values(referencePaths),
+    ...Object.values(agentPaths),
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -522,21 +592,24 @@ export function mergeCodexHooksFeature(toml) {
   return ensureTrailingNewline(next);
 }
 
-function getCodexTargets(options) {
+function getCodexTargets(options, skillLayout) {
   const root =
     options.scope === "repo"
       ? path.resolve(options.targetRepo)
       : path.join(options.homeDir, ".codex");
   const repoInstall = options.scope === "repo";
+  const skillDir = repoInstall
+    ? path.join(root, ".agents", "skills", "socrates")
+    : path.join(root, "skills", "socrates");
 
   return {
     repoInstall,
-    skillPath: repoInstall
-      ? path.join(root, ".agents", "skills", "socrates", "SKILL.md")
-      : path.join(root, "skills", "socrates", "SKILL.md"),
-    agentPath: repoInstall
-      ? path.join(root, ".agents", "skills", "socrates", "agents", "openai.yaml")
-      : path.join(root, "skills", "socrates", "agents", "openai.yaml"),
+    skillPath: path.join(skillDir, "SKILL.md"),
+    agentPath: path.join(skillDir, "agents", "openai.yaml"),
+    referencePaths: buildTargetPathMap(
+      path.join(skillDir, "references"),
+      skillLayout.skillReferences
+    ),
     hookScriptPath: repoInstall
       ? path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs")
       : path.join(root, "hooks", "session_start_socrates_context.mjs"),
@@ -555,18 +628,27 @@ function getCodexTargets(options) {
   };
 }
 
-function getClaudeTargets(options) {
+function getClaudeTargets(options, skillLayout) {
   const root =
     options.scope === "repo"
       ? path.resolve(options.targetRepo)
       : path.join(options.homeDir, ".claude");
   const repoInstall = options.scope === "repo";
+  const skillDir = repoInstall
+    ? path.join(root, ".claude", "skills", "socrates")
+    : path.join(root, "skills", "socrates");
+  const agentDir = repoInstall
+    ? path.join(root, ".claude", "agents")
+    : path.join(root, "agents");
 
   return {
     repoInstall,
-    skillPath: repoInstall
-      ? path.join(root, ".claude", "skills", "socrates", "SKILL.md")
-      : path.join(root, "skills", "socrates", "SKILL.md"),
+    skillPath: path.join(skillDir, "SKILL.md"),
+    referencePaths: buildTargetPathMap(
+      path.join(skillDir, "references"),
+      skillLayout.skillReferences
+    ),
+    agentPaths: buildTargetPathMap(agentDir, skillLayout.claudeAgents),
     hookScriptPath: repoInstall
       ? path.join(root, ".claude", "hooks", "session_start_socrates_context.mjs")
       : path.join(root, "hooks", "session_start_socrates_context.mjs"),
@@ -582,6 +664,29 @@ function getClaudeTargets(options) {
     settingsPath: repoInstall
       ? path.join(root, ".claude", "settings.json")
       : path.join(root, "settings.json"),
+  };
+}
+
+function buildTargetPathMap(baseDir, names) {
+  return Object.fromEntries(
+    names.map((name) => [name, path.join(baseDir, name)])
+  );
+}
+
+async function loadSkillLayout(loadAsset) {
+  const parsed = JSON.parse(await loadAsset(ASSETS.skillLayout));
+
+  if (
+    !isPlainObject(parsed) ||
+    !Array.isArray(parsed.skillReferences) ||
+    !Array.isArray(parsed.claudeAgents)
+  ) {
+    throw new Error("reference/skill-layout.json must define skillReferences and claudeAgents arrays");
+  }
+
+  return {
+    skillReferences: [...parsed.skillReferences],
+    claudeAgents: [...parsed.claudeAgents],
   };
 }
 

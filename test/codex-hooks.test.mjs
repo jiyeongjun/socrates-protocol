@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,6 +49,45 @@ function runHook(payload) {
   });
 }
 
+function runIsolatedHookWithoutDependencies(sourceHookPath) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const root = await mkdtemp(path.join(tmpdir(), "socrates-codex-hook-missing-deps-"));
+      const isolatedHookPath = path.join(root, path.basename(sourceHookPath));
+      await copyFile(sourceHookPath, isolatedHookPath);
+
+      const child = spawn(process.execPath, [isolatedHookPath], {
+        cwd: root,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      child.stdout.setEncoding("utf8");
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk;
+      });
+
+      child.stderr.setEncoding("utf8");
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk;
+      });
+
+      child.on("error", reject);
+      child.on("close", (code) => {
+        resolve({
+          code,
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+        });
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 test("session-start hook emits no output when no context doc exists", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-none-"));
 
@@ -59,6 +98,14 @@ test("session-start hook emits no output when no context doc exists", async () =
   });
 
   assert.equal(output, "");
+});
+
+test("session-start hook fails silent when bundled dependencies are missing", async () => {
+  const result = await runIsolatedHookWithoutDependencies(hookPath);
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, "");
+  assert.equal(result.stderr, "");
 });
 
 test("session-start hook injects context when a Socrates doc exists above cwd", async () => {
