@@ -76,6 +76,10 @@ flowchart TB
     G --> I
     H --> I
     M --> I
+
+    style T fill:#ffffff,stroke:#d1d5db,stroke-width:1px,color:#111827
+    style R fill:#ffffff,stroke:#d1d5db,stroke-width:1px,color:#111827
+    style X fill:#ffffff,stroke:#d1d5db,stroke-width:1px,color:#111827
 ```
 
 In short:
