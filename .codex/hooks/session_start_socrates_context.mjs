@@ -1,16 +1,19 @@
 #!/usr/bin/env node
 
 import { access, readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
 const DOC_FILENAME = "SOCRATES_CONTEXT.md";
-const HANDLED_SOURCES = new Set(["startup", "resume"]);
+const HANDLED_SOURCES = new Set(["startup", "resume", "clear", "compact"]);
 let analyzeContextDoc;
+let CURRENT_VERSION;
+let getContextDocRepairPlan;
 let findNearestContextDoc;
 let parseJson;
 let readStdin;
 
 try {
-  ({ analyzeContextDoc } = await loadModule(
+  ({ analyzeContextDoc, CURRENT_VERSION, getContextDocRepairPlan } = await loadModule(
     "./_socrates_context_doc.mjs",
     "../../reference/context-doc.mjs"
   ));
@@ -41,11 +44,23 @@ async function main() {
   }
 
   const markdown = await readFile(docPath, "utf8");
-  if (!looksLikeSocratesContext(markdown)) {
+  const analysis = analyzeContextDoc(markdown);
+  const repairPlan = getContextDocRepairPlan(markdown);
+
+  if (
+    analysis.ok !== true &&
+    repairPlan?.reason !== "legacy_version" &&
+    !looksLikeMalformedSocratesContext(markdown, repairPlan)
+  ) {
     return;
   }
 
-  const additionalContext = buildAdditionalContext(docPath);
+  const additionalContext =
+    analysis.ok === true
+      ? buildAdditionalContext(docPath)
+      : repairPlan?.reason === "legacy_version"
+        ? await buildLegacyAdditionalContext(docPath, repairPlan)
+      : await buildRepairAdditionalContext(docPath, repairPlan);
   // Codex SessionStart hooks must emit hookSpecificOutput JSON on stdout.
   process.stdout.write(
     `${JSON.stringify({
@@ -57,18 +72,90 @@ async function main() {
   );
 }
 
-function looksLikeSocratesContext(markdown) {
-  return analyzeContextDoc(markdown).ok === true;
-}
-
 function buildAdditionalContext(docPath) {
   return [
     `Socrates shared context is active at ${docPath}.`,
     `Read ${DOC_FILENAME} before continuing and treat its frontmatter as the canonical persisted state.`,
-    "Continue from its task, knowns, unknowns, next_question, decisions, and status instead of creating another persisted context file.",
-    "If unresolved unknowns remain, ask the next load-bearing question before implementation.",
+    "Continue from its task, knowns, unknowns, next_question, clarifying_phase, decisions, and status instead of creating another persisted context file.",
+    "If status is clarifying and clarifying_phase is needs_question, ask the next load-bearing question and flip clarifying_phase to awaiting_user_answer before ending the turn.",
+    "If status is clarifying and clarifying_phase is awaiting_user_answer, wait for the user instead of moving to implementation.",
     "Delete the file on successful completion; if the task stops incomplete, ask whether to keep or delete it.",
   ].join(" ");
+}
+
+async function buildLegacyAdditionalContext(docPath, repairPlan) {
+  const doctorCommand = await buildHelperCommand("doctor", docPath);
+  const repairCommand =
+    repairPlan?.action === "repair"
+      ? await buildHelperCommand("repair", docPath)
+      : null;
+
+  return [
+    `Socrates found a legacy version 1 shared context file at ${docPath}.`,
+    `Do not treat ${DOC_FILENAME} as canonical runtime state until it is normalized to version ${CURRENT_VERSION} or deleted.`,
+    "Ask whether to normalize the legacy file to the canonical version 2 format before continuing.",
+    doctorCommand
+      ? `If the user wants a diagnosis first, suggest: ${doctorCommand}.`
+      : "If the user wants a diagnosis first, suggest the local Socrates context doctor command if it is available.",
+    repairCommand
+      ? `If the user wants automatic normalization, suggest: ${repairCommand}.`
+      : "If the user wants automatic normalization, suggest the local Socrates context repair command if it is available.",
+    "If the user no longer needs that legacy file, suggest deleting it and continuing with a fresh version 2 context instead.",
+  ].join(" ");
+}
+
+async function buildRepairAdditionalContext(docPath, repairPlan) {
+  const doctorCommand = await buildHelperCommand("doctor", docPath);
+  const repairCommand =
+    repairPlan?.action === "repair"
+      ? await buildHelperCommand("repair", docPath)
+      : null;
+
+  return [
+    `Socrates found a malformed shared context file at ${docPath}.`,
+    "Do not treat this file as canonical persisted state until it is normalized.",
+    "Ask whether to normalize SOCRATES_CONTEXT.md to the canonical version 2 format before continuing.",
+    doctorCommand
+      ? `If the user wants a diagnosis first, suggest: ${doctorCommand}.`
+      : "If the user wants a diagnosis first, suggest the local Socrates context doctor command if it is available.",
+    repairCommand
+      ? `If the user wants automatic normalization, suggest: ${repairCommand}.`
+      : "If the user wants automatic normalization, explain that this file is not auto-repairable and must be rewritten or replaced manually after diagnosis.",
+  ].join(" ");
+}
+
+function looksLikeMalformedSocratesContext(markdown, repairPlan) {
+  const normalized = markdown.replace(/\r\n/g, "\n").trimStart();
+  return (
+    repairPlan?.action === "repair" ||
+    normalized.startsWith("## Task\n") ||
+    normalized === "## Task" ||
+    normalized.startsWith("---\n") ||
+    /(?:^|\n)# Socrates Context(?:\n|$)/.test(normalized)
+  );
+}
+
+async function buildHelperCommand(command, docPath) {
+  const helperPath = await findHelperScriptPath();
+  if (!helperPath) {
+    return null;
+  }
+
+  return `node ${JSON.stringify(helperPath)} ${command} --file ${JSON.stringify(docPath)}`;
+}
+
+async function findHelperScriptPath() {
+  for (const candidate of [
+    "./socrates_context_doc_helper.mjs",
+    "../../scripts/context-doc.mjs",
+  ]) {
+    const url = new URL(candidate, import.meta.url);
+    if (await fileExists(url)) {
+      return fileURLToPath(url);
+    }
+  }
+
+  return null;
 }
 
 async function loadModule(localSpecifier, repoSpecifier) {

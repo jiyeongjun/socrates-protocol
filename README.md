@@ -113,26 +113,27 @@ Use it as a risk-reduction aid, not as a guarantee that every load-bearing ambig
 
 ## Quick Install
 
-These examples are pinned to the current tagged version: `v0.3.0`.
+These examples are pinned to the current tagged version: `v0.3.1`.
+The current package version is `0.3.1`.
 
 ### Codex
 
 Recommended quick install:
 
 ```bash
-VERSION=v0.3.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION" --enable-codex-hooks
+VERSION=v0.3.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION" --enable-codex-hooks
 ```
 
 Want the Stop hook from the start:
 
 ```bash
-VERSION=v0.3.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
+VERSION=v0.3.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
 ```
 
 Codex hook activation:
 
 - the recommended install command above already enables `codex_hooks = true` in `~/.codex/config.toml`
-- if you installed earlier without `--enable-codex-hooks`, the skill still works, but the `SessionStart` and optional `Stop` hooks do not run until you enable that feature flag
+- if you installed earlier without `--enable-codex-hooks`, the skill still works, but the `SessionStart` sources (`startup`, `resume`, `clear`, `compact`) and optional `Stop` hook do not run until you enable that feature flag
 - you can fix an existing install by rerunning the installer with `--enable-codex-hooks`, or by running this one-time fallback command:
 
 ```bash
@@ -171,13 +172,13 @@ Update in place:
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.1/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.3.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION" --enable-codex-hooks
+VERSION=v0.3.1 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION" --enable-codex-hooks
 ```
 
 Explicit invocation example:
@@ -201,6 +202,7 @@ Optional Codex hook:
 
 - this repo also ships a conservative repo-local hook at `.codex/hooks.json`
 - it only runs on `SessionStart` and only adds context when `SOCRATES_CONTEXT.md` already exists
+- it restores shared context on `startup`, `resume`, `clear`, and `compact`, so long-running work can survive compaction without inventing another state file
 - it helps resumed Socrates tasks recover their shared context without changing fast-path tasks
 - Codex hooks are configured by `hooks.json` layers, not by per-skill activation, so this hook file is loaded whenever the repo hook layer is active
 - the included hook script is therefore intentionally a no-op unless it finds `SOCRATES_CONTEXT.md`
@@ -213,19 +215,22 @@ Optional Stop hook:
 - the default install does not add a `Stop` hook
 - install it separately only if you want Socrates to keep pushing one more clarification turn while `SOCRATES_CONTEXT.md` remains in `clarifying`
 - this hook is stronger than `SessionStart`: it can continue a turn instead of just restoring context
-- because hooks are config-scoped rather than skill-scoped, it may still affect non-Socrates work in the same repo if the current assistant message overlaps enough with the clarifying task
-- the included implementation is conservative: it requires a canonical `SOCRATES_CONTEXT.md`, `status: "clarifying"`, a pending `next_question`, and relevant overlap with the last assistant message
+- because hooks are config-scoped rather than skill-scoped, it may still affect non-Socrates work in the same repo if a stale clarifying file is left behind
+- the included implementation is strict and state-driven: it requires a canonical `SOCRATES_CONTEXT.md`, `status: "clarifying"`, `clarifying_phase: "needs_question"`, and a pending `next_question`
+- it does not inspect the assistant message to decide whether the question was phrased “well enough”
+- it only stops intervening after the shared context file is rewritten out of `clarifying_phase: "needs_question"`; in practice that means flipping it to `awaiting_user_answer` after asking the question
+- if a stale clarifying file remains in the repo, the Stop hook will keep intervening until you update, replace, or delete `SOCRATES_CONTEXT.md`
 
 Install the optional Codex Stop hook:
 
 ```bash
-VERSION=v0.3.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
+VERSION=v0.3.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
 ```
 
 Remove only the optional Codex Stop hook:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.1/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
 ```
 
 ### Claude Code
@@ -233,13 +238,13 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.0
 Recommended quick install:
 
 ```bash
-VERSION=v0.3.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
+VERSION=v0.3.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
 ```
 
 Want the Stop hook from the start:
 
 ```bash
-VERSION=v0.3.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
+VERSION=v0.3.1 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
 ```
 
 Claude hook behavior:
@@ -256,13 +261,13 @@ Update in place:
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.1/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.3.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.3.1 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Explicit invocation example:
@@ -285,6 +290,7 @@ Claude setup notes:
 - current repo version supports explicit `/socrates` use and auto-load when relevant
 - this repo also ships a conservative project hook at `.claude/settings.json`
 - it only runs on `SessionStart` and only adds context when `SOCRATES_CONTEXT.md` already exists
+- it restores shared context on `startup`, `resume`, `clear`, and `compact`, so long-running work can survive compaction without inventing another state file
 - Claude hooks are configured by settings layers, not by per-skill activation, so the included hook is intentionally a no-op unless it finds the shared context doc
 - the search walks upward only until the nearest git root, so a nested repo does not accidentally adopt a parent repo's `SOCRATES_CONTEXT.md`
 - the quick-install command above installs the Socrates router skill, mirrored `references/` files, Claude-only subagents, and the Socrates `SessionStart` hook, merging into any existing `.claude/settings.json`
@@ -294,8 +300,11 @@ Optional Claude Stop hook:
 - the default install does not add a `Stop` hook
 - install it separately only if you want Socrates to keep pushing one more clarification turn while `SOCRATES_CONTEXT.md` remains in `clarifying`
 - this hook is stronger than `SessionStart`: it can continue a turn instead of just restoring context
-- because hooks are config-scoped rather than skill-scoped, it may still affect non-Socrates work in the same project when the last assistant message overlaps with the clarifying task
-- the included implementation is conservative: it requires a canonical `SOCRATES_CONTEXT.md`, `status: "clarifying"`, a pending `next_question`, and relevant overlap with the last assistant message
+- because hooks are config-scoped rather than skill-scoped, it may still affect non-Socrates work in the same project if a stale clarifying file is left behind
+- the included implementation is strict and state-driven: it requires a canonical `SOCRATES_CONTEXT.md`, `status: "clarifying"`, `clarifying_phase: "needs_question"`, and a pending `next_question`
+- it does not inspect the assistant message to decide whether the question was phrased “well enough”
+- it only stops intervening after the shared context file is rewritten out of `clarifying_phase: "needs_question"`; in practice that means flipping it to `awaiting_user_answer` after asking the question
+- if a stale clarifying file remains in the project, the Stop hook will keep intervening until you update, replace, or delete `SOCRATES_CONTEXT.md`
 
 Install the optional Claude Stop hook:
 
@@ -304,20 +313,23 @@ Install the optional Claude Stop hook:
 Remove only the optional Claude Stop hook:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.3.1/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
 ```
 
 ## Versioning
 
 Socrates Protocol uses SemVer-style tags.
-The current tagged version is `v0.3.0`.
+The current tagged version is `v0.3.1`.
+The current package version is `0.3.1`.
 
-- the quick-install examples pin to the same tag shown above for reproducible installs
+- the quick-install examples pin to the current tag for reproducible installs
+- `npm run verify:release-assets` checks the current worktree by default
+- before publishing a new tag, run `npm run verify:release-assets -- --ref v0.3.1` to confirm every installer asset exists in that release ref
 - treat `0.x` releases as unstable contracts that may still change between minor versions
 
 ### Context File Format
 
-`SOCRATES_CONTEXT.md` currently uses `version: 1` in YAML frontmatter.
+`SOCRATES_CONTEXT.md` currently uses `version: 2` in YAML frontmatter.
 
 - while the project is still in `0.x`, the context file format is not yet a stable compatibility contract
 - if the format changes incompatibly, increment the frontmatter version instead of silently reinterpreting old files
@@ -333,13 +345,22 @@ Socrates only proposes `SOCRATES_CONTEXT.md` when continued context across turns
 - The file is the only persisted state. There is no hidden JSON, archive log, or task registry behind it.
 - The YAML frontmatter is the canonical machine-readable state.
 - The Markdown body is a rendered view of that state and may be regenerated on the next update.
+- `clarifying_phase` makes the clarification state explicit instead of inferring it from the last assistant message.
+- When `clarifying_phase` is `needs_question`, ask the pending question and rewrite the file to `awaiting_user_answer` before ending the turn.
+- When `clarifying_phase` is `awaiting_user_answer`, wait for the user instead of implementing.
+- If you enable the optional Stop hook, it enforces that same state directly and does not try to recover “already asked” status from free-form assistant text.
 - Socrates expects the standard generated frontmatter shape, not arbitrary YAML forms.
 - Socrates rewrites the whole file on each update using YAML frontmatter plus fixed Markdown sections.
 - If you decline once, Socrates explains the tradeoff briefly and asks once more.
 - If you decline twice, Socrates continues without persisted context and warns that cross-turn context is not guaranteed.
 - If `SOCRATES_CONTEXT.md` already exists for the same task, Socrates reads it first and keeps updating it.
 - If `SOCRATES_CONTEXT.md` already exists for a different task, Socrates asks whether to replace it or keep using the current file.
-- If the file is malformed or the canonical body sections drift out of sync with frontmatter, Socrates asks whether to normalize it back to the standard format.
+- `version: 2` is the only canonical runtime format. Legacy `version: 1` files must be normalized or deleted before hooks trust them again.
+- If the file is malformed or the canonical body sections drift out of sync with frontmatter, Socrates asks whether to normalize it to the canonical version 2 format.
+- When the `SessionStart` hook sees a malformed persisted context, it injects repair guidance and points to the local Socrates context helper instead of silently treating the file as valid state.
+- Automatic normalization is frontmatter-driven. Body-only or partially corrupted files may require manual rewrite after diagnosis.
+- To inspect or normalize an existing file locally, run `node scripts/context-doc.mjs doctor --cwd /path/to/workspace` or `node scripts/context-doc.mjs repair --cwd /path/to/workspace`.
+- After install, the same helper is available as `~/.codex/hooks/socrates_context_doc_helper.mjs`, `~/.claude/hooks/socrates_context_doc_helper.mjs`, or the repo-local hook path under `.codex/hooks/` or `.claude/hooks/`.
 - When the task successfully ends, Socrates automatically deletes `SOCRATES_CONTEXT.md`.
 - If the task stops incomplete or blocked, Socrates asks whether to keep or delete it.
 - This is a shared current-context file, not a task manager.
@@ -349,7 +370,7 @@ The file shape is fixed:
 
 ```md
 ---
-version: 1
+version: 2
 status: "clarifying"
 task: "..."
 knowns:
@@ -357,6 +378,7 @@ knowns:
 unknowns:
   - "..."
 next_question: "..."
+clarifying_phase: "needs_question"
 decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
@@ -383,6 +405,7 @@ clarifying
 ```
 
 `status` should be one of `clarifying`, `ready`, or `executing`.
+`clarifying_phase` should be `needs_question` or `awaiting_user_answer` while `status` is `clarifying`.
 Only move to `executing` after the file has reached `ready` with no unresolved `unknowns`.
 
 ## Representative Interactions

@@ -1,15 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  CLARIFYING_PHASES,
   ContextDocError,
   FIXED_HEADINGS,
+  CURRENT_VERSION,
+  LEGACY_VERSION,
   analyzeContextDoc,
   createState,
+  getClarifyingQuestionGate,
+  getContextDocRepairPlan,
+  markQuestionAsked,
   parseContextDoc,
   renderContextDoc,
+  startExecution,
+  updateForClarification,
 } from "../reference/context-doc.mjs";
 
-test("renderContextDoc renders stable YAML frontmatter and fixed headings", () => {
+test("renderContextDoc renders version 2 frontmatter with clarifying_phase", () => {
   const state = createState({
     task: "Design account deletion API",
     knowns: ["Production SaaS", "GDPR-compliant"],
@@ -24,7 +32,7 @@ test("renderContextDoc renders stable YAML frontmatter and fixed headings", () =
   assert.equal(
     output,
     `---
-version: 1
+version: 2
 status: "clarifying"
 task: "Design account deletion API"
 knowns:
@@ -34,6 +42,7 @@ unknowns:
   - "Deletion semantics"
   - "Retention obligations"
 next_question: "Should deletion be hard delete, soft delete, or async delete with a grace period?"
+clarifying_phase: "needs_question"
 decisions:
   - "Keep one shared context file only when needed."
 updated_at: "2026-03-29T00:00:00.000Z"
@@ -64,7 +73,7 @@ clarifying
   );
 });
 
-test("parseContextDoc round-trips rendered output", () => {
+test("parseContextDoc round-trips rendered version 2 output", () => {
   const original = createState({
     status: "ready",
     task: "Clarify retry policy",
@@ -80,6 +89,48 @@ test("parseContextDoc round-trips rendered output", () => {
   assert.deepEqual(parsed.state, original);
 });
 
+test("parseContextDoc rejects legacy version 1 docs as non-canonical", () => {
+  const legacy = `---
+version: 1
+status: "clarifying"
+task: "Clarify retry policy"
+knowns:
+  - "Production service"
+unknowns:
+  - "Retry scope"
+next_question: "Which failures should remain retryable?"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Clarify retry policy
+
+## What Socrates Knows
+- Production service
+
+## What Socrates Still Needs
+- Retry scope
+
+## Next Question
+Which failures should remain retryable?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`;
+
+  assert.throws(
+    () => parseContextDoc(legacy),
+    (error) =>
+      error instanceof ContextDocError && error.code === "invalid_version"
+  );
+});
+
 test("renderContextDoc handles empty lists and null next_question", () => {
   const state = createState({
     status: "ready",
@@ -93,6 +144,7 @@ test("renderContextDoc handles empty lists and null next_question", () => {
 
   const output = renderContextDoc(state);
   assert.match(output, /unknowns: \[\]/);
+  assert.match(output, /clarifying_phase: null/);
   assert.match(output, /decisions: \[\]/);
   assert.match(output, /## Next Question\nNone\./);
   assert.match(output, /## Fixed Decisions\n- None\./);
@@ -110,8 +162,48 @@ test("validateState rejects invalid status", () => {
   );
 });
 
-test("analyzeContextDoc accepts rendered docs with fixed headings", () => {
-  const rendered = renderContextDoc(
+test("validateState rejects clarifying states without a phase", () => {
+  assert.throws(
+    () =>
+      parseContextDoc(`---
+version: 2
+status: "clarifying"
+task: "Broken"
+knowns: []
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Broken
+
+## What Socrates Knows
+- None.
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`),
+    (error) =>
+      error instanceof ContextDocError && error.code === "invalid_clarifying_phase"
+  );
+});
+
+test("analyzeContextDoc accepts rendered docs with fixed headings and trailing notes", () => {
+  const rendered = `${renderContextDoc(
     createState({
       task: "Inspect auth retry behavior",
       knowns: ["There is only one auth module."],
@@ -120,7 +212,7 @@ test("analyzeContextDoc accepts rendered docs with fixed headings", () => {
       decisions: [],
       updated_at: "2026-03-29T00:00:00.000Z",
     })
-  );
+  )}\n## Notes\n- user-added note\n`;
 
   const analysis = analyzeContextDoc(rendered);
   assert.equal(analysis.ok, true);
@@ -129,26 +221,7 @@ test("analyzeContextDoc accepts rendered docs with fixed headings", () => {
   }
 });
 
-test("analyzeContextDoc tolerates extra body notes while keeping frontmatter canonical", () => {
-  const rendered = renderContextDoc(
-    createState({
-      task: "Design delete flow",
-      knowns: ["Production system"],
-      unknowns: ["Retention obligations"],
-      next_question: "What retained data is legally required?",
-      decisions: [],
-      updated_at: "2026-03-29T00:00:00.000Z",
-    })
-  ).replace(
-    "## Status\nclarifying\n",
-    "## Status\nclarifying\n\n## Notes\n- user-added note\n"
-  );
-
-  const analysis = analyzeContextDoc(rendered);
-  assert.deepEqual(analysis.ok, true);
-});
-
-test("analyzeContextDoc rejects required section drift from canonical frontmatter", () => {
+test("analyzeContextDoc rejects required body drift from canonical frontmatter", () => {
   const rendered = renderContextDoc(
     createState({
       task: "Design delete flow",
@@ -165,19 +238,20 @@ test("analyzeContextDoc rejects required section drift from canonical frontmatte
   assert.equal(analysis.reason, "body_mismatch");
 });
 
-test("analyzeContextDoc reports malformed frontmatter", () => {
-  const malformed = `---
-version: 1
-status: clarifying
-task: "Broken"
----
+test("analyzeContextDoc accepts canonical docs without a trailing newline", () => {
+  const rendered = renderContextDoc(
+    createState({
+      task: "Trailing newline tolerance",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    })
+  ).slice(0, -1);
 
-# Socrates Context
-`;
-
-  const analysis = analyzeContextDoc(malformed);
-  assert.equal(analysis.ok, false);
-  assert.equal(analysis.reason, "invalid_string");
+  const analysis = analyzeContextDoc(rendered);
+  assert.equal(analysis.ok, true);
 });
 
 test("parseContextDoc accepts CRLF frontmatter delimiters", () => {
@@ -196,21 +270,115 @@ test("parseContextDoc accepts CRLF frontmatter delimiters", () => {
   assert.equal(parsed.state.task, "CRLF task");
 });
 
-test("createState rejects an empty task", () => {
+test("parseContextDoc rejects docs without a closing frontmatter delimiter", () => {
   assert.throws(
     () =>
-      createState({
-        task: "   ",
-      }),
+      parseContextDoc(`---
+version: 2
+status: "clarifying"
+task: "Broken"
+knowns: []
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+`),
     (error) =>
-      error instanceof ContextDocError && error.code === "invalid_task"
+      error instanceof ContextDocError && error.code === "missing_frontmatter_end"
+  );
+});
+
+test("parseContextDoc rejects invalid frontmatter lines", () => {
+  assert.throws(
+    () =>
+      parseContextDoc(`---
+version: 2
+status "clarifying"
+task: "Broken"
+knowns: []
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Broken
+
+## What Socrates Knows
+- None.
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`),
+    (error) =>
+      error instanceof ContextDocError && error.code === "invalid_frontmatter_line"
+  );
+});
+
+test("parseContextDoc rejects empty string entries in arrays", () => {
+  assert.throws(
+    () =>
+      parseContextDoc(`---
+version: 2
+status: "clarifying"
+task: "Broken"
+knowns:
+  - "Valid"
+  - ""
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Broken
+
+## What Socrates Knows
+- Valid
+- 
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`),
+    (error) =>
+      error instanceof ContextDocError && error.code === "invalid_knowns"
   );
 });
 
 test("render and parse support quoted strings and escaped newlines", () => {
   const state = createState({
     task: 'Clarify "quoted" retry policy',
-    knowns: ['Line one\nLine two', 'Backslash \\\\ path'],
+    knowns: ['Line one\nLine two', "Backslash \\\\ path"],
     unknowns: ['What does "safe" mean here?'],
     next_question: 'Should "safe" mean idempotent-only retries?\nAnswer with one rule.',
     decisions: ['Keep "quoted" values as-is.'],
@@ -222,18 +390,298 @@ test("render and parse support quoted strings and escaped newlines", () => {
   assert.deepEqual(parsed.state, state);
 });
 
-test("renderContextDoc handles long knowns lists", () => {
-  const knowns = Array.from({ length: 25 }, (_, index) => `Known fact ${index + 1}`);
-  const state = createState({
-    task: "Long-list task",
-    knowns,
-    unknowns: ["One remaining unknown"],
-    next_question: "What is the last missing decision?",
+test("getContextDocRepairPlan rebuilds the canonical body from valid frontmatter", () => {
+  const drifted = `---
+version: ${CURRENT_VERSION}
+status: "clarifying"
+task: "Design delete flow"
+knowns:
+  - "Production system"
+unknowns:
+  - "Retention obligations"
+next_question: "What retained data is legally required?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Different task
+
+## What Socrates Knows
+- Production system
+
+## What Socrates Still Needs
+- Retention obligations
+
+## Next Question
+What retained data is legally required?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`;
+
+  const plan = getContextDocRepairPlan(drifted);
+  assert.equal(plan.action, "repair");
+  assert.equal(plan.reason, "body_mismatch");
+  assert.equal(plan.source, "frontmatter");
+  assert.match(plan.markdown, /^---\nversion: 2\nstatus: "clarifying"/);
+  assert.match(plan.markdown, /clarifying_phase: "needs_question"/);
+  assert.match(plan.markdown, /## Task\nDesign delete flow/);
+});
+
+test("getContextDocRepairPlan marks canonical legacy docs as repairable", () => {
+  const legacy = `---
+version: 1
+status: "clarifying"
+task: "Clarify retry policy"
+knowns:
+  - "Production service"
+unknowns:
+  - "Retry scope"
+next_question: "Which failures should remain retryable?"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Clarify retry policy
+
+## What Socrates Knows
+- Production service
+
+## What Socrates Still Needs
+- Retry scope
+
+## Next Question
+Which failures should remain retryable?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`;
+
+  const plan = getContextDocRepairPlan(legacy);
+  assert.equal(plan.action, "repair");
+  assert.equal(plan.reason, "legacy_version");
+  assert.equal(plan.source, "frontmatter");
+  assert.match(plan.markdown, /^---\nversion: 2\nstatus: "clarifying"/);
+});
+
+test("getContextDocRepairPlan reports body-only docs as unrepairable", () => {
+  const bodyOnly = `## Task
+Clarify retry policy
+
+## What Socrates Knows
+- Production service
+
+## What Socrates Still Needs
+- Retry scope
+
+## Next Question
+Which failures should remain retryable?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`;
+
+  const plan = getContextDocRepairPlan(bodyOnly);
+  assert.equal(plan.action, "unrepairable");
+  assert.equal(plan.reason, "missing_frontmatter");
+});
+
+test("markQuestionAsked transitions clarifying work to awaiting_user_answer", () => {
+  const initial = createState({
+    task: "Clarify retry policy",
+    knowns: ["Production service"],
+    unknowns: ["Retry scope"],
+    next_question: "Which failures should remain retryable?",
     decisions: [],
     updated_at: "2026-03-29T00:00:00.000Z",
   });
 
-  const output = renderContextDoc(state);
-  assert.equal((output.match(/Known fact/g) ?? []).length, knowns.length * 2);
-  assert.match(output, /Known fact 25/);
+  const next = markQuestionAsked(initial, "2026-03-29T00:05:00.000Z");
+  assert.equal(next.clarifying_phase, "awaiting_user_answer");
+  assert.equal(getClarifyingQuestionGate(next).action, "allow");
+});
+
+test("updateForClarification resets clarifying work back to needs_question", () => {
+  const awaiting = markQuestionAsked(
+    createState({
+      task: "Clarify retry policy",
+      knowns: ["Production service"],
+      unknowns: ["Retry scope"],
+      next_question: "Which failures should remain retryable?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
+    "2026-03-29T00:05:00.000Z"
+  );
+
+  const next = updateForClarification(awaiting, {
+    knowns: ["Production service", "Retries must be idempotent"],
+    unknowns: ["Duplicate charge handling"],
+    next_question: "How should duplicate charges be prevented?",
+    updated_at: "2026-03-29T00:10:00.000Z",
+  });
+
+  assert.equal(next.status, "clarifying");
+  assert.equal(next.clarifying_phase, "needs_question");
+});
+
+test("updateForClarification becomes ready when no unknowns remain", () => {
+  const initial = createState({
+    task: "Design billing retry flow",
+    knowns: ["Production billing system"],
+    unknowns: ["Retry scope"],
+    next_question: "Which failures should remain retryable?",
+    decisions: [],
+    updated_at: "2026-03-29T00:00:00.000Z",
+  });
+
+  const next = updateForClarification(initial, {
+    knowns: [...initial.knowns, "Only network timeouts remain retryable"],
+    unknowns: [],
+    next_question: null,
+    decisions: ["Retry only on network timeouts with idempotency keys."],
+    updated_at: "2026-03-29T00:10:00.000Z",
+  });
+
+  assert.equal(next.status, "ready");
+  assert.equal(next.clarifying_phase, null);
+});
+
+test("markQuestionAsked rejects non-clarifying states", () => {
+  const ready = createState({
+    status: "ready",
+    task: "Clarified retry policy",
+    knowns: ["Only network timeouts remain retryable"],
+    unknowns: [],
+    next_question: null,
+    decisions: ["Retry only on network timeouts with idempotency keys."],
+    updated_at: "2026-03-29T00:00:00.000Z",
+  });
+
+  assert.throws(
+    () => markQuestionAsked(ready, "2026-03-29T00:05:00.000Z"),
+    (error) =>
+      error instanceof ContextDocError && error.code === "invalid_transition"
+  );
+});
+
+test("updateForClarification preserves awaiting_user_answer when only decisions change", () => {
+  const awaiting = markQuestionAsked(
+    createState({
+      task: "Clarify retry policy",
+      knowns: ["Production service"],
+      unknowns: ["Retry scope"],
+      next_question: "Which failures should remain retryable?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
+    "2026-03-29T00:05:00.000Z"
+  );
+
+  const next = updateForClarification(awaiting, {
+    decisions: ["Retry decisions must stay backward-compatible."],
+    updated_at: "2026-03-29T00:10:00.000Z",
+  });
+
+  assert.equal(next.status, "clarifying");
+  assert.equal(next.clarifying_phase, "awaiting_user_answer");
+  assert.equal(next.next_question, "Which failures should remain retryable?");
+});
+
+test("updateForClarification ignores explicit awaiting_user_answer when a new question is introduced", () => {
+  const awaiting = markQuestionAsked(
+    createState({
+      task: "Clarify retry policy",
+      knowns: ["Production service"],
+      unknowns: ["Retry scope"],
+      next_question: "Which failures should remain retryable?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
+    "2026-03-29T00:05:00.000Z"
+  );
+
+  const next = updateForClarification(awaiting, {
+    unknowns: ["Duplicate charge handling"],
+    next_question: "How should duplicate charges be prevented?",
+    clarifying_phase: "awaiting_user_answer",
+    updated_at: "2026-03-29T00:10:00.000Z",
+  });
+
+  assert.equal(next.status, "clarifying");
+  assert.equal(next.clarifying_phase, "needs_question");
+  assert.deepEqual(getClarifyingQuestionGate(next), {
+    action: "continue",
+    next_question: "How should duplicate charges be prevented?",
+  });
+});
+
+test("startExecution transitions ready work to executing", () => {
+  const ready = createState({
+    status: "ready",
+    task: "Clarified retry policy",
+    knowns: ["Only network timeouts remain retryable"],
+    unknowns: [],
+    next_question: null,
+    decisions: ["Retry only on network timeouts with idempotency keys."],
+    updated_at: "2026-03-29T00:00:00.000Z",
+  });
+
+  const next = startExecution(ready, "2026-03-29T00:05:00.000Z");
+  assert.equal(next.status, "executing");
+  assert.equal(next.clarifying_phase, null);
+  assert.equal(next.updated_at, "2026-03-29T00:05:00.000Z");
+});
+
+test("startExecution rejects non-ready states", () => {
+  const clarifying = createState({
+    task: "Clarify retry policy",
+    knowns: ["Production service"],
+    unknowns: ["Retry scope"],
+    next_question: "Which failures should remain retryable?",
+    decisions: [],
+    updated_at: "2026-03-29T00:00:00.000Z",
+  });
+
+  assert.throws(
+    () => startExecution(clarifying, "2026-03-29T00:05:00.000Z"),
+    (error) =>
+      error instanceof ContextDocError && error.code === "invalid_transition"
+  );
+});
+
+test("getClarifyingQuestionGate only blocks when a question still needs asking", () => {
+  const needsQuestion = createState({
+    task: "Clarify retry policy",
+    knowns: ["Production service"],
+    unknowns: ["Retry scope"],
+    next_question: "Which failures should remain retryable?",
+    decisions: [],
+    updated_at: "2026-03-29T00:00:00.000Z",
+  });
+
+  assert.deepEqual(CLARIFYING_PHASES, [
+    "needs_question",
+    "awaiting_user_answer",
+  ]);
+  assert.deepEqual(getClarifyingQuestionGate(needsQuestion), {
+    action: "continue",
+    next_question: "Which failures should remain retryable?",
+  });
 });

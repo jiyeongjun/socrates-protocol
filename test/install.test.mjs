@@ -10,6 +10,7 @@ import {
   mergeCodexHooksFeature,
   mergeSessionStartHookDocument,
   parseArgs,
+  removeLegacySessionStartHookDocuments,
   removeSessionStartHookDocument,
   uninstallSocrates,
 } from "../scripts/install.mjs";
@@ -26,7 +27,39 @@ async function writeJson(target, value) {
   await writeFile(target, JSON.stringify(value, null, 2), "utf8");
 }
 
+async function buildFetchAssetMap() {
+  return new Map([
+    ["reference/skill-layout.json", await readFile(path.join(repoRoot, "reference/skill-layout.json"), "utf8")],
+    [".agents/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/SKILL.md"), "utf8")],
+    [".agents/skills/socrates/agents/openai.yaml", await readFile(path.join(repoRoot, ".agents/skills/socrates/agents/openai.yaml"), "utf8")],
+    [".agents/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/artifact-recovery.md"), "utf8")],
+    [".agents/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/protected-surfaces.md"), "utf8")],
+    [".agents/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/clarification.md"), "utf8")],
+    [".agents/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/verify-repair.md"), "utf8")],
+    [".agents/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/context-file.md"), "utf8")],
+    [".claude/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/SKILL.md"), "utf8")],
+    [".claude/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/artifact-recovery.md"), "utf8")],
+    [".claude/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/protected-surfaces.md"), "utf8")],
+    [".claude/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/clarification.md"), "utf8")],
+    [".claude/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/verify-repair.md"), "utf8")],
+    [".claude/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/context-file.md"), "utf8")],
+    [".claude/agents/socrates-explore.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-explore.md"), "utf8")],
+    [".claude/agents/socrates-plan.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-plan.md"), "utf8")],
+    [".claude/agents/socrates-verify.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-verify.md"), "utf8")],
+    [".codex/hooks/session_start_socrates_context.mjs", await readFile(path.join(repoRoot, ".codex/hooks/session_start_socrates_context.mjs"), "utf8")],
+    [".codex/hooks/stop_socrates_clarifying.mjs", await readFile(path.join(repoRoot, ".codex/hooks/stop_socrates_clarifying.mjs"), "utf8")],
+    ["reference/hook-utils.mjs", await readFile(path.join(repoRoot, "reference/hook-utils.mjs"), "utf8")],
+    ["reference/context-doc.mjs", await readFile(path.join(repoRoot, "reference/context-doc.mjs"), "utf8")],
+    ["reference/context-doc-helper-core.mjs", await readFile(path.join(repoRoot, "reference/context-doc-helper-core.mjs"), "utf8")],
+    ["reference/context-doc-helper.mjs", await readFile(path.join(repoRoot, "reference/context-doc-helper.mjs"), "utf8")],
+    ["reference/stop-clarifying-core.mjs", await readFile(path.join(repoRoot, "reference/stop-clarifying-core.mjs"), "utf8")],
+  ]);
+}
+
 function buildContextDoc({
+  version = 2,
+  status = "clarifying",
+  clarifyingPhase = status === "clarifying" ? "needs_question" : null,
   task = "Clarify retry policy",
   knowns = ['  - "Production service"'],
   unknowns = ['  - "Retry scope"'],
@@ -36,17 +69,23 @@ function buildContextDoc({
     unknowns.length === 0 ? "unknowns: []" : `unknowns:\n${unknowns.join("\n")}`;
   const nextQuestionFrontmatter =
     nextQuestion === null ? "next_question: null" : `next_question: ${JSON.stringify(nextQuestion)}`;
+  const clarifyingPhaseFrontmatter =
+    version >= 2
+      ? clarifyingPhase === null
+        ? "clarifying_phase: null"
+        : `clarifying_phase: ${JSON.stringify(clarifyingPhase)}`
+      : null;
   const nextQuestionBody = nextQuestion ?? "None.";
 
   return `---
-version: 1
-status: "clarifying"
+version: ${version}
+status: ${JSON.stringify(status)}
 task: ${JSON.stringify(task)}
 knowns:
 ${knowns.join("\n")}
 ${unknownsFrontmatter}
 ${nextQuestionFrontmatter}
-decisions: []
+${clarifyingPhaseFrontmatter ? `${clarifyingPhaseFrontmatter}\n` : ""}decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
 
@@ -68,13 +107,77 @@ ${nextQuestionBody}
 - None.
 
 ## Status
-clarifying
+${status}
 `;
 }
 
 function runNodeScript(scriptPath, payload, cwd) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [scriptPath], {
+      cwd,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    child.on("error", reject);
+    child.on("close", (code) => {
+      resolve({
+        code,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+      });
+    });
+
+    child.stdin.end(`${JSON.stringify(payload)}\n`);
+  });
+}
+
+function runNodeCli(scriptPath, args, cwd) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [scriptPath, ...args], {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+    });
+
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    child.on("error", reject);
+    child.on("close", (code) => {
+      resolve({
+        code,
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+      });
+      });
+  });
+}
+
+function runShellHook(command, payload, cwd) {
+  return new Promise((resolve, reject) => {
+    const child = spawn("/bin/zsh", ["-lc", command], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -113,7 +216,7 @@ test("mergeSessionStartHookDocument appends the Socrates handler without removin
     hooks: {
       SessionStart: [
         {
-          matcher: "startup|resume",
+          matcher: "startup|resume|clear|compact",
           hooks: [
             {
               type: "command",
@@ -137,7 +240,7 @@ test("mergeSessionStartHookDocument appends the Socrates handler without removin
   };
 
   const merged = mergeSessionStartHookDocument(initial, {
-    matcher: "startup|resume",
+    matcher: "startup|resume|clear|compact",
     handler: {
       type: "command",
       command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"',
@@ -154,7 +257,7 @@ test("mergeSessionStartHookDocument reuses an existing identical handler without
     hooks: {
       SessionStart: [
         {
-          matcher: "startup|resume",
+          matcher: "startup|resume|clear|compact",
           hooks: [
             {
               type: "command",
@@ -167,7 +270,7 @@ test("mergeSessionStartHookDocument reuses an existing identical handler without
   };
 
   const merged = mergeSessionStartHookDocument(initial, {
-    matcher: "startup|resume",
+    matcher: "startup|resume|clear|compact",
     handler: {
       type: "command",
       command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"',
@@ -182,7 +285,7 @@ test("mergeSessionStartHookDocument treats missing statusMessage as equivalent f
     hooks: {
       SessionStart: [
         {
-          matcher: "startup|resume",
+          matcher: "startup|resume|clear|compact",
           hooks: [
             {
               type: "command",
@@ -195,7 +298,7 @@ test("mergeSessionStartHookDocument treats missing statusMessage as equivalent f
   };
 
   const merged = mergeSessionStartHookDocument(initial, {
-    matcher: "startup|resume",
+    matcher: "startup|resume|clear|compact",
     handler: {
       type: "command",
       command: 'node "/tmp/session_start_socrates_context.mjs"',
@@ -224,7 +327,7 @@ test("mergeSessionStartHookDocument adds a separate group for a different matche
   };
 
   const merged = mergeSessionStartHookDocument(initial, {
-    matcher: "startup|resume",
+    matcher: "startup|resume|clear|compact",
     handler: {
       type: "command",
       command: "echo startup",
@@ -233,7 +336,7 @@ test("mergeSessionStartHookDocument adds a separate group for a different matche
 
   assert.equal(merged.hooks.SessionStart.length, 2);
   assert.equal(merged.hooks.SessionStart[0].matcher, "compact");
-  assert.equal(merged.hooks.SessionStart[1].matcher, "startup|resume");
+  assert.equal(merged.hooks.SessionStart[1].matcher, "startup|resume|clear|compact");
 });
 
 test("removeSessionStartHookDocument removes only the matching Socrates handler", () => {
@@ -241,7 +344,7 @@ test("removeSessionStartHookDocument removes only the matching Socrates handler"
     hooks: {
       SessionStart: [
         {
-          matcher: "startup|resume",
+          matcher: "startup|resume|clear|compact",
           hooks: [
             {
               type: "command",
@@ -269,7 +372,7 @@ test("removeSessionStartHookDocument removes only the matching Socrates handler"
   };
 
   const updated = removeSessionStartHookDocument(initial, {
-    matcher: "startup|resume",
+    matcher: "startup|resume|clear|compact",
     handler: {
       type: "command",
       command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"',
@@ -286,7 +389,7 @@ test("removeSessionStartHookDocument removes empty SessionStart sections after c
     hooks: {
       SessionStart: [
         {
-          matcher: "startup|resume",
+          matcher: "startup|resume|clear|compact",
           hooks: [
             {
               type: "command",
@@ -299,7 +402,7 @@ test("removeSessionStartHookDocument removes empty SessionStart sections after c
   };
 
   const updated = removeSessionStartHookDocument(initial, {
-    matcher: "startup|resume",
+    matcher: "startup|resume|clear|compact",
     handler: {
       type: "command",
       command: "echo socrates",
@@ -307,6 +410,52 @@ test("removeSessionStartHookDocument removes empty SessionStart sections after c
   });
 
   assert.deepEqual(updated, {});
+});
+
+test("removeLegacySessionStartHookDocuments removes Socrates from legacy matchers only", () => {
+  const initial = {
+    hooks: {
+      SessionStart: [
+        {
+          matcher: "startup|resume",
+          hooks: [
+            {
+              type: "command",
+              command: "echo existing",
+            },
+            {
+              type: "command",
+              command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"',
+            },
+          ],
+        },
+        {
+          matcher: "startup|resume|clear|compact",
+          hooks: [
+            {
+              type: "command",
+              command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"',
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  const updated = removeLegacySessionStartHookDocuments(initial, {
+    matcher: "startup|resume|clear|compact",
+    legacyMatchers: ["startup|resume"],
+    handler: {
+      type: "command",
+      command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"',
+    },
+  });
+
+  assert.equal(updated.hooks.SessionStart.length, 2);
+  assert.equal(updated.hooks.SessionStart[0].matcher, "startup|resume");
+  assert.equal(updated.hooks.SessionStart[0].hooks.length, 1);
+  assert.equal(updated.hooks.SessionStart[0].hooks[0].command, "echo existing");
+  assert.equal(updated.hooks.SessionStart[1].matcher, "startup|resume|clear|compact");
 });
 
 test("parseArgs accepts the recommended repo install shape", () => {
@@ -318,13 +467,13 @@ test("parseArgs accepts the recommended repo install shape", () => {
     "--target-repo",
     "/tmp/example",
     "--version",
-    "v0.3.0",
+    "v0.3.1",
   ]);
 
   assert.equal(parsed.platform, "both");
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
-  assert.equal(parsed.version, "v0.3.0");
+  assert.equal(parsed.version, "v0.3.1");
 });
 
 test("parseArgs accepts optional stop-hook features", () => {
@@ -456,7 +605,7 @@ test("repo install merges hooks and remains idempotent across reruns", async () 
         hooks: {
           SessionStart: [
             {
-              matcher: "startup|resume",
+              matcher: "startup|resume|clear|compact",
               hooks: [
                 {
                   type: "command",
@@ -494,7 +643,7 @@ test("repo install merges hooks and remains idempotent across reruns", async () 
         hooks: {
           SessionStart: [
             {
-              matcher: "startup|resume",
+              matcher: "startup|resume|clear|compact",
               hooks: [
                 {
                   type: "command",
@@ -538,7 +687,7 @@ test("repo install merges hooks and remains idempotent across reruns", async () 
     codexHooks.hooks.SessionStart[0].hooks.filter(
       (entry) =>
         entry.command ===
-        'node "$(git rev-parse --show-toplevel)/.codex/hooks/session_start_socrates_context.mjs"'
+        `node ${JSON.stringify(path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs"))}`
     ).length,
     1
   );
@@ -687,7 +836,7 @@ test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
       "--source-root",
       repoRoot,
       "--version",
-      "v0.3.0",
+      "v0.3.1",
       "--enable-codex-hooks",
     ],
     {
@@ -845,7 +994,52 @@ test("install appends to a different SessionStart matcher without rewriting it",
   assert.equal(settings.hooks.SessionStart.length, 2);
   assert.equal(settings.hooks.SessionStart[0].matcher, "compact");
   assert.equal(settings.hooks.SessionStart[0].hooks[0].command, "echo compact");
-  assert.equal(settings.hooks.SessionStart[1].matcher, "startup|resume");
+  assert.equal(settings.hooks.SessionStart[1].matcher, "startup|resume|clear|compact");
+});
+
+test("install migrates legacy Socrates session-start matcher without duplicating the handler", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-install-legacy-session-start-"));
+  await writeJson(path.join(root, ".claude", "settings.json"), {
+    hooks: {
+      SessionStart: [
+        {
+          matcher: "startup|resume",
+          hooks: [
+            {
+              type: "command",
+              command: "echo existing",
+            },
+            {
+              type: "command",
+              command: 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"',
+            },
+          ],
+        },
+      ],
+    },
+  });
+
+  await installSocrates({
+    platform: "claude",
+    scope: "repo",
+    targetRepo: root,
+    sourceRoot: repoRoot,
+  });
+
+  const settings = JSON.parse(
+    await readFile(path.join(root, ".claude", "settings.json"), "utf8")
+  );
+
+  assert.equal(settings.hooks.SessionStart.length, 2);
+  assert.equal(settings.hooks.SessionStart[0].matcher, "startup|resume");
+  assert.equal(settings.hooks.SessionStart[0].hooks.length, 1);
+  assert.equal(settings.hooks.SessionStart[0].hooks[0].command, "echo existing");
+  assert.equal(settings.hooks.SessionStart[1].matcher, "startup|resume|clear|compact");
+  assert.equal(settings.hooks.SessionStart[1].hooks.length, 1);
+  assert.equal(
+    settings.hooks.SessionStart[1].hooks[0].command,
+    'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"'
+  );
 });
 
 test("install adds stop hooks only when explicitly requested", async () => {
@@ -875,6 +1069,12 @@ test("install adds stop hooks only when explicitly requested", async () => {
   );
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".claude", "hooks", "stop_socrates_clarifying.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".claude", "hooks", "_socrates_stop_clarifying_core.mjs"), "utf8")
   );
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".codex", "hooks", "_socrates_hook_utils.mjs"), "utf8")
@@ -959,29 +1159,7 @@ test("install falls back to fetch when local source assets are unavailable", asy
   const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-fetch-"));
   const originalFetch = globalThis.fetch;
   const requested = [];
-  const assetMap = new Map([
-    ["reference/skill-layout.json", await readFile(path.join(repoRoot, "reference/skill-layout.json"), "utf8")],
-    [".agents/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/SKILL.md"), "utf8")],
-    [".agents/skills/socrates/agents/openai.yaml", await readFile(path.join(repoRoot, ".agents/skills/socrates/agents/openai.yaml"), "utf8")],
-    [".agents/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/artifact-recovery.md"), "utf8")],
-    [".agents/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/protected-surfaces.md"), "utf8")],
-    [".agents/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/clarification.md"), "utf8")],
-    [".agents/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/verify-repair.md"), "utf8")],
-    [".agents/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/context-file.md"), "utf8")],
-    [".claude/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/SKILL.md"), "utf8")],
-    [".claude/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/artifact-recovery.md"), "utf8")],
-    [".claude/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/protected-surfaces.md"), "utf8")],
-    [".claude/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/clarification.md"), "utf8")],
-    [".claude/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/verify-repair.md"), "utf8")],
-    [".claude/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/context-file.md"), "utf8")],
-    [".claude/agents/socrates-explore.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-explore.md"), "utf8")],
-    [".claude/agents/socrates-plan.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-plan.md"), "utf8")],
-    [".claude/agents/socrates-verify.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-verify.md"), "utf8")],
-    [".codex/hooks/session_start_socrates_context.mjs", await readFile(path.join(repoRoot, ".codex/hooks/session_start_socrates_context.mjs"), "utf8")],
-    [".codex/hooks/stop_socrates_clarifying.mjs", await readFile(path.join(repoRoot, ".codex/hooks/stop_socrates_clarifying.mjs"), "utf8")],
-    ["reference/hook-utils.mjs", await readFile(path.join(repoRoot, "reference/hook-utils.mjs"), "utf8")],
-    ["reference/context-doc.mjs", await readFile(path.join(repoRoot, "reference/context-doc.mjs"), "utf8")],
-  ]);
+  const assetMap = await buildFetchAssetMap();
 
   globalThis.fetch = async (url) => {
     requested.push(String(url));
@@ -1015,9 +1193,60 @@ test("install falls back to fetch when local source assets are unavailable", asy
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 11);
+  assert.equal(requested.length, 13);
   await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".codex", "hooks.json"), "utf8")
+  );
+});
+
+test("install falls back to fetch for stop-hook assets when requested", async () => {
+  const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-fetch-stop-hook-"));
+  const originalFetch = globalThis.fetch;
+  const requested = [];
+  const assetMap = await buildFetchAssetMap();
+
+  globalThis.fetch = async (url) => {
+    requested.push(String(url));
+    const prefix = "https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v-test/";
+    const relativePath = String(url).startsWith(prefix)
+      ? String(url).slice(prefix.length)
+      : null;
+
+    if (!relativePath || !assetMap.has(relativePath)) {
+      return {
+        ok: false,
+        text: async () => "",
+      };
+    }
+
+    return {
+      ok: true,
+      text: async () => assetMap.get(relativePath),
+    };
+  };
+
+  try {
+    await installSocrates({
+      platform: "codex",
+      scope: "global",
+      sourceRoot: path.join(fakeHome, "missing-source-root"),
+      homeDir: fakeHome,
+      version: "v-test",
+      features: ["stop-hook"],
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
+  assert.equal(requested.length, 15);
+  await assert.doesNotReject(() =>
+    readFile(
+      path.join(fakeHome, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"),
+      "utf8"
+    )
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(fakeHome, ".codex", "hooks", "stop_socrates_clarifying.mjs"), "utf8")
   );
 });
 
@@ -1078,6 +1307,174 @@ test("repo install produces self-contained hook scripts for both runtimes", asyn
   assert.match(claudeSession.stdout, /SOCRATES_CONTEXT\.md/);
   assert.equal(codexStop.code, 2);
   assert.equal(claudeStop.code, 2);
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".codex", "hooks", "_socrates_context_doc_helper_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".codex", "hooks", "socrates_context_doc_helper.mjs"), "utf8")
+  );
+});
+
+test("repo-scoped Codex hook commands run from hooks.json outside git repos", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-install-codex-command-repo-"));
+  await writeFile(path.join(root, "SOCRATES_CONTEXT.md"), buildContextDoc(), "utf8");
+
+  await installSocrates({
+    platform: "codex",
+    scope: "repo",
+    targetRepo: root,
+    sourceRoot: repoRoot,
+    features: ["stop-hook"],
+  });
+
+  const hooks = JSON.parse(
+    await readFile(path.join(root, ".codex", "hooks.json"), "utf8")
+  );
+  const sessionCommand = hooks.hooks.SessionStart[0].hooks[0].command;
+  const stopCommand = hooks.hooks.Stop[0].hooks[0].command;
+
+  assert.equal(
+    sessionCommand,
+    `node ${JSON.stringify(path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs"))}`
+  );
+  assert.equal(
+    stopCommand,
+    `node ${JSON.stringify(path.join(root, ".codex", "hooks", "stop_socrates_clarifying.mjs"))}`
+  );
+
+  const sessionResult = await runShellHook(
+    sessionCommand,
+    {
+      cwd: root,
+      hook_event_name: "SessionStart",
+      source: "resume",
+    },
+    root
+  );
+  const stopResult = await runShellHook(
+    stopCommand,
+    {
+      cwd: root,
+      hook_event_name: "Stop",
+      stop_hook_active: false,
+      last_assistant_message:
+        "I summarized the retry policy and retry scope and I am ready to implement retries now.",
+    },
+    root
+  );
+
+  assert.equal(sessionResult.code, 0);
+  assert.equal(
+    JSON.parse(sessionResult.stdout).hookSpecificOutput.hookEventName,
+    "SessionStart"
+  );
+  assert.equal(stopResult.code, 2);
+  assert.match(stopResult.stderr, /SOCRATES_CONTEXT\.md/);
+});
+
+test("repo install produces a self-contained context-doc helper", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-install-helper-repo-"));
+  const malformedDocPath = path.join(root, "SOCRATES_CONTEXT.md");
+  await writeFile(
+    malformedDocPath,
+    `---
+version: 1
+status: clarifying
+task: "Broken"
+knowns: []
+unknowns: []
+next_question: null
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+`,
+    "utf8"
+  );
+
+  await installSocrates({
+    platform: "codex",
+    scope: "repo",
+    targetRepo: root,
+    sourceRoot: repoRoot,
+  });
+
+  const doctor = await runNodeCli(
+    path.join(root, ".codex", "hooks", "socrates_context_doc_helper.mjs"),
+    ["doctor", "--file", malformedDocPath],
+    root
+  );
+
+  assert.equal(doctor.code, 1);
+  assert.match(doctor.stderr, /UNREPAIRABLE/);
+});
+
+test("repo-installed context-doc helper can repair a repairable doc", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-install-helper-repairable-"));
+  const repairableDocPath = path.join(root, "SOCRATES_CONTEXT.md");
+  await writeFile(
+    repairableDocPath,
+    `---
+version: 1
+status: "clarifying"
+task: "Clarify retry policy"
+knowns:
+  - "Production service"
+unknowns:
+  - "Retry scope"
+next_question: "Which failures should remain retryable?"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Different task
+
+## What Socrates Knows
+- Production service
+
+## What Socrates Still Needs
+- Retry scope
+
+## Next Question
+Which failures should remain retryable?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  await installSocrates({
+    platform: "codex",
+    scope: "repo",
+    targetRepo: root,
+    sourceRoot: repoRoot,
+  });
+
+  const repair = await runNodeCli(
+    path.join(root, ".codex", "hooks", "socrates_context_doc_helper.mjs"),
+    ["repair", "--file", repairableDocPath],
+    root
+  );
+
+  assert.equal(repair.code, 0);
+  assert.match(repair.stdout, /^Repaired /);
+  assert.match(repair.stdout, /source=frontmatter/);
+
+  const repaired = await readFile(repairableDocPath, "utf8");
+  assert.match(repaired, /^---\nversion: 2\nstatus: "clarifying"/);
+  assert.match(repaired, /clarifying_phase: "needs_question"/);
+  assert.match(repaired, /## Task\nClarify retry policy/);
 });
 
 test("global install produces self-contained hook scripts for both runtimes", async () => {
@@ -1138,6 +1535,18 @@ test("global install produces self-contained hook scripts for both runtimes", as
   assert.match(claudeSession.stdout, /SOCRATES_CONTEXT\.md/);
   assert.equal(codexStop.code, 2);
   assert.equal(claudeStop.code, 2);
+  await assert.doesNotReject(() =>
+    readFile(path.join(fakeHome, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(fakeHome, ".claude", "hooks", "_socrates_stop_clarifying_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(fakeHome, ".claude", "hooks", "_socrates_context_doc_helper_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(fakeHome, ".claude", "hooks", "socrates_context_doc_helper.mjs"), "utf8")
+  );
 });
 
 test("install surfaces fetch failures when an asset cannot be downloaded", async () => {
@@ -1240,6 +1649,12 @@ test("uninstall removes Socrates files and deletes empty config files on a clean
   await assertMissing(path.join(root, ".claude", "agents", "socrates-explore.md"));
   await assertMissing(path.join(root, ".codex", "hooks", "_socrates_hook_utils.mjs"));
   await assertMissing(path.join(root, ".claude", "hooks", "_socrates_context_doc.mjs"));
+  await assertMissing(path.join(root, ".codex", "hooks", "_socrates_context_doc_helper_core.mjs"));
+  await assertMissing(path.join(root, ".claude", "hooks", "_socrates_context_doc_helper_core.mjs"));
+  await assertMissing(path.join(root, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"));
+  await assertMissing(path.join(root, ".claude", "hooks", "_socrates_stop_clarifying_core.mjs"));
+  await assertMissing(path.join(root, ".codex", "hooks", "socrates_context_doc_helper.mjs"));
+  await assertMissing(path.join(root, ".claude", "hooks", "socrates_context_doc_helper.mjs"));
 });
 
 test("feature uninstall removes stop-hook only and keeps the base install", async () => {
@@ -1287,11 +1702,25 @@ test("feature uninstall removes stop-hook only and keeps the base install", asyn
   );
   await assertMissing(path.join(root, ".codex", "hooks", "stop_socrates_clarifying.mjs"));
   await assertMissing(path.join(root, ".claude", "hooks", "stop_socrates_clarifying.mjs"));
+  await assertMissing(path.join(root, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"));
+  await assertMissing(path.join(root, ".claude", "hooks", "_socrates_stop_clarifying_core.mjs"));
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".codex", "hooks", "_socrates_hook_utils.mjs"), "utf8")
   );
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".claude", "hooks", "_socrates_context_doc.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".codex", "hooks", "_socrates_context_doc_helper_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".codex", "hooks", "socrates_context_doc_helper.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".claude", "hooks", "_socrates_context_doc_helper_core.mjs"), "utf8")
+  );
+  await assert.doesNotReject(() =>
+    readFile(path.join(root, ".claude", "hooks", "socrates_context_doc_helper.mjs"), "utf8")
   );
 });
 

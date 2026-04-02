@@ -1,7 +1,7 @@
 {
   "name": "socrates-protocol",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "MIT",
   "engines": {
     "node": ">=24"
@@ -9,6 +9,7 @@
   "type": "module",
   "scripts": {
     "build:skills": "node reference/build-skills.mjs",
+    "verify:release-assets": "node scripts/check-release-assets.mjs",
     "verify:skills": "node reference/verify-skills.mjs",
     "test": "node --test"
   }

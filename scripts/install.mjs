@@ -6,11 +6,12 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DEFAULT_VERSION = "v0.3.0";
+export const DEFAULT_VERSION = "v0.3.1";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];
-const SESSION_START_MATCHER = "startup|resume";
+const SESSION_START_MATCHER = "startup|resume|clear|compact";
+const LEGACY_SESSION_START_MATCHERS = ["startup|resume"];
 // Stop hooks do not expose a source matcher, so the installer registers the
 // group broadly and leaves the Socrates-specific gating to the script itself.
 const STOP_MATCH_ALL = "";
@@ -21,6 +22,10 @@ function buildRelativeAssetMap(baseDir, names) {
   return Object.fromEntries(
     names.map((name) => [name, `${baseDir}/${name}`])
   );
+}
+
+function buildNodeCommand(scriptPath) {
+  return `node ${JSON.stringify(scriptPath)}`;
 }
 
 const ASSETS = {
@@ -37,7 +42,45 @@ const ASSETS = {
   claudeStopHookScript: ".claude/hooks/stop_socrates_clarifying.mjs",
   hookUtils: "reference/hook-utils.mjs",
   contextDoc: "reference/context-doc.mjs",
+  contextDocHelperCore: "reference/context-doc-helper-core.mjs",
+  contextDocHelper: "reference/context-doc-helper.mjs",
+  stopClarifyingCore: "reference/stop-clarifying-core.mjs",
 };
+
+export function listReleaseAssetPaths(skillLayout) {
+  const codexReferenceAssets = buildRelativeAssetMap(
+    ASSETS.codexReferencesDir,
+    skillLayout.skillReferences
+  );
+  const claudeReferenceAssets = buildRelativeAssetMap(
+    ASSETS.claudeReferencesDir,
+    skillLayout.skillReferences
+  );
+  const claudeAgentAssets = buildRelativeAssetMap(
+    ASSETS.claudeAgentsDir,
+    skillLayout.claudeAgents
+  );
+
+  return [
+    "scripts/install.mjs",
+    ASSETS.skillLayout,
+    ASSETS.codexSkill,
+    ASSETS.codexAgent,
+    ...Object.values(codexReferenceAssets),
+    ASSETS.claudeSkill,
+    ...Object.values(claudeReferenceAssets),
+    ...Object.values(claudeAgentAssets),
+    ASSETS.codexHookScript,
+    ASSETS.codexStopHookScript,
+    ASSETS.claudeHookScript,
+    ASSETS.claudeStopHookScript,
+    ASSETS.hookUtils,
+    ASSETS.contextDoc,
+    ASSETS.contextDocHelperCore,
+    ASSETS.contextDocHelper,
+    ASSETS.stopClarifyingCore,
+  ];
+}
 
 export function parseArgs(argv) {
   const options = {
@@ -267,6 +310,9 @@ async function installCodex(options, loadAsset, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    stopHookCorePath,
     stopHookScriptPath,
     hooksConfigPath,
   } = getCodexTargets(options, skillLayout);
@@ -280,9 +326,16 @@ async function installCodex(options, loadAsset, skillLayout) {
     matcher: SESSION_START_MATCHER,
     handler: {
       type: "command",
-      command: repoInstall
-        ? 'node "$(git rev-parse --show-toplevel)/.codex/hooks/session_start_socrates_context.mjs"'
-        : `node ${JSON.stringify(hookScriptPath)}`,
+      command: buildNodeCommand(hookScriptPath),
+      statusMessage: CODEX_HOOK_STATUS,
+    },
+  });
+  merged = removeLegacySessionStartHookDocuments(merged, {
+    matcher: SESSION_START_MATCHER,
+    legacyMatchers: LEGACY_SESSION_START_MATCHERS,
+    handler: {
+      type: "command",
+      command: buildNodeCommand(hookScriptPath),
       statusMessage: CODEX_HOOK_STATUS,
     },
   });
@@ -292,9 +345,7 @@ async function installCodex(options, loadAsset, skillLayout) {
       matcher: STOP_MATCH_ALL,
       handler: {
         type: "command",
-        command: repoInstall
-          ? 'node "$(git rev-parse --show-toplevel)/.codex/hooks/stop_socrates_clarifying.mjs"'
-          : `node ${JSON.stringify(stopHookScriptPath)}`,
+        command: buildNodeCommand(stopHookScriptPath),
         statusMessage: CODEX_STOP_HOOK_STATUS,
       },
     });
@@ -311,8 +362,20 @@ async function installCodex(options, loadAsset, skillLayout) {
   await writeTextFile(hookScriptPath, await loadAsset(ASSETS.codexHookScript));
   await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
   await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
+  await writeTextFile(
+    contextDocHelperCorePath,
+    await loadAsset(ASSETS.contextDocHelperCore)
+  );
+  await writeTextFile(
+    contextDocHelperPath,
+    await loadAsset(ASSETS.contextDocHelper)
+  );
 
   if (options.features.includes("stop-hook")) {
+    await writeTextFile(
+      stopHookCorePath,
+      await loadAsset(ASSETS.stopClarifyingCore)
+    );
     await writeTextFile(
       stopHookScriptPath,
       await loadAsset(ASSETS.codexStopHookScript)
@@ -328,7 +391,11 @@ async function installCodex(options, loadAsset, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
-    ...(options.features.includes("stop-hook") ? [stopHookScriptPath] : []),
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    ...(options.features.includes("stop-hook")
+      ? [stopHookCorePath, stopHookScriptPath]
+      : []),
     hooksConfigPath,
   ];
 }
@@ -342,6 +409,9 @@ async function installClaude(options, loadAsset, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    stopHookCorePath,
     stopHookScriptPath,
     settingsPath,
   } =
@@ -358,6 +428,16 @@ async function installClaude(options, loadAsset, skillLayout) {
   const settings = await readJsonFileOrDefault(settingsPath, {});
   let merged = mergeSessionStartHookDocument(settings, {
     matcher: SESSION_START_MATCHER,
+    handler: {
+      type: "command",
+      command: repoInstall
+        ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"'
+        : `node ${JSON.stringify(hookScriptPath)}`,
+    },
+  });
+  merged = removeLegacySessionStartHookDocuments(merged, {
+    matcher: SESSION_START_MATCHER,
+    legacyMatchers: LEGACY_SESSION_START_MATCHERS,
     handler: {
       type: "command",
       command: repoInstall
@@ -397,8 +477,20 @@ async function installClaude(options, loadAsset, skillLayout) {
   );
   await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
   await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
+  await writeTextFile(
+    contextDocHelperCorePath,
+    await loadAsset(ASSETS.contextDocHelperCore)
+  );
+  await writeTextFile(
+    contextDocHelperPath,
+    await loadAsset(ASSETS.contextDocHelper)
+  );
 
   if (options.features.includes("stop-hook")) {
+    await writeTextFile(
+      stopHookCorePath,
+      await loadAsset(ASSETS.stopClarifyingCore)
+    );
     await writeTextFile(
       stopHookScriptPath,
       await loadAsset(ASSETS.claudeStopHookScript)
@@ -414,7 +506,11 @@ async function installClaude(options, loadAsset, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
-    ...(options.features.includes("stop-hook") ? [stopHookScriptPath] : []),
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    ...(options.features.includes("stop-hook")
+      ? [stopHookCorePath, stopHookScriptPath]
+      : []),
     settingsPath,
   ];
 }
@@ -428,6 +524,9 @@ async function uninstallCodex(options, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    stopHookCorePath,
     stopHookScriptPath,
     hooksConfigPath,
   } = getCodexTargets(options, skillLayout);
@@ -443,8 +542,11 @@ async function uninstallCodex(options, skillLayout) {
     await deleteFile(hookScriptPath);
     await deleteFile(hookUtilsPath);
     await deleteFile(hookContextDocPath);
+    await deleteFile(contextDocHelperCorePath);
+    await deleteFile(contextDocHelperPath);
   }
   if (options.features.includes("stop-hook") || !removeOptionalOnly) {
+    await deleteFile(stopHookCorePath);
     await deleteFile(stopHookScriptPath);
   }
 
@@ -456,9 +558,16 @@ async function uninstallCodex(options, skillLayout) {
         matcher: SESSION_START_MATCHER,
         handler: {
           type: "command",
-          command: repoInstall
-            ? 'node "$(git rev-parse --show-toplevel)/.codex/hooks/session_start_socrates_context.mjs"'
-            : `node ${JSON.stringify(hookScriptPath)}`,
+          command: buildNodeCommand(hookScriptPath),
+          statusMessage: CODEX_HOOK_STATUS,
+        },
+      });
+      updated = removeLegacySessionStartHookDocuments(updated, {
+        matcher: SESSION_START_MATCHER,
+        legacyMatchers: LEGACY_SESSION_START_MATCHERS,
+        handler: {
+          type: "command",
+          command: buildNodeCommand(hookScriptPath),
           statusMessage: CODEX_HOOK_STATUS,
         },
       });
@@ -468,9 +577,7 @@ async function uninstallCodex(options, skillLayout) {
         matcher: STOP_MATCH_ALL,
         handler: {
           type: "command",
-          command: repoInstall
-            ? 'node "$(git rev-parse --show-toplevel)/.codex/hooks/stop_socrates_clarifying.mjs"'
-            : `node ${JSON.stringify(stopHookScriptPath)}`,
+          command: buildNodeCommand(stopHookScriptPath),
           statusMessage: CODEX_STOP_HOOK_STATUS,
         },
       });
@@ -485,6 +592,9 @@ async function uninstallCodex(options, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    stopHookCorePath,
     stopHookScriptPath,
     hooksConfigPath,
   ];
@@ -499,6 +609,9 @@ async function uninstallClaude(options, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    stopHookCorePath,
     stopHookScriptPath,
     settingsPath,
   } =
@@ -517,8 +630,11 @@ async function uninstallClaude(options, skillLayout) {
     await deleteFile(hookScriptPath);
     await deleteFile(hookUtilsPath);
     await deleteFile(hookContextDocPath);
+    await deleteFile(contextDocHelperCorePath);
+    await deleteFile(contextDocHelperPath);
   }
   if (options.features.includes("stop-hook") || !removeOptionalOnly) {
+    await deleteFile(stopHookCorePath);
     await deleteFile(stopHookScriptPath);
   }
 
@@ -528,6 +644,16 @@ async function uninstallClaude(options, skillLayout) {
     if (!removeOptionalOnly) {
       updated = removeSessionStartHookDocument(updated, {
         matcher: SESSION_START_MATCHER,
+        handler: {
+          type: "command",
+          command: repoInstall
+            ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"'
+            : `node ${JSON.stringify(hookScriptPath)}`,
+        },
+      });
+      updated = removeLegacySessionStartHookDocuments(updated, {
+        matcher: SESSION_START_MATCHER,
+        legacyMatchers: LEGACY_SESSION_START_MATCHERS,
         handler: {
           type: "command",
           command: repoInstall
@@ -557,6 +683,9 @@ async function uninstallClaude(options, skillLayout) {
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
+    contextDocHelperCorePath,
+    contextDocHelperPath,
+    stopHookCorePath,
     stopHookScriptPath,
     settingsPath,
   ];
@@ -619,6 +748,15 @@ function getCodexTargets(options, skillLayout) {
     hookContextDocPath: repoInstall
       ? path.join(root, ".codex", "hooks", "_socrates_context_doc.mjs")
       : path.join(root, "hooks", "_socrates_context_doc.mjs"),
+    contextDocHelperCorePath: repoInstall
+      ? path.join(root, ".codex", "hooks", "_socrates_context_doc_helper_core.mjs")
+      : path.join(root, "hooks", "_socrates_context_doc_helper_core.mjs"),
+    contextDocHelperPath: repoInstall
+      ? path.join(root, ".codex", "hooks", "socrates_context_doc_helper.mjs")
+      : path.join(root, "hooks", "socrates_context_doc_helper.mjs"),
+    stopHookCorePath: repoInstall
+      ? path.join(root, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs")
+      : path.join(root, "hooks", "_socrates_stop_clarifying_core.mjs"),
     stopHookScriptPath: repoInstall
       ? path.join(root, ".codex", "hooks", "stop_socrates_clarifying.mjs")
       : path.join(root, "hooks", "stop_socrates_clarifying.mjs"),
@@ -658,6 +796,15 @@ function getClaudeTargets(options, skillLayout) {
     hookContextDocPath: repoInstall
       ? path.join(root, ".claude", "hooks", "_socrates_context_doc.mjs")
       : path.join(root, "hooks", "_socrates_context_doc.mjs"),
+    contextDocHelperCorePath: repoInstall
+      ? path.join(root, ".claude", "hooks", "_socrates_context_doc_helper_core.mjs")
+      : path.join(root, "hooks", "_socrates_context_doc_helper_core.mjs"),
+    contextDocHelperPath: repoInstall
+      ? path.join(root, ".claude", "hooks", "socrates_context_doc_helper.mjs")
+      : path.join(root, "hooks", "socrates_context_doc_helper.mjs"),
+    stopHookCorePath: repoInstall
+      ? path.join(root, ".claude", "hooks", "_socrates_stop_clarifying_core.mjs")
+      : path.join(root, "hooks", "_socrates_stop_clarifying_core.mjs"),
     stopHookScriptPath: repoInstall
       ? path.join(root, ".claude", "hooks", "stop_socrates_clarifying.mjs")
       : path.join(root, "hooks", "stop_socrates_clarifying.mjs"),
@@ -756,6 +903,23 @@ export function removeSessionStartHookDocument(document, { matcher, handler }) {
     matcher,
     handler,
   });
+}
+
+export function removeLegacySessionStartHookDocuments(
+  document,
+  { matcher, legacyMatchers, handler }
+) {
+  let next = document;
+  for (const legacyMatcher of legacyMatchers) {
+    if (legacyMatcher === matcher) {
+      continue;
+    }
+    next = removeSessionStartHookDocument(next, {
+      matcher: legacyMatcher,
+      handler,
+    });
+  }
+  return next;
 }
 
 export function removeStopHookDocument(document, { matcher, handler }) {
@@ -923,6 +1087,10 @@ Options:
   --version git-ref-or-tag
   --feature ${OPTIONAL_FEATURES.join("|")}
   --enable-codex-hooks
+
+Notes:
+  - Socrates installs only the canonical version 2 shared-context format.
+  - Existing version 1 SOCRATES_CONTEXT.md files are treated as legacy and must be repaired or deleted before runtime hooks trust them.
 `;
 }
 

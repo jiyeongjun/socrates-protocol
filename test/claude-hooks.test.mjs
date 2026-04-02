@@ -115,7 +115,7 @@ test("Claude session-start hook injects context when a Socrates doc exists above
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
     `---
-version: 1
+version: 2
 status: "clarifying"
 task: "Clarify retry policy"
 knowns:
@@ -123,6 +123,7 @@ knowns:
 unknowns:
   - "Retry scope"
 next_question: "Which failures should remain retryable?"
+clarifying_phase: "needs_question"
 decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
@@ -158,7 +159,58 @@ clarifying
 
   assert.match(output, /SOCRATES_CONTEXT\.md/);
   assert.match(output, /canonical persisted state/);
-  assert.match(output, /ask the next load-bearing question before implementation/);
+  assert.match(output, /clarifying_phase/);
+  assert.match(output, /flip clarifying_phase to awaiting_user_answer/);
+});
+
+test("Claude session-start hook injects context on clear when a Socrates doc exists", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-clear-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `---
+version: 2
+status: "clarifying"
+task: "Clear recovery task"
+knowns:
+  - "One fact"
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Clear recovery task
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "clear",
+  });
+
+  assert.match(output, /SOCRATES_CONTEXT\.md/);
 });
 
 test("Claude session-start hook does not cross the nearest git root boundary", async () => {
@@ -170,7 +222,7 @@ test("Claude session-start hook does not cross the nearest git root boundary", a
   await writeFile(
     path.join(monorepo, "SOCRATES_CONTEXT.md"),
     `---
-version: 1
+version: 2
 status: "clarifying"
 task: "Parent repo task"
 knowns:
@@ -178,6 +230,7 @@ knowns:
 unknowns:
   - "One unknown"
 next_question: "What remains?"
+clarifying_phase: "needs_question"
 decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
@@ -231,8 +284,109 @@ test("Claude session-start hook stays silent for unrelated markdown files", asyn
   assert.equal(output, "");
 });
 
-test("Claude session-start hook ignores unsupported session sources", async () => {
+test("Claude session-start hook injects context on compact when a Socrates doc exists", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-source-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `---
+version: 2
+status: "clarifying"
+task: "Clarify retries"
+knowns:
+  - "One fact"
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Clarify retries
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "compact",
+  });
+
+  assert.match(output, /SOCRATES_CONTEXT\.md/);
+});
+
+test("Claude session-start hook points canonical legacy Socrates docs to normalization guidance", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-legacy-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `---
+version: 1
+status: "clarifying"
+task: "Legacy recovery task"
+knowns:
+  - "One fact"
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Legacy recovery task
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "resume",
+  });
+
+  assert.match(output, /legacy version 1 shared context file/);
+  assert.match(output, /canonical version 2 format/);
+  assert.match(output, /repair --file/);
+});
+
+test("Claude session-start hook ignores unsupported session sources", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-unsupported-source-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
     `---
@@ -274,13 +428,13 @@ clarifying
   const output = await runHook({
     cwd: root,
     hook_event_name: "SessionStart",
-    source: "compact",
+    source: "turn_end",
   });
 
   assert.equal(output, "");
 });
 
-test("Claude session-start hook stays silent for malformed Socrates docs", async () => {
+test("Claude session-start hook points malformed Socrates docs to repair guidance", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-malformed-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
@@ -324,7 +478,108 @@ clarifying
     source: "startup",
   });
 
-  assert.equal(output, "");
+  assert.match(output, /malformed shared context file/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.match(output, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
+  assert.match(output, /not auto-repairable|manual/);
+});
+
+test("Claude session-start hook points body-only malformed Socrates docs to repair guidance", async () => {
+  const root = await mkdtemp(
+    path.join(tmpdir(), "socrates-claude-hook-body-only-malformed-")
+  );
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `# Socrates Context
+
+## Task
+Broken
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+None.
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "startup",
+  });
+
+  assert.match(output, /malformed shared context file/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.match(output, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
+  assert.match(output, /not auto-repairable|manual/);
+});
+
+test("Claude session-start hook points title-less body-only malformed Socrates docs to repair guidance", async () => {
+  const root = await mkdtemp(
+    path.join(tmpdir(), "socrates-claude-hook-title-less-body-only-malformed-")
+  );
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `## Task
+Broken
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+None.
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "startup",
+  });
+
+  assert.match(output, /malformed shared context file/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.match(output, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
+  assert.match(output, /not auto-repairable|manual/);
+});
+
+test("Claude session-start hook points title-less partial body-only Socrates docs to repair guidance", async () => {
+  const root = await mkdtemp(
+    path.join(tmpdir(), "socrates-claude-hook-title-less-partial-body-only-malformed-")
+  );
+  await writeFile(path.join(root, "SOCRATES_CONTEXT.md"), "## Task\nBroken\n", "utf8");
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "startup",
+  });
+
+  assert.match(output, /malformed shared context file/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.doesNotMatch(output, /repair --file/);
+  assert.match(output, /not auto-repairable|rewritten or replaced manually/);
 });
 
 test("Claude session-start hook stays silent when stdin is invalid", async () => {

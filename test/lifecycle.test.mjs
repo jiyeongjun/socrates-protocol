@@ -9,6 +9,8 @@ import {
   askToDeleteIncompleteDoc,
   askToRepairDoc,
   createState,
+  getClarifyingQuestionGate,
+  markQuestionAsked,
   readContextDoc,
   deleteContextDoc,
   handleDocOptIn,
@@ -78,6 +80,7 @@ test("clarification updates keep status clarifying until unknowns are resolved",
   });
 
   assert.equal(next.status, "clarifying");
+  assert.equal(next.clarifying_phase, "needs_question");
   assert.deepEqual(next.unknowns, ["Duplicate charge handling"]);
 });
 
@@ -100,6 +103,23 @@ test("clarification updates become ready when no unknowns remain", () => {
   });
 
   assert.equal(next.status, "ready");
+  assert.equal(next.clarifying_phase, null);
+});
+
+test("markQuestionAsked moves clarifying state into awaiting_user_answer", () => {
+  const initial = createState({
+    task: "Clarify migration strategy",
+    knowns: ["Public API rename"],
+    unknowns: ["Cutover strategy"],
+    next_question: "Should this be a hard cutover or compatibility transition?",
+    decisions: [],
+    updated_at: "2026-03-29T00:00:00.000Z",
+  });
+
+  const next = markQuestionAsked(initial, "2026-03-29T00:01:00.000Z");
+
+  assert.equal(next.clarifying_phase, "awaiting_user_answer");
+  assert.equal(getClarifyingQuestionGate(next).action, "allow");
 });
 
 test("execution start sets executing status", () => {
@@ -215,7 +235,7 @@ Broken
   assert.equal(analysis.ok, false);
   assert.deepEqual(askToRepairDoc(), {
     action: "ask_repair_doc",
-    message: "Should I normalize SOCRATES_CONTEXT.md back to the standard format?",
+    message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 2 format?",
   });
 });
 
@@ -234,6 +254,7 @@ test("runLifecycleFixture executes the planned lifecycle sequence", () => {
     steps: [
       { type: "maybe_start", needsSharedContext: true, existingDoc: null },
       { type: "doc_opt_in", accepted: true, attempt: 1 },
+      { type: "question_asked", updated_at: "2026-03-29T00:02:00.000Z" },
       {
         type: "clarify",
         patch: {
@@ -251,7 +272,8 @@ test("runLifecycleFixture executes the planned lifecycle sequence", () => {
 
   assert.equal(run.outputs[0].action, "ask_create_doc");
   assert.equal(run.outputs[1].action, "create_or_update_doc");
-  assert.equal(run.outputs[2].state.status, "ready");
-  assert.equal(run.outputs[3].state.status, "executing");
-  assert.equal(run.outputs[4].action, "delete_doc");
+  assert.equal(run.outputs[2].state.clarifying_phase, "awaiting_user_answer");
+  assert.equal(run.outputs[3].state.status, "ready");
+  assert.equal(run.outputs[4].state.status, "executing");
+  assert.equal(run.outputs[5].action, "delete_doc");
 });

@@ -2,7 +2,13 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export const DOC_FILENAME = "SOCRATES_CONTEXT.md";
+export const CURRENT_VERSION = 2;
+export const LEGACY_VERSION = 1;
 export const STATUSES = ["clarifying", "ready", "executing"];
+export const CLARIFYING_PHASES = [
+  "needs_question",
+  "awaiting_user_answer",
+];
 export const FIXED_HEADINGS = [
   "Task",
   "What Socrates Knows",
@@ -24,17 +30,7 @@ export function contextDocPath(rootDir) {
 }
 
 export function createState(input) {
-  const state = {
-    version: 1,
-    status: input.status ?? "clarifying",
-    task: input.task ?? "",
-    knowns: input.knowns ?? [],
-    unknowns: input.unknowns ?? [],
-    next_question:
-      input.next_question === undefined ? null : input.next_question,
-    decisions: input.decisions ?? [],
-    updated_at: input.updated_at ?? new Date().toISOString(),
-  };
+  const state = buildStateFromInput(input);
 
   return validateState(state);
 }
@@ -42,8 +38,11 @@ export function createState(input) {
 export function validateState(input) {
   const state = structuredClone(input);
 
-  if (state.version !== 1) {
-    throw new ContextDocError("invalid_version", "version must be 1");
+  if (state.version !== CURRENT_VERSION) {
+    throw new ContextDocError(
+      "invalid_version",
+      `version must be ${CURRENT_VERSION}`
+    );
   }
 
   if (!STATUSES.includes(state.status)) {
@@ -75,6 +74,16 @@ export function validateState(input) {
   }
 
   if (
+    state.clarifying_phase !== null &&
+    !CLARIFYING_PHASES.includes(state.clarifying_phase)
+  ) {
+    throw new ContextDocError(
+      "invalid_clarifying_phase",
+      `clarifying_phase must be null or one of: ${CLARIFYING_PHASES.join(", ")}`
+    );
+  }
+
+  if (
     typeof state.updated_at !== "string" ||
     Number.isNaN(Date.parse(state.updated_at))
   ) {
@@ -97,6 +106,18 @@ function assertStateTransitionsAreConsistent(state) {
         "clarifying state must retain at least one unresolved unknown"
       );
     }
+    if (state.next_question === null) {
+      throw new ContextDocError(
+        "invalid_status_shape",
+        "clarifying state must keep one next_question"
+      );
+    }
+    if (state.clarifying_phase === null) {
+      throw new ContextDocError(
+        "invalid_status_shape",
+        "clarifying state must set clarifying_phase"
+      );
+    }
     return;
   }
 
@@ -111,6 +132,13 @@ function assertStateTransitionsAreConsistent(state) {
     throw new ContextDocError(
       "invalid_status_shape",
       `${state.status} state cannot keep a next_question`
+    );
+  }
+
+  if (state.clarifying_phase !== null) {
+    throw new ContextDocError(
+      "invalid_status_shape",
+      `${state.status} state cannot keep a clarifying_phase`
     );
   }
 }
@@ -130,6 +158,58 @@ function assertStringArray(value, field) {
   }
 }
 
+function buildStateFromInput(input = {}) {
+  const status = input.status ?? "clarifying";
+  const unknowns = input.unknowns ?? [];
+  const nextQuestion =
+    input.next_question === undefined ? null : input.next_question;
+
+  return {
+    version: input.version ?? CURRENT_VERSION,
+    status,
+    task: input.task ?? "",
+    knowns: input.knowns ?? [],
+    unknowns,
+    next_question: nextQuestion,
+    clarifying_phase:
+      input.clarifying_phase === undefined
+        ? inferDefaultClarifyingPhase({
+            status,
+            unknowns,
+            next_question: nextQuestion,
+          })
+        : input.clarifying_phase,
+    decisions: input.decisions ?? [],
+    updated_at: input.updated_at ?? new Date().toISOString(),
+  };
+}
+
+function inferDefaultClarifyingPhase(state) {
+  if (
+    state.status !== "clarifying" ||
+    state.unknowns.length === 0 ||
+    state.next_question === null
+  ) {
+    return null;
+  }
+
+  return "needs_question";
+}
+
+function normalizeLegacyParsedState(state) {
+  return {
+    ...state,
+    version: CURRENT_VERSION,
+    clarifying_phase:
+      state.clarifying_phase ??
+      inferDefaultClarifyingPhase({
+        status: state.status,
+        unknowns: state.unknowns ?? [],
+        next_question: state.next_question ?? null,
+      }),
+  };
+}
+
 export function renderContextDoc(input) {
   const state = validateState(input);
   const frontmatter = renderFrontmatter(state);
@@ -139,7 +219,7 @@ export function renderContextDoc(input) {
 
 function renderFrontmatter(state) {
   const lines = [
-    "version: 1",
+    `version: ${CURRENT_VERSION}`,
     `status: ${quote(state.status)}`,
     `task: ${quote(state.task)}`,
     renderArray("knowns", state.knowns),
@@ -147,6 +227,9 @@ function renderFrontmatter(state) {
     state.next_question === null
       ? "next_question: null"
       : `next_question: ${quote(state.next_question)}`,
+    state.clarifying_phase === null
+      ? "clarifying_phase: null"
+      : `clarifying_phase: ${quote(state.clarifying_phase)}`,
     renderArray("decisions", state.decisions),
     `updated_at: ${quote(state.updated_at)}`,
   ];
@@ -200,11 +283,23 @@ function quote(value) {
 }
 
 export function parseContextDoc(markdown) {
-  const { frontmatter, body } = splitFrontmatter(markdown);
-  const parsed = parseFrontmatter(frontmatter);
+  const { parsed, body } = parseParsedDocSource(markdown);
   return {
     state: validateState(parsed),
     body,
+  };
+}
+
+function parseParsedDocSource(markdown) {
+  const { frontmatter, body } = splitFrontmatter(markdown);
+  const parsed = parseFrontmatter(frontmatter);
+  const sourceVersion =
+    typeof parsed.version === "number" ? parsed.version : null;
+
+  return {
+    parsed,
+    body,
+    sourceVersion,
   };
 }
 
@@ -303,21 +398,7 @@ function parseQuotedString(raw) {
 export function analyzeContextDoc(markdown) {
   try {
     const { state, body } = parseContextDoc(markdown);
-    const sections = readCanonicalBodySections(body);
-    if (!sections) {
-      return {
-        ok: false,
-        reason: "missing_sections",
-        state,
-      };
-    }
-
-    const expectedSections = buildCanonicalSectionContents(state);
-    const hasMismatch = FIXED_HEADINGS.some(
-      (heading) => normalizeSection(sections[heading]) !== normalizeSection(expectedSections[heading])
-    );
-
-    if (hasMismatch) {
+    if (!bodyMatchesCanonicalView(body, renderBody(state))) {
       return {
         ok: false,
         reason: "body_mismatch",
@@ -340,55 +421,76 @@ export function analyzeContextDoc(markdown) {
   }
 }
 
-function readCanonicalBodySections(body) {
-  const headings = Array.from(
-    body.matchAll(/^## (.+)$/gm),
-    (match) => ({
-      heading: match[1].trim(),
-      index: match.index,
-      length: match[0].length,
-    })
-  );
-
-  if (headings.length < FIXED_HEADINGS.length) {
-    return null;
+export function getContextDocRepairPlan(markdown, options = {}) {
+  const legacyPlan = getLegacyContextDocRepairPlan(markdown);
+  if (legacyPlan) {
+    return legacyPlan;
   }
 
-  const hasRequiredOrder = FIXED_HEADINGS.every(
-    (heading, index) => headings[index].heading === heading
-  );
-  if (!hasRequiredOrder) {
-    return null;
+  const analysis = analyzeContextDoc(markdown);
+  if (analysis.ok) {
+    return {
+      action: "ok",
+      reason: null,
+      source: "canonical",
+      state: analysis.state,
+      markdown,
+    };
   }
 
-  const sections = {};
-  for (let index = 0; index < FIXED_HEADINGS.length; index += 1) {
-    const current = headings[index];
-    const next = headings[index + 1];
-    const contentStart = current.index + current.length;
-    const contentEnd = next ? next.index : body.length;
-    sections[current.heading] = body
-      .slice(contentStart, contentEnd)
-      .replace(/^\n+/, "")
-      .trimEnd();
+  if (analysis.state) {
+    return {
+      action: "repair",
+      reason: analysis.reason,
+      source: "frontmatter",
+      state: analysis.state,
+      markdown: renderContextDoc(analysis.state),
+    };
   }
 
-  return sections;
+  return {
+    action: "unrepairable",
+    reason: analysis.reason,
+    source: null,
+    state: null,
+    markdown: null,
+  };
 }
 
-function buildCanonicalSectionContents(state) {
-  return {
-    Task: state.task,
-    "What Socrates Knows": renderBodyList(state.knowns),
-    "What Socrates Still Needs": renderBodyList(state.unknowns),
-    "Next Question": state.next_question ?? "None.",
-    "Fixed Decisions": renderBodyList(state.decisions),
-    Status: state.status,
-  };
+function getLegacyContextDocRepairPlan(markdown) {
+  try {
+    const { parsed, sourceVersion } = parseParsedDocSource(markdown);
+    if (sourceVersion === null || sourceVersion >= CURRENT_VERSION) {
+      return null;
+    }
+
+    const state = validateState(normalizeLegacyParsedState(parsed));
+    return {
+      action: "repair",
+      reason: "legacy_version",
+      source: "frontmatter",
+      state,
+      markdown: renderContextDoc(state),
+    };
+  } catch (error) {
+    if (error instanceof ContextDocError) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 function normalizeSection(value) {
   return value.replace(/\r\n/g, "\n").trim();
+}
+
+function bodyMatchesCanonicalView(body, expectedBody) {
+  const normalizedBody = body.replace(/\r\n/g, "\n").trimEnd();
+  const normalizedExpected = expectedBody.replace(/\r\n/g, "\n").trimEnd();
+  return (
+    normalizedBody === normalizedExpected ||
+    normalizedBody.startsWith(`${normalizedExpected}\n`)
+  );
 }
 
 export async function writeContextDoc(rootDir, input) {
@@ -429,7 +531,7 @@ export function askToReplaceDoc() {
 export function askToRepairDoc() {
   return {
     action: "ask_repair_doc",
-    message: "Should I normalize SOCRATES_CONTEXT.md back to the standard format?",
+    message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 2 format?",
   };
 }
 
@@ -485,21 +587,73 @@ export function handleDocOptIn({ accepted, attempt }) {
 }
 
 export function updateForClarification(state, patch = {}) {
+  const validated = validateState(state);
+  const shouldResetClarifyingPhase =
+    patch.unknowns !== undefined || patch.next_question !== undefined;
   const nextState = {
-    ...state,
+    ...validated,
     ...patch,
-    knowns: patch.knowns ?? state.knowns,
-    unknowns: patch.unknowns ?? state.unknowns,
-    decisions: patch.decisions ?? state.decisions,
+    version: CURRENT_VERSION,
+    knowns: patch.knowns ?? validated.knowns,
+    unknowns: patch.unknowns ?? validated.unknowns,
+    decisions: patch.decisions ?? validated.decisions,
     next_question:
       patch.next_question === undefined
-        ? state.next_question
+        ? validated.next_question
         : patch.next_question,
+    clarifying_phase:
+      shouldResetClarifyingPhase
+        ? "needs_question"
+        : (patch.clarifying_phase ?? validated.clarifying_phase),
     updated_at: patch.updated_at ?? new Date().toISOString(),
   };
 
-  nextState.status = nextState.unknowns.length === 0 ? "ready" : "clarifying";
+  if (nextState.unknowns.length === 0) {
+    nextState.status = "ready";
+    nextState.next_question = null;
+    nextState.clarifying_phase = null;
+  } else {
+    nextState.status = "clarifying";
+  }
+
   return validateState(nextState);
+}
+
+export function markQuestionAsked(
+  state,
+  updated_at = new Date().toISOString()
+) {
+  const validated = validateState(state);
+  if (validated.status !== "clarifying") {
+    throw new ContextDocError(
+      "invalid_transition",
+      "can only mark a question as asked while clarifying"
+    );
+  }
+
+  return validateState({
+    ...validated,
+    clarifying_phase: "awaiting_user_answer",
+    updated_at,
+  });
+}
+
+export function getClarifyingQuestionGate(state) {
+  const validated = validateState(state);
+  if (
+    validated.status !== "clarifying" ||
+    validated.clarifying_phase !== "needs_question"
+  ) {
+    return {
+      action: "allow",
+      next_question: null,
+    };
+  }
+
+  return {
+    action: "continue",
+    next_question: validated.next_question,
+  };
 }
 
 export function startExecution(state, updated_at = new Date().toISOString()) {
@@ -514,6 +668,7 @@ export function startExecution(state, updated_at = new Date().toISOString()) {
   return validateState({
     ...validated,
     status: "executing",
+    clarifying_phase: null,
     updated_at,
   });
 }
@@ -551,6 +706,10 @@ export function runLifecycleFixture(fixture) {
         break;
       case "clarify":
         contextState = updateForClarification(contextState, step.patch);
+        outputs.push({ action: "state_updated", state: contextState });
+        break;
+      case "question_asked":
+        contextState = markQuestionAsked(contextState, step.updated_at);
         outputs.push({ action: "state_updated", state: contextState });
         break;
       case "start_execution":

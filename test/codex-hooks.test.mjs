@@ -115,7 +115,7 @@ test("session-start hook injects context when a Socrates doc exists above cwd", 
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
     `---
-version: 1
+version: 2
 status: "clarifying"
 task: "Design account deletion API"
 knowns:
@@ -123,6 +123,7 @@ knowns:
 unknowns:
   - "Retention obligations"
 next_question: "What retained data is legally required?"
+clarifying_phase: "needs_question"
 decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
@@ -160,7 +161,115 @@ clarifying
   assert.equal(parsed.hookSpecificOutput.hookEventName, "SessionStart");
   assert.match(parsed.hookSpecificOutput.additionalContext, /SOCRATES_CONTEXT\.md/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /canonical persisted state/);
-  assert.match(parsed.hookSpecificOutput.additionalContext, /ask the next load-bearing question before implementation/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /clarifying_phase/);
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /flip clarifying_phase to awaiting_user_answer/
+  );
+});
+
+test("session-start hook injects context on compact when a Socrates doc exists", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-compact-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `---
+version: 2
+status: "clarifying"
+task: "Compact recovery task"
+knowns:
+  - "One fact"
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Compact recovery task
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "compact",
+  });
+  const parsed = JSON.parse(output);
+
+  assert.equal(parsed.hookSpecificOutput.hookEventName, "SessionStart");
+  assert.match(parsed.hookSpecificOutput.additionalContext, /SOCRATES_CONTEXT\.md/);
+});
+
+test("session-start hook points canonical legacy Socrates docs to normalization guidance", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-legacy-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `---
+version: 1
+status: "clarifying"
+task: "Legacy recovery task"
+knowns:
+  - "One fact"
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Legacy recovery task
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "resume",
+  });
+  const parsed = JSON.parse(output);
+
+  assert.match(parsed.hookSpecificOutput.additionalContext, /legacy version 1 shared context file/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /canonical version 2 format/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /repair --file/);
 });
 
 test("session-start hook does not cross the nearest git root boundary", async () => {
@@ -172,7 +281,7 @@ test("session-start hook does not cross the nearest git root boundary", async ()
   await writeFile(
     path.join(monorepo, "SOCRATES_CONTEXT.md"),
     `---
-version: 1
+version: 2
 status: "clarifying"
 task: "Parent repo task"
 knowns:
@@ -180,6 +289,7 @@ knowns:
 unknowns:
   - "One unknown"
 next_question: "What remains?"
+clarifying_phase: "needs_question"
 decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
@@ -233,12 +343,12 @@ test("session-start hook stays silent for unrelated markdown files", async () =>
   assert.equal(output, "");
 });
 
-test("session-start hook ignores unsupported session sources", async () => {
+test("session-start hook injects context on clear when a Socrates doc exists", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-source-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
     `---
-version: 1
+version: 2
 status: "clarifying"
 task: "Clarify retries"
 knowns:
@@ -246,6 +356,7 @@ knowns:
 unknowns:
   - "One unknown"
 next_question: "What remains?"
+clarifying_phase: "needs_question"
 decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
@@ -279,10 +390,61 @@ clarifying
     source: "clear",
   });
 
+  const parsed = JSON.parse(output);
+  assert.equal(parsed.hookSpecificOutput.hookEventName, "SessionStart");
+});
+
+test("session-start hook ignores unsupported session sources", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-unsupported-source-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `---
+version: 2
+status: "clarifying"
+task: "Clarify retries"
+knowns:
+  - "One fact"
+unknowns:
+  - "One unknown"
+next_question: "What remains?"
+clarifying_phase: "needs_question"
+decisions: []
+updated_at: "2026-03-29T00:00:00.000Z"
+---
+
+# Socrates Context
+
+## Task
+Clarify retries
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+What remains?
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "turn_end",
+  });
+
   assert.equal(output, "");
 });
 
-test("session-start hook stays silent for malformed Socrates docs", async () => {
+test("session-start hook points malformed Socrates docs to repair guidance", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-malformed-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
@@ -326,7 +488,140 @@ clarifying
     source: "startup",
   });
 
-  assert.equal(output, "");
+  const parsed = JSON.parse(output);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+  );
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /context-doc\.mjs|socrates_context_doc_helper\.mjs/
+  );
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /not auto-repairable|manual/
+  );
+});
+
+test("session-start hook points body-only malformed Socrates docs to repair guidance", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-body-only-malformed-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `# Socrates Context
+
+## Task
+Broken
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+None.
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "startup",
+  });
+
+  const parsed = JSON.parse(output);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+  );
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /context-doc\.mjs|socrates_context_doc_helper\.mjs/
+  );
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /not auto-repairable|manual/
+  );
+});
+
+test("session-start hook points title-less body-only malformed Socrates docs to repair guidance", async () => {
+  const root = await mkdtemp(
+    path.join(tmpdir(), "socrates-hook-title-less-body-only-malformed-")
+  );
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    `## Task
+Broken
+
+## What Socrates Knows
+- One fact
+
+## What Socrates Still Needs
+- One unknown
+
+## Next Question
+None.
+
+## Fixed Decisions
+- None.
+
+## Status
+clarifying
+`,
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "startup",
+  });
+
+  const parsed = JSON.parse(output);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+  );
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /context-doc\.mjs|socrates_context_doc_helper\.mjs/
+  );
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /not auto-repairable|manual/
+  );
+});
+
+test("session-start hook points title-less partial body-only Socrates docs to repair guidance", async () => {
+  const root = await mkdtemp(
+    path.join(tmpdir(), "socrates-hook-title-less-partial-body-only-malformed-")
+  );
+  await writeFile(path.join(root, "SOCRATES_CONTEXT.md"), "## Task\nBroken\n", "utf8");
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "startup",
+  });
+
+  const parsed = JSON.parse(output);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+  );
+  assert.doesNotMatch(parsed.hookSpecificOutput.additionalContext, /repair --file/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /not auto-repairable|rewritten or replaced manually/);
 });
 
 test("session-start hook stays silent when stdin is invalid", async () => {

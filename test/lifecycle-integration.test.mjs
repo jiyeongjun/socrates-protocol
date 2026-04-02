@@ -11,6 +11,7 @@ import {
   deleteContextDoc,
   handleDocOptIn,
   handleTaskCompletion,
+  markQuestionAsked,
   maybeStartSharedContext,
   startExecution,
   updateForClarification,
@@ -165,11 +166,12 @@ for (const runtimeName of Object.keys(runtimes)) {
     const session = await runSessionStart(runtimeName, root, "resume");
     assert.match(session.context, /SOCRATES_CONTEXT\.md/);
     assert.match(session.context, /canonical persisted state/);
+    assert.match(session.context, /clarifying_phase/);
 
     const stopWhileClarifying = await runStop(
       runtimeName,
       root,
-      "I summarized the retry policy and retry scope and I am ready to implement retries now."
+      "I have enough context now and will implement the retry change."
     );
     assert.equal(stopWhileClarifying.code, 2);
     assert.match(stopWhileClarifying.stderr, /Ask this next load-bearing question:/);
@@ -177,9 +179,35 @@ for (const runtimeName of Object.keys(runtimes)) {
       stopWhileClarifying.stderr,
       /Which failures should remain retryable\?/
     );
+    assert.match(stopWhileClarifying.stderr, /awaiting_user_answer/);
 
-    const ready = updateForClarification(clarifying, {
-      knowns: [...clarifying.knowns, "Only network timeouts remain retryable"],
+    const stopAfterQuestionWithoutStateUpdate = await runStop(
+      runtimeName,
+      root,
+      "Which failures should remain retryable?"
+    );
+    assert.equal(stopAfterQuestionWithoutStateUpdate.code, 2);
+    assert.match(
+      stopAfterQuestionWithoutStateUpdate.stderr,
+      /awaiting_user_answer/
+    );
+
+    const awaitingUserAnswer = markQuestionAsked(
+      clarifying,
+      "2026-03-29T00:05:00.000Z"
+    );
+    await writeContextDoc(root, awaitingUserAnswer);
+
+    const stopWhileAwaitingUser = await runStop(
+      runtimeName,
+      root,
+      "Which failures should remain retryable?"
+    );
+    assert.equal(stopWhileAwaitingUser.code, 0);
+    assert.equal(stopWhileAwaitingUser.stderr, "");
+
+    const ready = updateForClarification(awaitingUserAnswer, {
+      knowns: [...awaitingUserAnswer.knowns, "Only network timeouts remain retryable"],
       unknowns: [],
       next_question: null,
       decisions: ["Retry only network timeouts with idempotency keys."],
@@ -239,7 +267,7 @@ for (const runtimeName of Object.keys(runtimes)) {
     assert.equal(stop.stderr, "");
   });
 
-  test(`${runtimeName} malformed persisted context does not activate hooks and asks for repair`, async () => {
+  test(`${runtimeName} malformed persisted context points to repair and keeps stop inactive`, async () => {
     const root = await mkdtemp(path.join(tmpdir(), `socrates-${runtimeName}-malformed-`));
     await writeFile(
       path.join(root, "SOCRATES_CONTEXT.md"),
@@ -261,11 +289,12 @@ updated_at: "2026-03-29T00:00:00.000Z"
 
     assert.deepEqual(askToRepairDoc(), {
       action: "ask_repair_doc",
-      message: "Should I normalize SOCRATES_CONTEXT.md back to the standard format?",
+      message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 2 format?",
     });
 
     const session = await runSessionStart(runtimeName, root, "resume");
-    assert.equal(session.context, "");
+    assert.match(session.context, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+    assert.match(session.context, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
 
     const stop = await runStop(
       runtimeName,
