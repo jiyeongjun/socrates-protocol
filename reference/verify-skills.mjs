@@ -5,8 +5,10 @@ import {
   buildSkillDocument,
   claudeAgentNames,
   claudeAgentTargets,
+  modelPolicyTargetPaths,
   readAgentPromptSource,
   readClaudeAgentSource,
+  readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
   skillReferenceNames,
@@ -16,6 +18,7 @@ import {
 
 const body = await readSkillBody();
 const promptSource = await readAgentPromptSource();
+const modelPolicy = `${await readModelPolicySource()}\n`;
 let hasMismatch = false;
 
 for (const [name, target] of Object.entries(skillTargets)) {
@@ -42,6 +45,17 @@ for (const [platform, targets] of Object.entries(skillReferenceTargets)) {
         `${platform} skill reference ${name} is out of sync with reference/skill-references/${name}`
       );
     }
+  }
+}
+
+for (const [platform, target] of Object.entries(modelPolicyTargetPaths)) {
+  const actual = await readFile(target, "utf8");
+
+  if (actual !== modelPolicy) {
+    hasMismatch = true;
+    console.error(
+      `${platform} skill model-policy.json is out of sync with reference/model-policy.json`
+    );
   }
 }
 

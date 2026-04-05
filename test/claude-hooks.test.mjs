@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { createState, renderContextDoc } from "../reference/context-doc.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -14,6 +15,10 @@ const hookPath = path.join(
   "hooks",
   "session_start_socrates_context.mjs"
 );
+
+function buildCanonicalDoc(input) {
+  return renderContextDoc(createState(input));
+}
 
 function runHook(payload) {
   return new Promise((resolve, reject) => {
@@ -114,40 +119,14 @@ test("Claude session-start hook injects context when a Socrates doc exists above
   await mkdir(nested, { recursive: true });
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Clarify retry policy"
-knowns:
-  - "Production service"
-unknowns:
-  - "Retry scope"
-next_question: "Which failures should remain retryable?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Clarify retry policy
-
-## What Socrates Knows
-- Production service
-
-## What Socrates Still Needs
-- Retry scope
-
-## Next Question
-Which failures should remain retryable?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Clarify retry policy",
+      knowns: ["Production service"],
+      unknowns: ["Retry scope"],
+      next_question: "Which failures should remain retryable?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -167,40 +146,14 @@ test("Claude session-start hook injects context on clear when a Socrates doc exi
   const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-clear-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Clear recovery task"
-knowns:
-  - "One fact"
-unknowns:
-  - "One unknown"
-next_question: "What remains?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Clear recovery task
-
-## What Socrates Knows
-- One fact
-
-## What Socrates Still Needs
-- One unknown
-
-## Next Question
-What remains?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Clear recovery task",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -221,40 +174,14 @@ test("Claude session-start hook does not cross the nearest git root boundary", a
   await mkdir(nestedCwd, { recursive: true });
   await writeFile(
     path.join(monorepo, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Parent repo task"
-knowns:
-  - "One fact"
-unknowns:
-  - "One unknown"
-next_question: "What remains?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Parent repo task
-
-## What Socrates Knows
-- One fact
-
-## What Socrates Still Needs
-- One unknown
-
-## Next Question
-What remains?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Parent repo task",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -288,40 +215,14 @@ test("Claude session-start hook injects context on compact when a Socrates doc e
   const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-source-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Clarify retries"
-knowns:
-  - "One fact"
-unknowns:
-  - "One unknown"
-next_question: "What remains?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Clarify retries
-
-## What Socrates Knows
-- One fact
-
-## What Socrates Still Needs
-- One unknown
-
-## Next Question
-What remains?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Clarify retries",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -332,6 +233,34 @@ clarifying
   });
 
   assert.match(output, /SOCRATES_CONTEXT\.md/);
+});
+
+test("Claude session-start hook surfaces inline evaluation guidance for executing tasks", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-claude-hook-executing-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    buildCanonicalDoc({
+      status: "executing",
+      task: "Ship retry policy change",
+      knowns: ["Patch is implemented"],
+      unknowns: [],
+      next_question: null,
+      clarifying_phase: null,
+      decisions: ["Keep retry budget unchanged"],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "resume",
+  });
+
+  assert.match(output, /quality_evaluator/);
+  assert.match(output, /inline within the current turn/);
+  assert.match(output, /instead of persisting execution micro-state/);
 });
 
 test("Claude session-start hook points canonical legacy Socrates docs to normalization guidance", async () => {
@@ -380,8 +309,8 @@ clarifying
     source: "resume",
   });
 
-  assert.match(output, /legacy version 1 shared context file/);
-  assert.match(output, /canonical version 2 format/);
+  assert.match(output, /legacy shared context file/);
+  assert.match(output, /canonical version 3 format/);
   assert.match(output, /repair --file/);
 });
 
@@ -479,7 +408,7 @@ clarifying
   });
 
   assert.match(output, /malformed shared context file/);
-  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/);
   assert.match(output, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
   assert.match(output, /not auto-repairable|manual/);
 });
@@ -520,7 +449,7 @@ clarifying
   });
 
   assert.match(output, /malformed shared context file/);
-  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/);
   assert.match(output, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
   assert.match(output, /not auto-repairable|manual/);
 });
@@ -559,7 +488,7 @@ clarifying
   });
 
   assert.match(output, /malformed shared context file/);
-  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/);
   assert.match(output, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
   assert.match(output, /not auto-repairable|manual/);
 });
@@ -577,7 +506,7 @@ test("Claude session-start hook points title-less partial body-only Socrates doc
   });
 
   assert.match(output, /malformed shared context file/);
-  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+  assert.match(output, /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/);
   assert.doesNotMatch(output, /repair --file/);
   assert.match(output, /not auto-repairable|rewritten or replaced manually/);
 });

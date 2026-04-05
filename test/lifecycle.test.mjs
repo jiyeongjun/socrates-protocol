@@ -235,7 +235,7 @@ Broken
   assert.equal(analysis.ok, false);
   assert.deepEqual(askToRepairDoc(), {
     action: "ask_repair_doc",
-    message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 2 format?",
+    message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 3 format?",
   });
 });
 

@@ -12,6 +12,7 @@ Goals:
 - surface the single most important unresolved decision
 
 Rules:
+- invoke this agent as soon as a protected-surface trigger is detected and migration, compatibility, rollback, or safety policy is still unclear
 - do not edit files
 - do not run bash
 - do not ask multiple questions

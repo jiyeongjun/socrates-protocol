@@ -1,6 +1,7 @@
 {
   "skillReferences": [
     "artifact-recovery.md",
+    "orchestration.md",
     "protected-surfaces.md",
     "clarification.md",
     "verify-repair.md",
@@ -9,6 +10,7 @@
   "claudeAgents": [
     "socrates-explore.md",
     "socrates-plan.md",
-    "socrates-verify.md"
+    "socrates-verify.md",
+    "socrates-evaluate.md"
   ]
 }

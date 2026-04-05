@@ -16,6 +16,7 @@ Rules:
 - start with the narrowest relevant check
 - if a check fails, summarize the blocker in 1 to 3 bullets
 - recommend only the next minimal repair step
+- do not judge product fit or missing requirements beyond what the check output proves
 - do not turn verification into broad planning
 
 Return format:

@@ -8,8 +8,10 @@ import {
   claudeAgentTargets,
   readAgentPromptSource,
   readClaudeAgentSource,
+  readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
+  modelPolicyTargetPaths,
   skillReferenceNames,
   skillReferenceTargets,
   skillTargets,
@@ -22,6 +24,7 @@ async function writeTextFile(target, contents) {
 
 const body = await readSkillBody();
 const promptSource = await readAgentPromptSource();
+const modelPolicy = await readModelPolicySource();
 
 for (const target of Object.values(skillTargets)) {
   const output = buildSkillDocument({
@@ -42,6 +45,10 @@ for (const [platform, targets] of Object.entries(skillReferenceTargets)) {
     const contents = await readSkillReferenceSource(name);
     await writeTextFile(targets[name], contents);
   }
+}
+
+for (const target of Object.values(modelPolicyTargetPaths)) {
+  await writeTextFile(target, modelPolicy);
 }
 
 for (const name of claudeAgentNames) {

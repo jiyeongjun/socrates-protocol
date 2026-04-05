@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "roles": {
+    "fast_explorer": {
+      "description": "Cheap read-only discovery pass before asking the user or editing code.",
+      "codex": {
+        "preferred_models": [
+          "gpt-5.4-mini",
+          "gpt-5.3-codex-spark",
+          "gpt-5.3-codex"
+        ],
+        "fallback_behavior": "host_default"
+      },
+      "claude": {
+        "preferred_models": [
+          "haiku",
+          "sonnet"
+        ],
+        "fallback_behavior": "host_default_best_effort"
+      }
+    },
+    "protected_surface_planner": {
+      "description": "Read-only planning pass for migrations, contracts, rollout, and rollback.",
+      "codex": {
+        "preferred_models": [
+          "gpt-5.4-mini",
+          "gpt-5.4",
+          "gpt-5.3-codex"
+        ],
+        "fallback_behavior": "host_default"
+      },
+      "claude": {
+        "preferred_models": [
+          "haiku",
+          "sonnet"
+        ],
+        "fallback_behavior": "host_default_best_effort"
+      }
+    },
+    "fast_verifier": {
+      "description": "Cheap verification pass that runs the narrowest relevant checks first.",
+      "codex": {
+        "preferred_models": [
+          "gpt-5.4-mini",
+          "gpt-5.3-codex-spark",
+          "gpt-5.3-codex"
+        ],
+        "fallback_behavior": "host_default"
+      },
+      "claude": {
+        "preferred_models": [
+          "haiku",
+          "sonnet"
+        ],
+        "fallback_behavior": "host_default_best_effort"
+      }
+    },
+    "quality_evaluator": {
+      "description": "Read-only quality gate for requirement fit, missing coverage, regression risk, and whether one inline repair loop is warranted.",
+      "codex": {
+        "preferred_models": [
+          "gpt-5.4",
+          "gpt-5.4-mini",
+          "gpt-5.3-codex"
+        ],
+        "fallback_behavior": "host_default"
+      },
+      "claude": {
+        "preferred_models": [
+          "sonnet",
+          "haiku"
+        ],
+        "fallback_behavior": "host_default_best_effort"
+      }
+    }
+  },
+  "rules": {
+    "main_skill_artifacts_must_not_hardcode_model_names": true,
+    "claude_binding_mode": "best_effort_until_host_supports_per_agent_binding",
+    "host_default_fallback_is_allowed": true
+  }
+}

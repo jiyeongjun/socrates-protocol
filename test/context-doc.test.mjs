@@ -3,13 +3,14 @@ import assert from "node:assert/strict";
 import {
   CLARIFYING_PHASES,
   ContextDocError,
-  FIXED_HEADINGS,
   CURRENT_VERSION,
+  FIXED_HEADINGS,
   LEGACY_VERSION,
   analyzeContextDoc,
   createState,
   getClarifyingQuestionGate,
   getContextDocRepairPlan,
+  getTurnContinuationGate,
   markQuestionAsked,
   parseContextDoc,
   renderContextDoc,
@@ -17,7 +18,7 @@ import {
   updateForClarification,
 } from "../reference/context-doc.mjs";
 
-test("renderContextDoc renders version 2 frontmatter with clarifying_phase", () => {
+test("renderContextDoc renders version 3 frontmatter without execution micro-state", () => {
   const state = createState({
     task: "Design account deletion API",
     knowns: ["Production SaaS", "GDPR-compliant"],
@@ -32,7 +33,7 @@ test("renderContextDoc renders version 2 frontmatter with clarifying_phase", () 
   assert.equal(
     output,
     `---
-version: 2
+version: 3
 status: "clarifying"
 task: "Design account deletion API"
 knowns:
@@ -73,7 +74,7 @@ clarifying
   );
 });
 
-test("parseContextDoc round-trips rendered version 2 output", () => {
+test("parseContextDoc round-trips rendered version 3 output", () => {
   const original = createState({
     status: "ready",
     task: "Clarify retry policy",
@@ -148,9 +149,13 @@ test("renderContextDoc handles empty lists and null next_question", () => {
   assert.match(output, /decisions: \[\]/);
   assert.match(output, /## Next Question\nNone\./);
   assert.match(output, /## Fixed Decisions\n- None\./);
+  assert.doesNotMatch(output, /workflow_phase/);
+  assert.doesNotMatch(output, /handoff_question/);
+  assert.doesNotMatch(output, /repair_attempts/);
+  assert.doesNotMatch(output, /evaluation_attempts/);
 });
 
-test("validateState rejects invalid status", () => {
+test("createState rejects invalid status", () => {
   assert.throws(
     () =>
       createState({
@@ -162,17 +167,18 @@ test("validateState rejects invalid status", () => {
   );
 });
 
-test("validateState rejects clarifying states without a phase", () => {
+test("parseContextDoc rejects clarifying states with an explicit null phase", () => {
   assert.throws(
     () =>
       parseContextDoc(`---
-version: 2
+version: 3
 status: "clarifying"
 task: "Broken"
 knowns: []
 unknowns:
   - "One unknown"
 next_question: "What remains?"
+clarifying_phase: null
 decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 ---
@@ -198,7 +204,8 @@ What remains?
 clarifying
 `),
     (error) =>
-      error instanceof ContextDocError && error.code === "invalid_clarifying_phase"
+      error instanceof ContextDocError &&
+      error.code === "invalid_status_shape"
   );
 });
 
@@ -274,7 +281,7 @@ test("parseContextDoc rejects docs without a closing frontmatter delimiter", () 
   assert.throws(
     () =>
       parseContextDoc(`---
-version: 2
+version: 3
 status: "clarifying"
 task: "Broken"
 knowns: []
@@ -286,7 +293,8 @@ decisions: []
 updated_at: "2026-03-29T00:00:00.000Z"
 `),
     (error) =>
-      error instanceof ContextDocError && error.code === "missing_frontmatter_end"
+      error instanceof ContextDocError &&
+      error.code === "missing_frontmatter_end"
   );
 });
 
@@ -294,7 +302,7 @@ test("parseContextDoc rejects invalid frontmatter lines", () => {
   assert.throws(
     () =>
       parseContextDoc(`---
-version: 2
+version: 3
 status "clarifying"
 task: "Broken"
 knowns: []
@@ -327,7 +335,8 @@ What remains?
 clarifying
 `),
     (error) =>
-      error instanceof ContextDocError && error.code === "invalid_frontmatter_line"
+      error instanceof ContextDocError &&
+      error.code === "invalid_frontmatter_line"
   );
 });
 
@@ -335,7 +344,7 @@ test("parseContextDoc rejects empty string entries in arrays", () => {
   assert.throws(
     () =>
       parseContextDoc(`---
-version: 2
+version: 3
 status: "clarifying"
 task: "Broken"
 knowns:
@@ -391,53 +400,51 @@ test("render and parse support quoted strings and escaped newlines", () => {
 });
 
 test("getContextDocRepairPlan rebuilds the canonical body from valid frontmatter", () => {
-  const drifted = `---
-version: ${CURRENT_VERSION}
-status: "clarifying"
-task: "Design delete flow"
-knowns:
-  - "Production system"
-unknowns:
-  - "Retention obligations"
-next_question: "What retained data is legally required?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Different task
-
-## What Socrates Knows
-- Production system
-
-## What Socrates Still Needs
-- Retention obligations
-
-## Next Question
-What retained data is legally required?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`;
+  const drifted = renderContextDoc(
+    createState({
+      task: "Design delete flow",
+      knowns: ["Production system"],
+      unknowns: ["Retention obligations"],
+      next_question: "What retained data is legally required?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    })
+  ).replace("## Task\nDesign delete flow", "## Task\nDifferent task");
 
   const plan = getContextDocRepairPlan(drifted);
   assert.equal(plan.action, "repair");
   assert.equal(plan.reason, "body_mismatch");
   assert.equal(plan.source, "frontmatter");
-  assert.match(plan.markdown, /^---\nversion: 2\nstatus: "clarifying"/);
+  assert.match(plan.markdown, /^---\nversion: 3\nstatus: "clarifying"/);
   assert.match(plan.markdown, /clarifying_phase: "needs_question"/);
   assert.match(plan.markdown, /## Task\nDesign delete flow/);
+  assert.doesNotMatch(plan.markdown, /workflow_phase/);
+});
+
+test("getContextDocRepairPlan repairs current-version docs with extra frontmatter keys", () => {
+  const drifted = renderContextDoc(
+    createState({
+      task: "Repair frontmatter drift",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    })
+  ).replace(
+    "decisions: []",
+    'workflow_phase: "needs_evaluation"\ndecisions: []'
+  );
+
+  const plan = getContextDocRepairPlan(drifted);
+  assert.equal(plan.action, "repair");
+  assert.equal(plan.reason, "frontmatter_drift");
+  assert.doesNotMatch(plan.markdown, /workflow_phase/);
 });
 
 test("getContextDocRepairPlan marks canonical legacy docs as repairable", () => {
   const legacy = `---
-version: 1
+version: ${LEGACY_VERSION}
 status: "clarifying"
 task: "Clarify retry policy"
 knowns:
@@ -474,7 +481,8 @@ clarifying
   assert.equal(plan.action, "repair");
   assert.equal(plan.reason, "legacy_version");
   assert.equal(plan.source, "frontmatter");
-  assert.match(plan.markdown, /^---\nversion: 2\nstatus: "clarifying"/);
+  assert.match(plan.markdown, /^---\nversion: 3\nstatus: "clarifying"/);
+  assert.doesNotMatch(plan.markdown, /workflow_phase/);
 });
 
 test("getContextDocRepairPlan reports body-only docs as unrepairable", () => {
@@ -666,7 +674,7 @@ test("startExecution rejects non-ready states", () => {
   );
 });
 
-test("getClarifyingQuestionGate only blocks when a question still needs asking", () => {
+test("clarifying gates only block while a question still needs asking", () => {
   const needsQuestion = createState({
     task: "Clarify retry policy",
     knowns: ["Production service"],
@@ -680,8 +688,38 @@ test("getClarifyingQuestionGate only blocks when a question still needs asking",
     "needs_question",
     "awaiting_user_answer",
   ]);
+  assert.equal(CURRENT_VERSION, 3);
   assert.deepEqual(getClarifyingQuestionGate(needsQuestion), {
     action: "continue",
     next_question: "Which failures should remain retryable?",
+  });
+  assert.deepEqual(getTurnContinuationGate(needsQuestion), {
+    action: "continue",
+    kind: "clarifying_question",
+    next_question: "Which failures should remain retryable?",
+  });
+});
+
+test("getTurnContinuationGate allows ready and executing states", () => {
+  const ready = createState({
+    status: "ready",
+    task: "Clarified retry policy",
+    knowns: ["Only network timeouts remain retryable"],
+    unknowns: [],
+    next_question: null,
+    decisions: ["Retry only on network timeouts with idempotency keys."],
+    updated_at: "2026-03-29T00:00:00.000Z",
+  });
+  const executing = startExecution(ready, "2026-03-29T00:05:00.000Z");
+
+  assert.deepEqual(getTurnContinuationGate(ready), {
+    action: "allow",
+    kind: null,
+    next_question: null,
+  });
+  assert.deepEqual(getTurnContinuationGate(executing), {
+    action: "allow",
+    kind: null,
+    next_question: null,
   });
 });

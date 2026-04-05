@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v0.3.1";
+export const DEFAULT_VERSION = "v0.4.0";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];
@@ -30,12 +30,15 @@ function buildNodeCommand(scriptPath) {
 
 const ASSETS = {
   skillLayout: "reference/skill-layout.json",
+  modelPolicy: "reference/model-policy.json",
   codexSkill: ".agents/skills/socrates/SKILL.md",
   codexAgent: ".agents/skills/socrates/agents/openai.yaml",
+  codexModelPolicy: ".agents/skills/socrates/model-policy.json",
   codexReferencesDir: ".agents/skills/socrates/references",
   codexHookScript: ".codex/hooks/session_start_socrates_context.mjs",
   codexStopHookScript: ".codex/hooks/stop_socrates_clarifying.mjs",
   claudeSkill: ".claude/skills/socrates/SKILL.md",
+  claudeModelPolicy: ".claude/skills/socrates/model-policy.json",
   claudeReferencesDir: ".claude/skills/socrates/references",
   claudeAgentsDir: ".claude/agents",
   claudeHookScript: ".claude/hooks/session_start_socrates_context.mjs",
@@ -64,10 +67,13 @@ export function listReleaseAssetPaths(skillLayout) {
   return [
     "scripts/install.mjs",
     ASSETS.skillLayout,
+    ASSETS.modelPolicy,
     ASSETS.codexSkill,
     ASSETS.codexAgent,
+    ASSETS.codexModelPolicy,
     ...Object.values(codexReferenceAssets),
     ASSETS.claudeSkill,
+    ASSETS.claudeModelPolicy,
     ...Object.values(claudeReferenceAssets),
     ...Object.values(claudeAgentAssets),
     ASSETS.codexHookScript,
@@ -306,6 +312,7 @@ async function installCodex(options, loadAsset, skillLayout) {
     repoInstall,
     skillPath,
     agentPath,
+    modelPolicyPath,
     referencePaths,
     hookScriptPath,
     hookUtilsPath,
@@ -353,6 +360,10 @@ async function installCodex(options, loadAsset, skillLayout) {
 
   await writeTextFile(skillPath, await loadAsset(ASSETS.codexSkill));
   await writeTextFile(agentPath, await loadAsset(ASSETS.codexAgent));
+  await writeTextFile(
+    modelPolicyPath,
+    await loadAsset(ASSETS.codexModelPolicy)
+  );
   for (const name of skillLayout.skillReferences) {
     await writeTextFile(
       referencePaths[name],
@@ -387,6 +398,7 @@ async function installCodex(options, loadAsset, skillLayout) {
   return [
     skillPath,
     agentPath,
+    modelPolicyPath,
     ...Object.values(referencePaths),
     hookScriptPath,
     hookUtilsPath,
@@ -404,6 +416,7 @@ async function installClaude(options, loadAsset, skillLayout) {
   const {
     repoInstall,
     skillPath,
+    modelPolicyPath,
     referencePaths,
     agentPaths,
     hookScriptPath,
@@ -459,6 +472,10 @@ async function installClaude(options, loadAsset, skillLayout) {
   }
 
   await writeTextFile(skillPath, await loadAsset(ASSETS.claudeSkill));
+  await writeTextFile(
+    modelPolicyPath,
+    await loadAsset(ASSETS.claudeModelPolicy)
+  );
   for (const name of skillLayout.skillReferences) {
     await writeTextFile(
       referencePaths[name],
@@ -501,6 +518,7 @@ async function installClaude(options, loadAsset, skillLayout) {
 
   return [
     skillPath,
+    modelPolicyPath,
     ...Object.values(referencePaths),
     ...Object.values(agentPaths),
     hookScriptPath,
@@ -520,6 +538,7 @@ async function uninstallCodex(options, skillLayout) {
     repoInstall,
     skillPath,
     agentPath,
+    modelPolicyPath,
     referencePaths,
     hookScriptPath,
     hookUtilsPath,
@@ -536,6 +555,7 @@ async function uninstallCodex(options, skillLayout) {
   if (!removeOptionalOnly) {
     await deleteFile(skillPath);
     await deleteFile(agentPath);
+    await deleteFile(modelPolicyPath);
     for (const target of Object.values(referencePaths)) {
       await deleteFile(target);
     }
@@ -588,6 +608,7 @@ async function uninstallCodex(options, skillLayout) {
   return [
     skillPath,
     agentPath,
+    modelPolicyPath,
     ...Object.values(referencePaths),
     hookScriptPath,
     hookUtilsPath,
@@ -604,6 +625,7 @@ async function uninstallClaude(options, skillLayout) {
   const {
     repoInstall,
     skillPath,
+    modelPolicyPath,
     referencePaths,
     agentPaths,
     hookScriptPath,
@@ -621,6 +643,7 @@ async function uninstallClaude(options, skillLayout) {
 
   if (!removeOptionalOnly) {
     await deleteFile(skillPath);
+    await deleteFile(modelPolicyPath);
     for (const target of Object.values(referencePaths)) {
       await deleteFile(target);
     }
@@ -678,6 +701,7 @@ async function uninstallClaude(options, skillLayout) {
 
   return [
     skillPath,
+    modelPolicyPath,
     ...Object.values(referencePaths),
     ...Object.values(agentPaths),
     hookScriptPath,
@@ -735,6 +759,7 @@ function getCodexTargets(options, skillLayout) {
     repoInstall,
     skillPath: path.join(skillDir, "SKILL.md"),
     agentPath: path.join(skillDir, "agents", "openai.yaml"),
+    modelPolicyPath: path.join(skillDir, "model-policy.json"),
     referencePaths: buildTargetPathMap(
       path.join(skillDir, "references"),
       skillLayout.skillReferences
@@ -782,6 +807,7 @@ function getClaudeTargets(options, skillLayout) {
   return {
     repoInstall,
     skillPath: path.join(skillDir, "SKILL.md"),
+    modelPolicyPath: path.join(skillDir, "model-policy.json"),
     referencePaths: buildTargetPathMap(
       path.join(skillDir, "references"),
       skillLayout.skillReferences
@@ -1089,8 +1115,8 @@ Options:
   --enable-codex-hooks
 
 Notes:
-  - Socrates installs only the canonical version 2 shared-context format.
-  - Existing version 1 SOCRATES_CONTEXT.md files are treated as legacy and must be repaired or deleted before runtime hooks trust them.
+  - Socrates installs only the canonical version 3 shared-context format.
+  - Existing version 1 and version 2 SOCRATES_CONTEXT.md files are treated as legacy and must be repaired or deleted before runtime hooks trust them.
 `;
 }
 

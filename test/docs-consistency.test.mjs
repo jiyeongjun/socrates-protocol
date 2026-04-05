@@ -9,8 +9,10 @@ import {
   buildSkillDocument,
   claudeAgentNames,
   claudeAgentTargets,
+  modelPolicyTargetPaths,
   readAgentPromptSource,
   readClaudeAgentSource,
+  readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
   skillReferenceNames,
@@ -28,7 +30,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.3.1");
+  assert.equal(pkg.version, "0.4.0");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
   assert.equal(
@@ -46,9 +48,9 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /Explicit invocation example:/);
   assert.match(readme, /Auto-load example:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.3\.1/);
-  assert.match(readme, /current tagged version: `v0\.3\.1`/i);
-  assert.match(readme, /package version (is|:) `0\.3\.1`/i);
+  assert.match(readme, /VERSION=v0\.4\.0/);
+  assert.match(readme, /release tag `v0\.4\.0`/i);
+  assert.match(readme, /current package version in this worktree is `0\.4\.0`/i);
   assert.match(readme, /automatically deletes `SOCRATES_CONTEXT\.md`/);
   assert.match(readme, /If you decline twice/);
   assert.match(readme, /already exists for the same task, Socrates reads it first/);
@@ -70,19 +72,25 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /Want the Stop hook from the start:/);
   assert.match(readme, /\.claude\/settings\.json/);
   assert.match(readme, /\.claude\/agents\//);
+  assert.match(readme, /\.claude\/agents\/socrates-evaluate\.md/);
   assert.match(readme, /mirrored `references\/` files/);
+  assert.match(readme, /model-policy\.json/);
   assert.match(readme, /not a task manager/i);
   assert.match(readme, /canonical machine-readable state/);
   assert.match(readme, /may be regenerated/);
   assert.match(readme, /drift out of sync with frontmatter/);
   assert.match(readme, /clarifying_phase/);
   assert.match(readme, /awaiting_user_answer/);
+  assert.match(readme, /inline verification, evaluation, and repair flow/);
   assert.match(readme, /scripts\/context-doc\.mjs doctor/);
   assert.match(readme, /scripts\/context-doc\.mjs repair/);
   assert.match(readme, /socrates_context_doc_helper\.mjs/);
   assert.match(readme, /verify:release-assets/);
-  assert.match(readme, /version: 2/);
+  assert.match(readme, /version: 3/);
   assert.match(readme, /Node `24\+`/);
+  assert.doesNotMatch(readme, /workflow_phase/);
+  assert.doesNotMatch(readme, /needs_evaluation/);
+  assert.doesNotMatch(readme, /needs_repair/);
 });
 
 test("Korean README documents shared context lifecycle", async () => {
@@ -94,9 +102,9 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /명시적 호출 예시:/);
   assert.match(readme, /자동 개입 예시:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.3\.1/);
-  assert.match(readme, /현재 태그 버전은 `v0\.3\.1`입니다/);
-  assert.match(readme, /package version은 `0\.3\.1`입니다/);
+  assert.match(readme, /VERSION=v0\.4\.0/);
+  assert.match(readme, /현재 릴리즈 태그는 `v0\.4\.0`입니다/);
+  assert.match(readme, /현재 worktree의 package version은 `0\.4\.0`입니다/);
   assert.match(readme, /성공적으로 끝나면.*자동으로 삭제/);
   assert.match(readme, /두 번 연속 거부/);
   assert.match(readme, /같은 작업을 가리키는 `SOCRATES_CONTEXT\.md`가 이미 있으면 먼저 읽고 계속 갱신합니다/);
@@ -118,25 +126,43 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /처음부터 Stop hook까지 포함해서 설치:/);
   assert.match(readme, /\.claude\/settings\.json/);
   assert.match(readme, /\.claude\/agents\//);
+  assert.match(readme, /\.claude\/agents\/socrates-evaluate\.md/);
   assert.match(readme, /미러된 `references\/` 파일들/);
+  assert.match(readme, /model-policy\.json/);
   assert.match(readme, /task manager가 아니라/);
   assert.match(readme, /canonical machine-readable state/);
   assert.match(readme, /다시 생성될 수 있습니다/);
   assert.match(readme, /body 섹션이 frontmatter와 어긋나면/);
   assert.match(readme, /clarifying_phase/);
   assert.match(readme, /awaiting_user_answer/);
+  assert.match(readme, /inline verification, evaluation, and repair flow/);
   assert.match(readme, /scripts\/context-doc\.mjs doctor/);
   assert.match(readme, /scripts\/context-doc\.mjs repair/);
   assert.match(readme, /socrates_context_doc_helper\.mjs/);
   assert.match(readme, /verify:release-assets/);
-  assert.match(readme, /version: 2/);
+  assert.match(readme, /version: 3/);
   assert.match(readme, /Node `24\+`/);
+  assert.doesNotMatch(readme, /workflow_phase/);
+  assert.doesNotMatch(readme, /needs_evaluation/);
+  assert.doesNotMatch(readme, /needs_repair/);
 });
 
 test("Codex and Claude skills are generated from the shared skill body source", async () => {
   const body = await readSkillBody();
   const codex = await readFile(skillTargets.codex.path, "utf8");
   const claude = await readFile(skillTargets.claude.path, "utf8");
+
+  assert.match(
+    body,
+    /Fast path only skips extra clarification or shared-context ceremony; it does not waive post-patch verification or evaluation/
+  );
+  assert.match(body, /run `protected_surface_planner` before patching/);
+  assert.match(
+    body,
+    /evaluation still finds actionable drift after that inline repair loop/
+  );
+  assert.match(body, /Default to a closed request scope/);
+  assert.match(body, /If a local Socrates context helper or `scripts\/context-doc\.mjs` is available/);
 
   assert.equal(
     codex,
@@ -175,6 +201,15 @@ test("Claude subagents are generated from the shared source", async () => {
   }
 });
 
+test("Model policy is mirrored from the shared source", async () => {
+  const expected = `${await readModelPolicySource()}\n`;
+  const codex = await readFile(modelPolicyTargetPaths.codex, "utf8");
+  const claude = await readFile(modelPolicyTargetPaths.claude, "utf8");
+
+  assert.equal(codex, expected);
+  assert.equal(claude, expected);
+});
+
 test("OpenAI agent prompt stays aligned with the router and on-demand references", async () => {
   const promptSource = await readAgentPromptSource();
   const prompt = await readFile(agentTargetPath, "utf8");
@@ -191,7 +226,31 @@ test("OpenAI agent prompt stays aligned with the router and on-demand references
   assert.match(prompt, /context-file\.md/);
   assert.match(prompt, /verify-repair\.md/);
   assert.match(prompt, /SOCRATES_CONTEXT\.md/);
+  assert.match(prompt, /protected_surface_planner/);
+  assert.match(prompt, /quality_evaluator/);
+  assert.match(prompt, /including explicit fast-path executions/);
+  assert.match(prompt, /Default to a closed request scope/);
+  assert.match(prompt, /If a local Socrates context helper or `scripts\/context-doc\.mjs` is available/);
   assert.match(prompt, /Do not create hidden JSON/);
+});
+
+test("Reference files encode strict context-doc and anti-scope-creep rules", async () => {
+  const contextFile = await readSkillReferenceSource("context-file.md");
+  const orchestration = await readSkillReferenceSource("orchestration.md");
+  const verifyRepair = await readSkillReferenceSource("verify-repair.md");
+  const evaluator = await readClaudeAgentSource("socrates-evaluate.md");
+
+  assert.match(
+    contextFile,
+    /If `scripts\/context-doc\.mjs` or `socrates_context_doc_helper\.mjs` is available/
+  );
+  assert.match(contextFile, /run the local doctor command/);
+  assert.match(orchestration, /new accepted input shapes/);
+  assert.match(verifyRepair, /Do not add tests for new semantics/);
+  assert.match(
+    evaluator,
+    /fail the patch when it adds new accepted input shapes/
+  );
 });
 
 test("repo-local hook configs stay aligned with the SessionStart matcher", async () => {

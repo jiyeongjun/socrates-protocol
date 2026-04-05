@@ -10,6 +10,7 @@ const SOCRATES_DESCRIPTION =
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");
+export const modelPolicySourcePath = path.join(__dirname, "model-policy.json");
 export const skillReferenceSourceDir = path.join(__dirname, "skill-references");
 export const claudeAgentSourceDir = path.join(__dirname, "claude-agents");
 export const skillLayoutPath = path.join(__dirname, "skill-layout.json");
@@ -51,6 +52,11 @@ export const skillReferenceTargets = {
     path.resolve(__dirname, "../.claude/skills/socrates/references"),
     skillReferenceNames
   ),
+};
+
+export const modelPolicyTargetPaths = {
+  codex: path.resolve(__dirname, "../.agents/skills/socrates/model-policy.json"),
+  claude: path.resolve(__dirname, "../.claude/skills/socrates/model-policy.json"),
 };
 
 export const claudeAgentTargets = buildNamedTargetPaths(
@@ -96,6 +102,10 @@ export async function readSkillBody() {
 
 export async function readAgentPromptSource() {
   return (await readFile(agentPromptPath, "utf8")).trim();
+}
+
+export async function readModelPolicySource() {
+  return (await readFile(modelPolicySourcePath, "utf8")).trim();
 }
 
 export async function readSkillReferenceSource(name) {

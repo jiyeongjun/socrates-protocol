@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { createState, renderContextDoc } from "../reference/context-doc.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -14,6 +15,10 @@ const hookPath = path.join(
   "hooks",
   "session_start_socrates_context.mjs"
 );
+
+function buildCanonicalDoc(input) {
+  return renderContextDoc(createState(input));
+}
 
 function runHook(payload) {
   return new Promise((resolve, reject) => {
@@ -114,40 +119,14 @@ test("session-start hook injects context when a Socrates doc exists above cwd", 
   await mkdir(nested, { recursive: true });
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Design account deletion API"
-knowns:
-  - "Production SaaS"
-unknowns:
-  - "Retention obligations"
-next_question: "What retained data is legally required?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Design account deletion API
-
-## What Socrates Knows
-- Production SaaS
-
-## What Socrates Still Needs
-- Retention obligations
-
-## Next Question
-What retained data is legally required?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Design account deletion API",
+      knowns: ["Production SaaS"],
+      unknowns: ["Retention obligations"],
+      next_question: "What retained data is legally required?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -172,40 +151,14 @@ test("session-start hook injects context on compact when a Socrates doc exists",
   const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-compact-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Compact recovery task"
-knowns:
-  - "One fact"
-unknowns:
-  - "One unknown"
-next_question: "What remains?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Compact recovery task
-
-## What Socrates Knows
-- One fact
-
-## What Socrates Still Needs
-- One unknown
-
-## Next Question
-What remains?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Compact recovery task",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -267,8 +220,8 @@ clarifying
   });
   const parsed = JSON.parse(output);
 
-  assert.match(parsed.hookSpecificOutput.additionalContext, /legacy version 1 shared context file/);
-  assert.match(parsed.hookSpecificOutput.additionalContext, /canonical version 2 format/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /legacy shared context file/);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /canonical version 3 format/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /repair --file/);
 });
 
@@ -280,40 +233,14 @@ test("session-start hook does not cross the nearest git root boundary", async ()
   await mkdir(nestedCwd, { recursive: true });
   await writeFile(
     path.join(monorepo, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Parent repo task"
-knowns:
-  - "One fact"
-unknowns:
-  - "One unknown"
-next_question: "What remains?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Parent repo task
-
-## What Socrates Knows
-- One fact
-
-## What Socrates Still Needs
-- One unknown
-
-## Next Question
-What remains?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Parent repo task",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -347,40 +274,14 @@ test("session-start hook injects context on clear when a Socrates doc exists", a
   const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-source-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Clarify retries"
-knowns:
-  - "One fact"
-unknowns:
-  - "One unknown"
-next_question: "What remains?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Clarify retries
-
-## What Socrates Knows
-- One fact
-
-## What Socrates Still Needs
-- One unknown
-
-## Next Question
-What remains?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Clarify retries",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -394,44 +295,53 @@ clarifying
   assert.equal(parsed.hookSpecificOutput.hookEventName, "SessionStart");
 });
 
+test("session-start hook surfaces inline evaluation guidance for executing tasks", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-executing-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    buildCanonicalDoc({
+      status: "executing",
+      task: "Ship retry policy change",
+      knowns: ["Patch is implemented"],
+      unknowns: [],
+      next_question: null,
+      clarifying_phase: null,
+      decisions: ["Keep retry budget unchanged"],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
+    "utf8"
+  );
+
+  const output = await runHook({
+    cwd: root,
+    hook_event_name: "SessionStart",
+    source: "resume",
+  });
+
+  const parsed = JSON.parse(output);
+  assert.match(parsed.hookSpecificOutput.additionalContext, /quality_evaluator/);
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /inline within the current turn/
+  );
+  assert.match(
+    parsed.hookSpecificOutput.additionalContext,
+    /instead of persisting execution micro-state/
+  );
+});
+
 test("session-start hook ignores unsupported session sources", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-hook-unsupported-source-"));
   await writeFile(
     path.join(root, "SOCRATES_CONTEXT.md"),
-    `---
-version: 2
-status: "clarifying"
-task: "Clarify retries"
-knowns:
-  - "One fact"
-unknowns:
-  - "One unknown"
-next_question: "What remains?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Clarify retries
-
-## What Socrates Knows
-- One fact
-
-## What Socrates Still Needs
-- One unknown
-
-## Next Question
-What remains?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
+    buildCanonicalDoc({
+      task: "Clarify retries",
+      knowns: ["One fact"],
+      unknowns: ["One unknown"],
+      next_question: "What remains?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    }),
     "utf8"
   );
 
@@ -492,7 +402,7 @@ clarifying
   assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
   assert.match(
     parsed.hookSpecificOutput.additionalContext,
-    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/
   );
   assert.match(
     parsed.hookSpecificOutput.additionalContext,
@@ -541,7 +451,7 @@ clarifying
   assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
   assert.match(
     parsed.hookSpecificOutput.additionalContext,
-    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/
   );
   assert.match(
     parsed.hookSpecificOutput.additionalContext,
@@ -590,7 +500,7 @@ clarifying
   assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
   assert.match(
     parsed.hookSpecificOutput.additionalContext,
-    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/
   );
   assert.match(
     parsed.hookSpecificOutput.additionalContext,
@@ -618,7 +528,7 @@ test("session-start hook points title-less partial body-only Socrates docs to re
   assert.match(parsed.hookSpecificOutput.additionalContext, /malformed shared context file/);
   assert.match(
     parsed.hookSpecificOutput.additionalContext,
-    /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/
+    /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/
   );
   assert.doesNotMatch(parsed.hookSpecificOutput.additionalContext, /repair --file/);
   assert.match(parsed.hookSpecificOutput.additionalContext, /not auto-repairable|rewritten or replaced manually/);

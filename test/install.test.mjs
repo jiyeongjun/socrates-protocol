@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { CURRENT_VERSION, createState, renderContextDoc } from "../reference/context-doc.mjs";
 import {
   installSocrates,
   mergeCodexHooksFeature,
@@ -30,15 +31,20 @@ async function writeJson(target, value) {
 async function buildFetchAssetMap() {
   return new Map([
     ["reference/skill-layout.json", await readFile(path.join(repoRoot, "reference/skill-layout.json"), "utf8")],
+    ["reference/model-policy.json", await readFile(path.join(repoRoot, "reference/model-policy.json"), "utf8")],
     [".agents/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/SKILL.md"), "utf8")],
     [".agents/skills/socrates/agents/openai.yaml", await readFile(path.join(repoRoot, ".agents/skills/socrates/agents/openai.yaml"), "utf8")],
+    [".agents/skills/socrates/model-policy.json", await readFile(path.join(repoRoot, ".agents/skills/socrates/model-policy.json"), "utf8")],
     [".agents/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/artifact-recovery.md"), "utf8")],
+    [".agents/skills/socrates/references/orchestration.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/orchestration.md"), "utf8")],
     [".agents/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/protected-surfaces.md"), "utf8")],
     [".agents/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/clarification.md"), "utf8")],
     [".agents/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/verify-repair.md"), "utf8")],
     [".agents/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/context-file.md"), "utf8")],
     [".claude/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/SKILL.md"), "utf8")],
+    [".claude/skills/socrates/model-policy.json", await readFile(path.join(repoRoot, ".claude/skills/socrates/model-policy.json"), "utf8")],
     [".claude/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/artifact-recovery.md"), "utf8")],
+    [".claude/skills/socrates/references/orchestration.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/orchestration.md"), "utf8")],
     [".claude/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/protected-surfaces.md"), "utf8")],
     [".claude/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/clarification.md"), "utf8")],
     [".claude/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/verify-repair.md"), "utf8")],
@@ -46,6 +52,7 @@ async function buildFetchAssetMap() {
     [".claude/agents/socrates-explore.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-explore.md"), "utf8")],
     [".claude/agents/socrates-plan.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-plan.md"), "utf8")],
     [".claude/agents/socrates-verify.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-verify.md"), "utf8")],
+    [".claude/agents/socrates-evaluate.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-evaluate.md"), "utf8")],
     [".codex/hooks/session_start_socrates_context.mjs", await readFile(path.join(repoRoot, ".codex/hooks/session_start_socrates_context.mjs"), "utf8")],
     [".codex/hooks/stop_socrates_clarifying.mjs", await readFile(path.join(repoRoot, ".codex/hooks/stop_socrates_clarifying.mjs"), "utf8")],
     ["reference/hook-utils.mjs", await readFile(path.join(repoRoot, "reference/hook-utils.mjs"), "utf8")],
@@ -57,7 +64,7 @@ async function buildFetchAssetMap() {
 }
 
 function buildContextDoc({
-  version = 2,
+  version = CURRENT_VERSION,
   status = "clarifying",
   clarifyingPhase = status === "clarifying" ? "needs_question" : null,
   task = "Clarify retry policy",
@@ -65,6 +72,21 @@ function buildContextDoc({
   unknowns = ['  - "Retry scope"'],
   nextQuestion = "Which failures should remain retryable?",
 } = {}) {
+  if (version === CURRENT_VERSION) {
+    return renderContextDoc(
+      createState({
+        status,
+        clarifying_phase: clarifyingPhase,
+        task,
+        knowns: knowns.map((entry) => JSON.parse(entry.slice(4))),
+        unknowns: unknowns.map((entry) => JSON.parse(entry.slice(4))),
+        next_question: nextQuestion,
+        decisions: [],
+        updated_at: "2026-03-29T00:00:00.000Z",
+      })
+    );
+  }
+
   const unknownsFrontmatter =
     unknowns.length === 0 ? "unknowns: []" : `unknowns:\n${unknowns.join("\n")}`;
   const nextQuestionFrontmatter =
@@ -467,13 +489,13 @@ test("parseArgs accepts the recommended repo install shape", () => {
     "--target-repo",
     "/tmp/example",
     "--version",
-    "v0.3.1",
+    "v0.4.0",
   ]);
 
   assert.equal(parsed.platform, "both");
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
-  assert.equal(parsed.version, "v0.3.1");
+  assert.equal(parsed.version, "v0.4.0");
 });
 
 test("parseArgs accepts optional stop-hook features", () => {
@@ -836,7 +858,7 @@ test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
       "--source-root",
       repoRoot,
       "--version",
-      "v0.3.1",
+      "v0.4.0",
       "--enable-codex-hooks",
     ],
     {
@@ -1193,7 +1215,7 @@ test("install falls back to fetch when local source assets are unavailable", asy
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 13);
+  assert.equal(requested.length, 15);
   await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".codex", "hooks.json"), "utf8")
   );
@@ -1238,7 +1260,7 @@ test("install falls back to fetch for stop-hook assets when requested", async ()
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 15);
+  assert.equal(requested.length, 17);
   await assert.doesNotReject(() =>
     readFile(
       path.join(fakeHome, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"),
@@ -1472,7 +1494,7 @@ clarifying
   assert.match(repair.stdout, /source=frontmatter/);
 
   const repaired = await readFile(repairableDocPath, "utf8");
-  assert.match(repaired, /^---\nversion: 2\nstatus: "clarifying"/);
+  assert.match(repaired, /^---\nversion: 3\nstatus: "clarifying"/);
   assert.match(repaired, /clarifying_phase: "needs_question"/);
   assert.match(repaired, /## Task\nClarify retry policy/);
 });

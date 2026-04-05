@@ -45,45 +45,18 @@ function runCli(args, cwd = repoRoot) {
 test("context-doc doctor reports repairable drift", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-context-cli-doctor-"));
   const target = path.join(root, "SOCRATES_CONTEXT.md");
+  const drifted = renderContextDoc(
+    createState({
+      task: "Design delete flow",
+      knowns: ["Production system"],
+      unknowns: ["Retention obligations"],
+      next_question: "What retained data is legally required?",
+      decisions: [],
+      updated_at: "2026-03-29T00:00:00.000Z",
+    })
+  ).replace("## Task\nDesign delete flow", "## Task\nDifferent task");
 
-  await writeFile(
-    target,
-    `---
-version: 2
-status: "clarifying"
-task: "Design delete flow"
-knowns:
-  - "Production system"
-unknowns:
-  - "Retention obligations"
-next_question: "What retained data is legally required?"
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-Different task
-
-## What Socrates Knows
-- Production system
-
-## What Socrates Still Needs
-- Retention obligations
-
-## Next Question
-What retained data is legally required?
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-`,
-    "utf8"
-  );
+  await writeFile(target, drifted, "utf8");
 
   const result = await runCli(["doctor", "--file", target]);
   assert.equal(result.code, 2);
@@ -92,7 +65,7 @@ clarifying
   assert.match(result.stdout, /source=frontmatter/);
 });
 
-test("context-doc repair rewrites a repairable file into version 2 canonical form", async () => {
+test("context-doc repair rewrites a repairable file into version 3 canonical form", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-context-cli-repair-"));
   const target = path.join(root, "SOCRATES_CONTEXT.md");
 
@@ -140,7 +113,7 @@ clarifying
   assert.match(result.stdout, /source=frontmatter/);
 
   const next = await readFile(target, "utf8");
-  assert.match(next, /^---\nversion: 2\nstatus: "clarifying"/);
+  assert.match(next, /^---\nversion: 3\nstatus: "clarifying"/);
   assert.match(next, /clarifying_phase: "needs_question"/);
   assert.match(next, /## Task\nClarify retry policy/);
 });

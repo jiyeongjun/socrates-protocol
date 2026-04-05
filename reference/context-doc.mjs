@@ -2,7 +2,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export const DOC_FILENAME = "SOCRATES_CONTEXT.md";
-export const CURRENT_VERSION = 2;
+export const CURRENT_VERSION = 3;
 export const LEGACY_VERSION = 1;
 export const STATUSES = ["clarifying", "ready", "executing"];
 export const CLARIFYING_PHASES = [
@@ -18,6 +18,18 @@ export const FIXED_HEADINGS = [
   "Status",
 ];
 
+const CANONICAL_FRONTMATTER_KEYS = new Set([
+  "version",
+  "status",
+  "task",
+  "knowns",
+  "unknowns",
+  "next_question",
+  "clarifying_phase",
+  "decisions",
+  "updated_at",
+]);
+
 export class ContextDocError extends Error {
   constructor(code, message) {
     super(message);
@@ -30,13 +42,21 @@ export function contextDocPath(rootDir) {
 }
 
 export function createState(input) {
-  const state = buildStateFromInput(input);
-
-  return validateState(state);
+  return validateState(buildStateFromInput(input));
 }
 
 export function validateState(input) {
-  const state = structuredClone(input);
+  const state = {
+    version: input.version,
+    status: input.status,
+    task: input.task,
+    knowns: input.knowns,
+    unknowns: input.unknowns,
+    next_question: input.next_question,
+    clarifying_phase: input.clarifying_phase,
+    decisions: input.decisions,
+    updated_at: input.updated_at,
+  };
 
   if (state.version !== CURRENT_VERSION) {
     throw new ContextDocError(
@@ -197,17 +217,10 @@ function inferDefaultClarifyingPhase(state) {
 }
 
 function normalizeLegacyParsedState(state) {
-  return {
+  return buildStateFromInput({
     ...state,
     version: CURRENT_VERSION,
-    clarifying_phase:
-      state.clarifying_phase ??
-      inferDefaultClarifyingPhase({
-        status: state.status,
-        unknowns: state.unknowns ?? [],
-        next_question: state.next_question ?? null,
-      }),
-  };
+  });
 }
 
 export function renderContextDoc(input) {
@@ -285,7 +298,7 @@ function quote(value) {
 export function parseContextDoc(markdown) {
   const { parsed, body } = parseParsedDocSource(markdown);
   return {
-    state: validateState(parsed),
+    state: createState(parsed),
     body,
   };
 }
@@ -421,7 +434,7 @@ export function analyzeContextDoc(markdown) {
   }
 }
 
-export function getContextDocRepairPlan(markdown, options = {}) {
+export function getContextDocRepairPlan(markdown) {
   const legacyPlan = getLegacyContextDocRepairPlan(markdown);
   if (legacyPlan) {
     return legacyPlan;
@@ -429,6 +442,21 @@ export function getContextDocRepairPlan(markdown, options = {}) {
 
   const analysis = analyzeContextDoc(markdown);
   if (analysis.ok) {
+    try {
+      const { parsed } = parseParsedDocSource(markdown);
+      if (hasExtraFrontmatterKeys(parsed)) {
+        return {
+          action: "repair",
+          reason: "frontmatter_drift",
+          source: "frontmatter",
+          state: analysis.state,
+          markdown: renderContextDoc(analysis.state),
+        };
+      }
+    } catch {
+      // analyzeContextDoc already validated this case.
+    }
+
     return {
       action: "ok",
       reason: null,
@@ -457,6 +485,10 @@ export function getContextDocRepairPlan(markdown, options = {}) {
   };
 }
 
+function hasExtraFrontmatterKeys(parsed) {
+  return Object.keys(parsed).some((key) => !CANONICAL_FRONTMATTER_KEYS.has(key));
+}
+
 function getLegacyContextDocRepairPlan(markdown) {
   try {
     const { parsed, sourceVersion } = parseParsedDocSource(markdown);
@@ -478,10 +510,6 @@ function getLegacyContextDocRepairPlan(markdown) {
     }
     throw error;
   }
-}
-
-function normalizeSection(value) {
-  return value.replace(/\r\n/g, "\n").trim();
 }
 
 function bodyMatchesCanonicalView(body, expectedBody) {
@@ -531,7 +559,7 @@ export function askToReplaceDoc() {
 export function askToRepairDoc() {
   return {
     action: "ask_repair_doc",
-    message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 2 format?",
+    message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 3 format?",
   };
 }
 
@@ -653,6 +681,23 @@ export function getClarifyingQuestionGate(state) {
   return {
     action: "continue",
     next_question: validated.next_question,
+  };
+}
+
+export function getTurnContinuationGate(state) {
+  const clarificationGate = getClarifyingQuestionGate(state);
+  if (clarificationGate.action === "continue") {
+    return {
+      action: "continue",
+      kind: "clarifying_question",
+      next_question: clarificationGate.next_question,
+    };
+  }
+
+  return {
+    action: "allow",
+    kind: null,
+    next_question: null,
   };
 }
 

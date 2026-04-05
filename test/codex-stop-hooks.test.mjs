@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { CURRENT_VERSION, createState, renderContextDoc } from "../reference/context-doc.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
@@ -16,7 +17,7 @@ const hookPath = path.join(
 );
 
 function buildDoc({
-  version = 2,
+  version = CURRENT_VERSION,
   status = "clarifying",
   clarifyingPhase = status === "clarifying" ? "needs_question" : null,
   task = "Clarify retry policy",
@@ -26,6 +27,21 @@ function buildDoc({
   unknowns = ['  - "Retry scope"'],
   bodyUnknowns = "- Retry scope",
 } = {}) {
+  if (version === CURRENT_VERSION) {
+    return renderContextDoc(
+      createState({
+        status,
+        clarifying_phase: clarifyingPhase,
+        task,
+        knowns: knowns.map((entry) => JSON.parse(entry.slice(4))),
+        unknowns: unknowns.map((entry) => JSON.parse(entry.slice(4))),
+        next_question: nextQuestion,
+        decisions: [],
+        updated_at: "2026-03-29T00:00:00.000Z",
+      })
+    );
+  }
+
   const knownsFrontmatter =
     knowns.length === 0 ? "knowns: []" : `knowns:\n${knowns.join("\n")}`;
   const unknownsFrontmatter =
@@ -285,6 +301,30 @@ test("Codex stop hook stays silent when the task is already ready", async () => 
   });
 
   assert.equal(result.code, 0);
+});
+
+test("Codex stop hook stays silent while executing", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-codex-stop-executing-"));
+  await writeFile(
+    path.join(root, "SOCRATES_CONTEXT.md"),
+    buildDoc({
+      status: "executing",
+      clarifyingPhase: null,
+      nextQuestion: null,
+      unknowns: [],
+    }),
+    "utf8"
+  );
+
+  const result = await runHook({
+    cwd: root,
+    hook_event_name: "Stop",
+    stop_hook_active: false,
+    last_assistant_message: "The patch is done.",
+  });
+
+  assert.equal(result.code, 0);
+  assert.equal(result.stderr, "");
 });
 
 test("Codex stop hook keeps intervening when already continued once but state is unchanged", async () => {

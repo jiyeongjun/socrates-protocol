@@ -289,11 +289,11 @@ updated_at: "2026-03-29T00:00:00.000Z"
 
     assert.deepEqual(askToRepairDoc(), {
       action: "ask_repair_doc",
-      message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 2 format?",
+      message: "Should I normalize SOCRATES_CONTEXT.md to the canonical version 3 format?",
     });
 
     const session = await runSessionStart(runtimeName, root, "resume");
-    assert.match(session.context, /normalize SOCRATES_CONTEXT\.md to the canonical version 2 format/);
+    assert.match(session.context, /normalize SOCRATES_CONTEXT\.md to the canonical version 3 format/);
     assert.match(session.context, /context-doc\.mjs|socrates_context_doc_helper\.mjs/);
 
     const stop = await runStop(
