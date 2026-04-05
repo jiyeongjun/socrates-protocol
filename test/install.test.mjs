@@ -495,13 +495,13 @@ test("parseArgs accepts the recommended repo install shape", () => {
     "--target-repo",
     "/tmp/example",
     "--version",
-    "v0.4.0",
+    "v0.4.1",
   ]);
 
   assert.equal(parsed.platform, "both");
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
-  assert.equal(parsed.version, "v0.4.0");
+  assert.equal(parsed.version, "v0.4.1");
 });
 
 test("parseArgs accepts optional stop-hook features", () => {
@@ -864,7 +864,7 @@ test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
       "--source-root",
       repoRoot,
       "--version",
-      "v0.4.0",
+      "v0.4.1",
       "--enable-codex-hooks",
     ],
     {
