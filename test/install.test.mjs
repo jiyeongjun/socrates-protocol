@@ -18,6 +18,12 @@ import {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
+const SHELL_COMMAND = process.platform === "win32"
+  ? process.env.ComSpec ?? "cmd.exe"
+  : "/bin/sh";
+const SHELL_ARGS_PREFIX = process.platform === "win32"
+  ? ["/d", "/s", "/c"]
+  : ["-lc"];
 
 async function assertMissing(target) {
   await assert.rejects(() => access(target));
@@ -199,7 +205,7 @@ function runNodeCli(scriptPath, args, cwd) {
 
 function runShellHook(command, payload, cwd) {
   return new Promise((resolve, reject) => {
-    const child = spawn("/bin/zsh", ["-lc", command], {
+    const child = spawn(SHELL_COMMAND, [...SHELL_ARGS_PREFIX, command], {
       cwd,
       stdio: ["pipe", "pipe", "pipe"],
     });
