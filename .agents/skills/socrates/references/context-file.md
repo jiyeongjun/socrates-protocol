@@ -5,6 +5,8 @@ Use this only when continued context across turns would materially change the im
 ## Creation Gate
 - If the request is already explicit, testable, and single-path, execute directly and do not create `SOCRATES_CONTEXT.md`.
 - If the user asks to continue, resume, or pick up prior clarification, migration, or decision history and no matching `SOCRATES_CONTEXT.md` exists, treat that missing history as load-bearing context.
+- For that missing-history case, ask only: `What was the last unresolved question or decision from the prior session?`
+- Do not append restart offers, alternative workflows, or follow-up option lists after that question unless the user asks for options.
 - Before creating the file, ask: `This task looks like it needs shared context. Should I keep it in SOCRATES_CONTEXT.md at the workspace root?`
 - If the user declines, explain once that cross-turn context may be lost and ask once more.
 - If the user declines a second time, continue without the file and warn briefly.

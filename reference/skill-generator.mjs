@@ -135,5 +135,5 @@ export function normalizeAgentPrompt(source) {
 
 export function buildOpenAIYaml({ promptSource }) {
   const prompt = normalizeAgentPrompt(promptSource);
-  return `# Generated from reference/openai-default-prompt.txt. Edit the shared source instead.\ninterface:\n  display_name: "Socrates"\n  short_description: "Recover missing artifacts, guard protected surfaces, and keep shared context only when it is truly needed."\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
+  return `# Generated from reference/openai-default-prompt.txt. Edit the shared source instead.\ninterface:\n  display_name: "Socrates"\n  short_description: "Recover artifacts and guard risky changes."\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
 }

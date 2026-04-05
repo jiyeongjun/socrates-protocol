@@ -221,17 +221,12 @@ test("OpenAI agent prompt stays aligned with the router and on-demand references
     })
   );
   assert.match(prompt, /allow_implicit_invocation: true/);
-  assert.match(prompt, /artifact-recovery\.md/);
-  assert.match(prompt, /protected-surfaces\.md/);
-  assert.match(prompt, /context-file\.md/);
-  assert.match(prompt, /verify-repair\.md/);
-  assert.match(prompt, /SOCRATES_CONTEXT\.md/);
-  assert.match(prompt, /protected_surface_planner/);
-  assert.match(prompt, /quality_evaluator/);
-  assert.match(prompt, /including explicit fast-path executions/);
-  assert.match(prompt, /Default to a closed request scope/);
-  assert.match(prompt, /If a local Socrates context helper or `scripts\/context-doc\.mjs` is available/);
-  assert.match(prompt, /Do not create hidden JSON/);
+  assert.match(prompt, /display_name: "Socrates"/);
+  assert.match(prompt, /short_description: "Recover artifacts and guard risky changes\."/);
+  assert.match(
+    prompt,
+    /default_prompt: "Use \$socrates to recover missing artifacts, surface one load-bearing question when needed, and keep risky changes on a narrow verified path\."/
+  );
 });
 
 test("Reference files encode strict context-doc and anti-scope-creep rules", async () => {

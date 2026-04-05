@@ -26,7 +26,7 @@ Use this when Socrates needs to coordinate exploration, implementation, verifica
 ## Rules
 - Exploration is mandatory for Socrates-triggered work, but hook enforcement only applies when `SOCRATES_CONTEXT.md` exists.
 - "Fast path" only skips extra clarification or shared-context ceremony. It does not waive post-patch verification or the evaluation pass after repo-tracked code changes.
-- When a protected surface is touched and migration, compatibility, rollback, or safety policy is not already clear, run `protected_surface_planner` before patching. If exactly one load-bearing policy decision remains, ask that one question; otherwise keep the planner output as the short change plan.
+- When a protected surface is touched and migration, compatibility, rollback, or safety policy is not already clear, run `protected_surface_planner` before patching. After the required exploration pass, do not stop at an inspection plan. If exactly one load-bearing policy decision remains, ask that one question; otherwise keep the planner output as the short change plan.
 - The evaluator is read-only. Only the main agent edits files.
 - Keep verify -> evaluate -> repair -> re-verify -> re-evaluate inline within the current turn by default.
 - The evaluator-triggered repair loop is capped at one full extra cycle.
