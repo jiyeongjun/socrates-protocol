@@ -15,7 +15,9 @@ Use this when the change may affect compatibility, safety, rollback, or external
 ## Rules
 - On first detection of a protected surface whose migration, compatibility, rollback, or safety policy is still unclear, run `protected_surface_planner` before patching.
 - Do not patch immediately if migration, compatibility, rollback, or safety policy is not already clear.
-- After the required exploration pass, do not reply with only an intent to inspect files or trace call sites.
+- Before planning or patching, complete a deeper exploration pass that identifies the public entrypoints or callers, persistence, config, migration, or contract touchpoints, the compatibility boundary, the rollback lever, and the minimal verification path.
+- If one of those items is still unknown but discoverable from the repo, keep exploring instead of patching or asking a broad question.
+- After the required deeper exploration pass, do not reply with only an intent to inspect files or trace call sites.
 - If the planner leaves exactly one load-bearing policy decision unresolved, ask that one question. Otherwise keep the planner output as the short change plan and proceed from there.
 - Prefer one safety-critical question or one short change plan over broad discussion.
 - Treat compatibility-sensitive renames as non-mechanical until cutover policy is explicit.
@@ -26,6 +28,7 @@ Use this when the change may affect compatibility, safety, rollback, or external
 
 ## Short Change Plan
 - affected surface
+- evidence checked
 - compatibility or migration risk
 - rollback strategy
 - verification

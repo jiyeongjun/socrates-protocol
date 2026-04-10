@@ -3,17 +3,19 @@
 Use this when Socrates needs to coordinate exploration, implementation, verification, inline evaluation, and the single repair loop.
 
 ## Flow
-1. Start with one short current-state exploration pass before asking the user or editing code.
-2. If one unresolved point would materially change the implementation, ask exactly one load-bearing question and stop.
-3. Implement only after the path is explicit enough.
-4. Run the narrowest relevant verification first.
-5. Run one inline read-only quality evaluation pass after verification when repo-tracked code changed, including explicit fast-path executions.
-6. If evaluation finds actionable drift and no repair loop has been spent yet, do exactly one inline repair loop, then re-verify and re-evaluate.
-7. If evaluation still finds actionable drift after that inline repair loop, ask the user what to do next.
+1. Start with one short current-state exploration pass before asking the user or editing code. Use it to classify fast path versus deeper exploration.
+2. If the short pass finds a protected surface, likely cross-boundary impact, unclear ownership, or rollout-sensitive touchpoints, expand to one deeper read-only exploration pass before continuing.
+3. In a deeper exploration pass, recover the main entrypoints or callers, relevant contract, config, persistence, or migration touchpoints, the narrowest useful repro or tests, and the compatibility, rollback, or rollout constraints that could change the implementation.
+4. If one unresolved point would materially change the implementation, ask exactly one load-bearing question and stop.
+5. Implement only after the path is explicit enough and the required exploration coverage is satisfied.
+6. Run the narrowest relevant verification first.
+7. Run one inline read-only quality evaluation pass after verification when repo-tracked code changed, including explicit fast-path executions.
+8. If evaluation finds actionable drift and no repair loop has been spent yet, do exactly one inline repair loop, then re-verify and re-evaluate.
+9. If evaluation still finds actionable drift after that inline repair loop, ask the user what to do next.
 
 ## Roles
-- `fast_explorer`: cheap read-only discovery of files, symbols, tests, repro paths, protected surfaces, and rollout touchpoints
-- `protected_surface_planner`: cheap read-only planning pass for migrations, compatibility, rollback, and safety policy
+- `fast_explorer`: read-only discovery pass that classifies fast path versus deeper exploration and recovers the current implementation shape
+- `protected_surface_planner`: read-only planning pass for migrations, compatibility, rollback, and safety policy after the required deeper exploration coverage is in hand
 - `fast_verifier`: cheap verification pass that runs the narrowest relevant checks first
 - `quality_evaluator`: read-only quality gate that checks requirement fit, regression risk, missing coverage, and whether one inline repair loop is warranted
 
@@ -26,7 +28,10 @@ Use this when Socrates needs to coordinate exploration, implementation, verifica
 ## Rules
 - Exploration is mandatory for Socrates-triggered work, but hook enforcement only applies when `SOCRATES_CONTEXT.md` exists.
 - "Fast path" only skips extra clarification or shared-context ceremony. It does not waive post-patch verification or the evaluation pass after repo-tracked code changes.
-- When a protected surface is touched and migration, compatibility, rollback, or safety policy is not already clear, run `protected_surface_planner` before patching. After the required exploration pass, do not stop at an inspection plan. If exactly one load-bearing policy decision remains, ask that one question; otherwise keep the planner output as the short change plan.
+- Deeper exploration is required for protected surfaces and should also trigger when the first pass cannot bound blast radius to a single local change.
+- Do not patch while a still-discoverable entrypoint, contract, config, persistence, migration, repro, test, compatibility, rollback, or rollout touchpoint is still unknown and could change the implementation or verification.
+- When a protected surface is touched and migration, compatibility, rollback, or safety policy is not already clear, run `protected_surface_planner` before patching. After the required deeper exploration pass, do not stop at an inspection plan. If exactly one load-bearing policy decision remains, ask that one question; otherwise keep the planner output as the short change plan.
+- After a deeper exploration pass, return a compact coverage summary of what you checked before patching or asking.
 - The evaluator is read-only. Only the main agent edits files.
 - Keep verify -> evaluate -> repair -> re-verify -> re-evaluate inline within the current turn by default.
 - The evaluator-triggered repair loop is capped at one full extra cycle.

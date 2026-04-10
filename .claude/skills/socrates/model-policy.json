@@ -2,7 +2,7 @@
   "version": 1,
   "roles": {
     "fast_explorer": {
-      "description": "Cheap read-only discovery pass before asking the user or editing code.",
+      "description": "Read-only discovery pass that classifies fast path versus deeper exploration before asking the user or editing code.",
       "codex": {
         "preferred_models": [
           "gpt-5.4-mini",
@@ -20,11 +20,11 @@
       }
     },
     "protected_surface_planner": {
-      "description": "Read-only planning pass for migrations, contracts, rollout, and rollback.",
+      "description": "Read-only planning pass for migrations, contracts, rollout, and rollback after the required deeper exploration coverage is in hand.",
       "codex": {
         "preferred_models": [
-          "gpt-5.4-mini",
           "gpt-5.4",
+          "gpt-5.4-mini",
           "gpt-5.3-codex"
         ],
         "fallback_behavior": "host_default"

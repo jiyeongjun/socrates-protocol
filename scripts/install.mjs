@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v0.4.1";
+export const DEFAULT_VERSION = "v0.4.2";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];

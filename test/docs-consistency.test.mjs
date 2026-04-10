@@ -30,7 +30,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.4.1");
+  assert.equal(pkg.version, "0.4.2");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
   assert.equal(
@@ -48,9 +48,9 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /Explicit invocation example:/);
   assert.match(readme, /Auto-load example:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.4\.1/);
-  assert.match(readme, /release tag `v0\.4\.1`/i);
-  assert.match(readme, /current package version in this worktree is `0\.4\.1`/i);
+  assert.match(readme, /VERSION=v0\.4\.2/);
+  assert.match(readme, /release tag `v0\.4\.2`/i);
+  assert.match(readme, /current package version in this worktree is `0\.4\.2`/i);
   assert.match(readme, /automatically deletes `SOCRATES_CONTEXT\.md`/);
   assert.match(readme, /If you decline twice/);
   assert.match(readme, /already exists for the same task, Socrates reads it first/);
@@ -102,9 +102,9 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /명시적 호출 예시:/);
   assert.match(readme, /자동 개입 예시:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.4\.1/);
-  assert.match(readme, /현재 릴리즈 태그는 `v0\.4\.1`입니다/);
-  assert.match(readme, /현재 worktree의 package version은 `0\.4\.1`입니다/);
+  assert.match(readme, /VERSION=v0\.4\.2/);
+  assert.match(readme, /현재 릴리즈 태그는 `v0\.4\.2`입니다/);
+  assert.match(readme, /현재 worktree의 package version은 `0\.4\.2`입니다/);
   assert.match(readme, /성공적으로 끝나면.*자동으로 삭제/);
   assert.match(readme, /두 번 연속 거부/);
   assert.match(readme, /같은 작업을 가리키는 `SOCRATES_CONTEXT\.md`가 이미 있으면 먼저 읽고 계속 갱신합니다/);
@@ -225,7 +225,7 @@ test("OpenAI agent prompt stays aligned with the router and on-demand references
   assert.match(prompt, /short_description: "Recover artifacts and guard risky changes\."/);
   assert.match(
     prompt,
-    /default_prompt: "Use \$socrates to recover missing artifacts, surface one load-bearing question when needed, and keep risky changes on a narrow verified path\."/
+    /default_prompt: "Use \$socrates to recover missing artifacts, expand to deeper exploration when risk signals appear, surface one load-bearing question when needed, and keep risky changes on a narrow verified path\."/
   );
 });
 
