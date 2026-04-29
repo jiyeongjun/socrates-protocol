@@ -30,7 +30,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.4.2");
+  assert.equal(pkg.version, "0.5.0");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
   assert.equal(
@@ -48,9 +48,9 @@ test("README documents shared context lifecycle and quick install", async () => 
   assert.match(readme, /Explicit invocation example:/);
   assert.match(readme, /Auto-load example:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.4\.2/);
-  assert.match(readme, /release tag `v0\.4\.2`/i);
-  assert.match(readme, /current package version in this worktree is `0\.4\.2`/i);
+  assert.match(readme, /VERSION=v0\.5\.0/);
+  assert.match(readme, /release tag `v0\.5\.0`/i);
+  assert.match(readme, /current package version in this worktree is `0\.5\.0`/i);
   assert.match(readme, /automatically deletes `SOCRATES_CONTEXT\.md`/);
   assert.match(readme, /If you decline twice/);
   assert.match(readme, /already exists for the same task, Socrates reads it first/);
@@ -102,9 +102,9 @@ test("Korean README documents shared context lifecycle", async () => {
   assert.match(readme, /명시적 호출 예시:/);
   assert.match(readme, /자동 개입 예시:/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.4\.2/);
-  assert.match(readme, /현재 릴리즈 태그는 `v0\.4\.2`입니다/);
-  assert.match(readme, /현재 worktree의 package version은 `0\.4\.2`입니다/);
+  assert.match(readme, /VERSION=v0\.5\.0/);
+  assert.match(readme, /현재 릴리즈 태그는 `v0\.5\.0`입니다/);
+  assert.match(readme, /현재 worktree의 package version은 `0\.5\.0`입니다/);
   assert.match(readme, /성공적으로 끝나면.*자동으로 삭제/);
   assert.match(readme, /두 번 연속 거부/);
   assert.match(readme, /같은 작업을 가리키는 `SOCRATES_CONTEXT\.md`가 이미 있으면 먼저 읽고 계속 갱신합니다/);
@@ -154,8 +154,9 @@ test("Codex and Claude skills are generated from the shared skill body source", 
 
   assert.match(
     body,
-    /Fast path only skips extra clarification or shared-context ceremony; it does not waive post-patch verification or evaluation/
+    /Fast path only skips extra clarification, protected-surface planning, shared-context ceremony, and evaluator ceremony/
   );
+  assert.match(body, /For trivial explicit edits, a narrow verification plus self-check is enough/);
   assert.match(body, /run `protected_surface_planner` before patching/);
   assert.match(
     body,

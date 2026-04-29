@@ -9,7 +9,7 @@ Use this when Socrates needs to coordinate exploration, implementation, verifica
 4. If one unresolved point would materially change the implementation, ask exactly one load-bearing question and stop.
 5. Implement only after the path is explicit enough and the required exploration coverage is satisfied.
 6. Run the narrowest relevant verification first.
-7. Run one inline read-only quality evaluation pass after verification when repo-tracked code changed, including explicit fast-path executions.
+7. Run one inline read-only quality evaluation pass after verification when repo-tracked code changed on a protected surface, cross-module path, deeper-exploration path, or other nontrivial Socrates path. For trivial explicit edits, a narrow verification plus self-check is enough.
 8. If evaluation finds actionable drift and no repair loop has been spent yet, do exactly one inline repair loop, then re-verify and re-evaluate.
 9. If evaluation still finds actionable drift after that inline repair loop, ask the user what to do next.
 
@@ -19,15 +19,16 @@ Use this when Socrates needs to coordinate exploration, implementation, verifica
 - `fast_verifier`: cheap verification pass that runs the narrowest relevant checks first
 - `quality_evaluator`: read-only quality gate that checks requirement fit, regression risk, missing coverage, and whether one inline repair loop is warranted
 
-## Model Routing
+## Host Model Guidance
 - Keep model names out of the main skill text.
 - Read `model-policy.json` at the Socrates skill root for per-platform role aliases and ordered fallbacks.
-- On Codex, resolve a role to the first available preferred model and fall back to the host default if none are available.
-- On Claude, treat the same role policy as best-effort guidance until the host exposes a stable per-agent model binding surface.
+- Treat the policy as guidance, not a requirement to delegate. Keep role work inline unless the host already supports an isolated worker or subagent and delegation will not block the next step.
+- On Codex, prefer the host default when a requested model alias is unavailable. For lightweight explorer or verifier roles, prefer the current mini or fast coding model when available.
+- On Claude Code, use subagent frontmatter `model` aliases (`haiku`, `sonnet`, `opus`, or `inherit`) when a custom subagent is present. Exact Claude model versions and availability come from `/model`.
 
 ## Rules
 - Exploration is mandatory for Socrates-triggered work, but hook enforcement only applies when `SOCRATES_CONTEXT.md` exists.
-- "Fast path" only skips extra clarification or shared-context ceremony. It does not waive post-patch verification or the evaluation pass after repo-tracked code changes.
+- "Fast path" only skips extra clarification, protected-surface planning, shared-context ceremony, and evaluator ceremony when narrow verification covers the request. It does not waive post-patch verification.
 - Deeper exploration is required for protected surfaces and should also trigger when the first pass cannot bound blast radius to a single local change.
 - Do not patch while a still-discoverable entrypoint, contract, config, persistence, migration, repro, test, compatibility, rollback, or rollout touchpoint is still unknown and could change the implementation or verification.
 - When a protected surface is touched and migration, compatibility, rollback, or safety policy is not already clear, run `protected_surface_planner` before patching. After the required deeper exploration pass, do not stop at an inspection plan. If exactly one load-bearing policy decision remains, ask that one question; otherwise keep the planner output as the short change plan.

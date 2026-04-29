@@ -4,7 +4,7 @@ Use this only when a required file, symbol, test, target, or repro path is missi
 
 ## Rules
 - Search the codebase before asking the user.
-- Prefer `Read`, `Grep`, and `Glob` over clarification when the artifact is discoverable.
+- Prefer host-native file search and read tools over clarification when the artifact is discoverable. In Codex, prefer `rg` and `rg --files`; in Claude Code, use `Read`, `Grep`, and `Glob`.
 - If exactly one candidate is clearly dominant, continue without asking.
 - If multiple plausible candidates remain, ask one compact disambiguation question.
 - Do not branch-analyze before recovering the required artifact.

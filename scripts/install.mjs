@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v0.4.2";
+export const DEFAULT_VERSION = "v0.5.0";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];
@@ -322,6 +322,7 @@ async function installCodex(options, loadAsset, skillLayout) {
     stopHookCorePath,
     stopHookScriptPath,
     hooksConfigPath,
+    legacySkillDir,
   } = getCodexTargets(options, skillLayout);
   const referenceAssets = buildRelativeAssetMap(
     ASSETS.codexReferencesDir,
@@ -394,6 +395,9 @@ async function installCodex(options, loadAsset, skillLayout) {
   }
 
   await writeJsonFile(hooksConfigPath, merged);
+  if (legacySkillDir) {
+    await rm(legacySkillDir, { recursive: true, force: true });
+  }
 
   return [
     skillPath,
@@ -548,6 +552,7 @@ async function uninstallCodex(options, skillLayout) {
     stopHookCorePath,
     stopHookScriptPath,
     hooksConfigPath,
+    legacySkillDir,
   } = getCodexTargets(options, skillLayout);
 
   const removeOptionalOnly = options.features.length > 0;
@@ -564,6 +569,9 @@ async function uninstallCodex(options, skillLayout) {
     await deleteFile(hookContextDocPath);
     await deleteFile(contextDocHelperCorePath);
     await deleteFile(contextDocHelperPath);
+    if (legacySkillDir) {
+      await rm(legacySkillDir, { recursive: true, force: true });
+    }
   }
   if (options.features.includes("stop-hook") || !removeOptionalOnly) {
     await deleteFile(stopHookCorePath);
@@ -746,17 +754,19 @@ export function mergeCodexHooksFeature(toml) {
 }
 
 function getCodexTargets(options, skillLayout) {
-  const root =
-    options.scope === "repo"
-      ? path.resolve(options.targetRepo)
-      : path.join(options.homeDir, ".codex");
   const repoInstall = options.scope === "repo";
+  const repoRoot = repoInstall ? path.resolve(options.targetRepo) : null;
+  const hooksRoot = repoInstall ? repoRoot : path.join(options.homeDir, ".codex");
   const skillDir = repoInstall
-    ? path.join(root, ".agents", "skills", "socrates")
-    : path.join(root, "skills", "socrates");
+    ? path.join(repoRoot, ".agents", "skills", "socrates")
+    : path.join(options.homeDir, ".agents", "skills", "socrates");
+  const legacySkillDir = repoInstall
+    ? null
+    : path.join(options.homeDir, ".codex", "skills", "socrates");
 
   return {
     repoInstall,
+    legacySkillDir,
     skillPath: path.join(skillDir, "SKILL.md"),
     agentPath: path.join(skillDir, "agents", "openai.yaml"),
     modelPolicyPath: path.join(skillDir, "model-policy.json"),
@@ -765,29 +775,29 @@ function getCodexTargets(options, skillLayout) {
       skillLayout.skillReferences
     ),
     hookScriptPath: repoInstall
-      ? path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs")
-      : path.join(root, "hooks", "session_start_socrates_context.mjs"),
+      ? path.join(hooksRoot, ".codex", "hooks", "session_start_socrates_context.mjs")
+      : path.join(hooksRoot, "hooks", "session_start_socrates_context.mjs"),
     hookUtilsPath: repoInstall
-      ? path.join(root, ".codex", "hooks", "_socrates_hook_utils.mjs")
-      : path.join(root, "hooks", "_socrates_hook_utils.mjs"),
+      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_hook_utils.mjs")
+      : path.join(hooksRoot, "hooks", "_socrates_hook_utils.mjs"),
     hookContextDocPath: repoInstall
-      ? path.join(root, ".codex", "hooks", "_socrates_context_doc.mjs")
-      : path.join(root, "hooks", "_socrates_context_doc.mjs"),
+      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_context_doc.mjs")
+      : path.join(hooksRoot, "hooks", "_socrates_context_doc.mjs"),
     contextDocHelperCorePath: repoInstall
-      ? path.join(root, ".codex", "hooks", "_socrates_context_doc_helper_core.mjs")
-      : path.join(root, "hooks", "_socrates_context_doc_helper_core.mjs"),
+      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_context_doc_helper_core.mjs")
+      : path.join(hooksRoot, "hooks", "_socrates_context_doc_helper_core.mjs"),
     contextDocHelperPath: repoInstall
-      ? path.join(root, ".codex", "hooks", "socrates_context_doc_helper.mjs")
-      : path.join(root, "hooks", "socrates_context_doc_helper.mjs"),
+      ? path.join(hooksRoot, ".codex", "hooks", "socrates_context_doc_helper.mjs")
+      : path.join(hooksRoot, "hooks", "socrates_context_doc_helper.mjs"),
     stopHookCorePath: repoInstall
-      ? path.join(root, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs")
-      : path.join(root, "hooks", "_socrates_stop_clarifying_core.mjs"),
+      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs")
+      : path.join(hooksRoot, "hooks", "_socrates_stop_clarifying_core.mjs"),
     stopHookScriptPath: repoInstall
-      ? path.join(root, ".codex", "hooks", "stop_socrates_clarifying.mjs")
-      : path.join(root, "hooks", "stop_socrates_clarifying.mjs"),
+      ? path.join(hooksRoot, ".codex", "hooks", "stop_socrates_clarifying.mjs")
+      : path.join(hooksRoot, "hooks", "stop_socrates_clarifying.mjs"),
     hooksConfigPath: repoInstall
-      ? path.join(root, ".codex", "hooks.json")
-      : path.join(root, "hooks.json"),
+      ? path.join(hooksRoot, ".codex", "hooks.json")
+      : path.join(hooksRoot, "hooks.json"),
   };
 }
 

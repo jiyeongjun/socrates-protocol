@@ -8,7 +8,7 @@ Use this after patching.
 3. If it fails, summarize the blocker in 1 to 3 bullets.
 4. Repair and retry.
 5. Stop after 2 repair attempts or when the failure indicates a missing requirement or decision.
-6. If verification passes on a repo-tracked code change, hand off inline to the read-only quality evaluator before ending the Socrates loop.
+6. If verification passes on a repo-tracked protected-surface, cross-module, deeper-exploration, or otherwise nontrivial Socrates change, hand off inline to the read-only quality evaluator before ending the Socrates loop.
 
 ## Verification Order
 - targeted repro or single failing test

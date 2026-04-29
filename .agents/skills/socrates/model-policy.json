@@ -1,11 +1,13 @@
 {
-  "version": 1,
+  "version": 2,
   "roles": {
     "fast_explorer": {
       "description": "Read-only discovery pass that classifies fast path versus deeper exploration before asking the user or editing code.",
       "codex": {
         "preferred_models": [
           "gpt-5.4-mini",
+          "gpt-5.5",
+          "gpt-5.4",
           "gpt-5.3-codex-spark",
           "gpt-5.3-codex"
         ],
@@ -23,6 +25,7 @@
       "description": "Read-only planning pass for migrations, contracts, rollout, and rollback after the required deeper exploration coverage is in hand.",
       "codex": {
         "preferred_models": [
+          "gpt-5.5",
           "gpt-5.4",
           "gpt-5.4-mini",
           "gpt-5.3-codex"
@@ -31,8 +34,9 @@
       },
       "claude": {
         "preferred_models": [
-          "haiku",
-          "sonnet"
+          "sonnet",
+          "opus",
+          "haiku"
         ],
         "fallback_behavior": "host_default_best_effort"
       }
@@ -42,6 +46,8 @@
       "codex": {
         "preferred_models": [
           "gpt-5.4-mini",
+          "gpt-5.5",
+          "gpt-5.4",
           "gpt-5.3-codex-spark",
           "gpt-5.3-codex"
         ],
@@ -59,6 +65,7 @@
       "description": "Read-only quality gate for requirement fit, missing coverage, regression risk, and whether one inline repair loop is warranted.",
       "codex": {
         "preferred_models": [
+          "gpt-5.5",
           "gpt-5.4",
           "gpt-5.4-mini",
           "gpt-5.3-codex"
@@ -68,6 +75,7 @@
       "claude": {
         "preferred_models": [
           "sonnet",
+          "opus",
           "haiku"
         ],
         "fallback_behavior": "host_default_best_effort"
@@ -76,7 +84,8 @@
   },
   "rules": {
     "main_skill_artifacts_must_not_hardcode_model_names": true,
-    "claude_binding_mode": "best_effort_until_host_supports_per_agent_binding",
+    "codex_binding_mode": "host_default_or_available_model_picker",
+    "claude_binding_mode": "subagent_frontmatter_aliases_when_custom_agents_are_used",
     "host_default_fallback_is_allowed": true
   }
 }

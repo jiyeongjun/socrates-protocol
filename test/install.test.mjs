@@ -748,6 +748,9 @@ test("repo install merges hooks and remains idempotent across reruns", async () 
 
 test("global install writes into the provided home directory", async () => {
   const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-home-"));
+  const legacySkillPath = path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md");
+  await mkdir(path.dirname(legacySkillPath), { recursive: true });
+  await writeFile(legacySkillPath, "legacy Socrates skill\n", "utf8");
 
   await installSocrates({
     platform: "codex",
@@ -765,13 +768,14 @@ test("global install writes into the provided home directory", async () => {
     `node ${JSON.stringify(path.join(fakeHome, ".codex", "hooks", "session_start_socrates_context.mjs"))}`
   );
   await assert.doesNotReject(() =>
-    readFile(path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
   );
+  await assertMissing(legacySkillPath);
   await assert.doesNotReject(() =>
     readFile(
       path.join(
         fakeHome,
-        ".codex",
+        ".agents",
         "skills",
         "socrates",
         "references",
@@ -844,7 +848,7 @@ test("importing install.mjs from a stdin module does not auto-run the installer"
   });
 
   assert.match(stdout, /import ok/);
-  await assertMissing(path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md"));
   await assertMissing(path.join(fakeHome, ".claude", "skills", "socrates", "SKILL.md"));
 });
 
@@ -904,7 +908,7 @@ test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
 
   assert.match(stdout, /Installed Socrates to:/);
   await assert.doesNotReject(() =>
-    readFile(path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
   );
   const config = await readFile(path.join(fakeHome, ".codex", "config.toml"), "utf8");
   assert.match(config, /codex_hooks = true/);

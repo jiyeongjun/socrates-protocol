@@ -90,7 +90,7 @@ Fail:
 ### Codex
 - confirm global install matches repo output:
 ```bash
-diff -ru .agents/skills/socrates ~/.codex/skills/socrates
+diff -ru .agents/skills/socrates ~/.agents/skills/socrates
 ```
 - if hooks are expected, confirm `~/.codex/config.toml` still has `codex_hooks = true`
 

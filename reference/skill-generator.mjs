@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOCRATES_DESCRIPTION =
-  "Handles ambiguous or high-impact coding work where missing artifacts, protected-surface changes, or unresolved implementation branches could materially change the implementation. Use for coding tasks that need artifact recovery, guarded clarification, or post-patch verification. Skip trivial, formatting-only, or already explicit single-path work.";
+  "Use when a coding task has missing target artifacts, protected surfaces such as API/schema/auth/billing/deletion/config/production changes, or unresolved choices that would materially change implementation. Guides artifact recovery, one-question clarification, protected-surface planning, and bounded verify/evaluate/repair. Skip explicit low-risk single-path edits, formatting-only work, and read-only explanations.";
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");
@@ -33,7 +33,6 @@ export const skillTargets = {
     frontmatter: [
       "name: socrates",
       `description: ${SOCRATES_DESCRIPTION}`,
-      "allowed-tools: Read, Grep, Glob, Edit, Bash",
     ],
   },
 };
