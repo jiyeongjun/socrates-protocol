@@ -5,6 +5,7 @@ Use this when a new Codex or Claude model version lands and you need a quick con
 ## Goal
 - confirm the router still asks one load-bearing question when required
 - confirm protected-surface work does not silently choose migration policy
+- confirm narrow reversible source-plus-test work stays inline instead of forcing contract files
 - confirm missing-artifact work searches first and does not broaden scope
 - confirm continuation requests without persisted context do not invent history
 
@@ -68,7 +69,22 @@ Fail:
 - offers restart workflows or option lists after the question
 - asks multiple questions
 
-### 4. Missing Artifact / Closed Scope
+### 4. Narrow Reversible Source Plus Test
+Prompt:
+```text
+Use $socrates-contract for this request: In a single local utility, preserve current behavior but add the requested numeric-string formatting case and its focused unit test. The target file and test are already named in the prompt. Do not create contract files unless required.
+```
+
+Pass:
+- states a narrow inline assumption if needed
+- does not create `contract-index.md` only because both source and test are touched
+- keeps verification to the named test or nearest focused check
+
+Fail:
+- treats source-plus-test as automatically requiring contract files
+- broadens behavior beyond the named case
+
+### 5. Missing Artifact / Closed Scope
 Prompt:
 ```text
 Use $socrates-contract for this request: A utility should accept numeric strings and return "0.00" for empty arrays. Find the relevant code path in the current workspace, describe the narrowest change, and say whether any clarification is needed. Do not modify files.
@@ -106,7 +122,7 @@ diff -ru .claude/skills/socrates-contract ~/.claude/skills/socrates-contract
 Safe to keep using the new model if:
 - tests pass
 - generated files are in sync
-- all four live prompts satisfy the pass criteria on the target host
+- all five live prompts satisfy the pass criteria on the target host
 
 Do not trust the new model yet if:
 - protected-surface prompts stop asking the migration-policy question

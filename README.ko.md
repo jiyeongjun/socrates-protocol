@@ -338,7 +338,7 @@ Socrates Protocol은 SemVer 스타일 태그를 사용합니다.
 
 ### Contract 파일 포맷
 
-새로운 multi-step 작업은 보이는 contract 파일을 사용합니다:
+오래 이어질 multi-step 작업, protected-surface 작업, 또는 handoff가 중요한 작업은 보이는 contract 파일을 사용합니다. 하나의 일관된 검증 경로가 있는 좁고 되돌리기 쉬운 수정은 구현 파일과 테스트 또는 문서를 함께 건드려도 inline으로 처리할 수 있습니다.
 
 - `contract-index.md`는 거시 목표, 성공 기준, 범위, 비목표, 보호면, 확정 결정, 열린 질문, 전체 진행 상태를 정의합니다.
 - `contracts/contract-001.md`, `contracts/contract-002.md` 이후 파일은 각각 하나의 bounded subcontract를 담습니다.
@@ -360,9 +360,10 @@ Socrates Protocol은 SemVer 스타일 태그를 사용합니다.
 
 ## Contract 파일 동작 방식
 
-Socrates Contract는 목표에 여러 결정, 여러 mutation surface, 또는 독립 검증 가능한 여러 하위 목표가 필요할 때 `contract-index.md`와 `contracts/contract-NNN.md`를 제안합니다.
+Socrates Contract는 목표에 오래 남길 handoff, protected-surface 계획, context loss 뒤에도 유지되어야 하는 미해결 결정, 또는 여러 독립 문제가 필요할 때 `contract-index.md`와 `contracts/contract-NNN.md`를 제안합니다.
 
 - macro index는 기본적으로 workspace root에 둡니다.
+- 관련 없는 `contract-index.md`, `contracts/`, 또는 `SOCRATES_CONTEXT.md`가 이미 있으면 덮어쓰지 않습니다. 사용자가 위치를 이미 지정하지 않았다면 위치 또는 교체 여부에 관한 질문 하나를 해야 합니다.
 - index는 routing file입니다. 거시 목표, 진행 상태, 결정, 열린 질문, 각 subcontract 경로를 기록합니다.
 - subcontract 파일은 `contracts/` 아래에 두며 active task, inputs, completion criteria, mutation plan, verification, work log, result를 담습니다.
 - 한 번에 하나의 subcontract만 active여야 합니다.

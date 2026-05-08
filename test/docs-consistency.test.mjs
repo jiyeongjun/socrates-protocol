@@ -56,6 +56,10 @@ test("README documents contract workflow, legacy context, and quick install", as
   assert.match(readme, /release tag `v0\.6\.2`/i);
   assert.match(readme, /current package version in this worktree is `0\.6\.2`/i);
   assert.match(readme, /Every contract file should stay under 500 lines/);
+  assert.match(readme, /Narrow reversible edits can stay inline/);
+  assert.match(readme, /implementation plus tests or docs/);
+  assert.match(readme, /durable handoff, protected-surface planning/);
+  assert.match(readme, /should not overwrite it/);
   assert.match(readme, /Subcontract status values are `proposed`, `aligned`, `executing`, `blocked`, `verifying`, and `done`/);
   assert.match(readme, /If you decline twice/);
   assert.match(readme, /already exists for the same task, Socrates reads it first/);
@@ -115,6 +119,10 @@ test("Korean README documents contract workflow and legacy context", async () =>
   assert.match(readme, /현재 릴리즈 태그는 `v0\.6\.2`입니다/);
   assert.match(readme, /현재 worktree의 package version은 `0\.6\.2`입니다/);
   assert.match(readme, /모든 contract 파일은 500줄 미만으로 유지합니다/);
+  assert.match(readme, /좁고 되돌리기 쉬운 수정/);
+  assert.match(readme, /구현 파일과 테스트 또는 문서/);
+  assert.match(readme, /오래 남길 handoff, protected-surface 계획/);
+  assert.match(readme, /이미 있으면 덮어쓰지 않습니다/);
   assert.match(readme, /`proposed`, `aligned`, `executing`, `blocked`, `verifying`, `done`/);
   assert.match(readme, /두 번 연속 거부/);
   assert.match(readme, /같은 작업을 가리키는 `SOCRATES_CONTEXT\.md`가 이미 있으면 먼저 읽고 계속 갱신합니다/);
@@ -155,6 +163,19 @@ test("Korean README documents contract workflow and legacy context", async () =>
   assert.doesNotMatch(readme, /workflow_phase/);
   assert.doesNotMatch(readme, /needs_evaluation/);
   assert.doesNotMatch(readme, /needs_repair/);
+});
+
+test("Model regression checklist preserves Codex contract thresholds", async () => {
+  const checklist = await readRepoFile("reference/model-regression-checklist.md");
+
+  assert.match(checklist, /Protected-Surface Rename/);
+  assert.match(checklist, /Vague Safety Wording/);
+  assert.match(checklist, /Continuation Without Context/);
+  assert.match(checklist, /Narrow Reversible Source Plus Test/);
+  assert.match(checklist, /Missing Artifact \/ Closed Scope/);
+  assert.match(checklist, /source-plus-test work stays inline/);
+  assert.match(checklist, /does not create `contract-index\.md` only because both source and test are touched/);
+  assert.match(checklist, /all five live prompts satisfy the pass criteria/);
 });
 
 test("Codex and Claude skills are generated from the shared skill body source", async () => {

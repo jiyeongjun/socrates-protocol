@@ -338,7 +338,7 @@ The current package version in this worktree is `0.6.2`.
 
 ### Contract File Format
 
-New multi-step work uses visible contract files:
+Durable multi-step, protected-surface, or handoff-heavy work uses visible contract files. Narrow reversible edits can stay inline when they have one coherent verification path, even if they touch implementation plus tests or docs.
 
 - `contract-index.md` defines the macro goal, success criteria, scope, non-goals, protected surfaces, fixed decisions, open questions, and overall progress.
 - `contracts/contract-001.md`, `contracts/contract-002.md`, and later files hold one bounded subcontract each.
@@ -360,9 +360,10 @@ To run the local validation scripts exactly as CI does, use Node `24+`.
 
 ## How Contract Files Work
 
-Socrates Contract proposes `contract-index.md` and `contracts/contract-NNN.md` when a goal needs several decisions, several mutation surfaces, or several independently verifiable subgoals.
+Socrates Contract proposes `contract-index.md` and `contracts/contract-NNN.md` when a goal needs durable handoff, protected-surface planning, unresolved decisions that must survive context loss, or several independent problems.
 
 - The macro index lives at the workspace root by default.
+- If an unrelated `contract-index.md`, `contracts/`, or `SOCRATES_CONTEXT.md` already exists, Socrates should not overwrite it; it should ask one location or replacement question unless you already named a location.
 - The index is the routing file: it records the macro goal, progress, decisions, open questions, and each subcontract path.
 - Subcontract files live under `contracts/` and contain the active task, inputs, completion criteria, mutation plan, verification, work log, and result.
 - Only one subcontract should be active at a time.
