@@ -30,7 +30,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.6.2");
+  assert.equal(pkg.version, "0.7.0");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
   assert.equal(
@@ -52,9 +52,9 @@ test("README documents contract workflow, legacy context, and quick install", as
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.6\.2/);
-  assert.match(readme, /release tag `v0\.6\.2`/i);
-  assert.match(readme, /current package version in this worktree is `0\.6\.2`/i);
+  assert.match(readme, /VERSION=v0\.7\.0/);
+  assert.match(readme, /release tag `v0\.7\.0`/i);
+  assert.match(readme, /current package version in this worktree is `0\.7\.0`/i);
   assert.match(readme, /Every contract file should stay under 500 lines/);
   assert.match(readme, /Narrow reversible edits can stay inline/);
   assert.match(readme, /implementation plus tests or docs/);
@@ -115,9 +115,9 @@ test("Korean README documents contract workflow and legacy context", async () =>
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.6\.2/);
-  assert.match(readme, /현재 릴리즈 태그는 `v0\.6\.2`입니다/);
-  assert.match(readme, /현재 worktree의 package version은 `0\.6\.2`입니다/);
+  assert.match(readme, /VERSION=v0\.7\.0/);
+  assert.match(readme, /현재 릴리즈 태그는 `v0\.7\.0`입니다/);
+  assert.match(readme, /현재 worktree의 package version은 `0\.7\.0`입니다/);
   assert.match(readme, /모든 contract 파일은 500줄 미만으로 유지합니다/);
   assert.match(readme, /좁고 되돌리기 쉬운 수정/);
   assert.match(readme, /구현 파일과 테스트 또는 문서/);
