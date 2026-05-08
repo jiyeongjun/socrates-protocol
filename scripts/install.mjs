@@ -767,10 +767,11 @@ function getCodexTargets(options, skillLayout) {
   const hooksRoot = repoInstall ? repoRoot : path.join(options.homeDir, ".codex");
   const skillDir = repoInstall
     ? path.join(repoRoot, ".agents", "skills", "socrates-contract")
-    : path.join(options.homeDir, ".agents", "skills", "socrates-contract");
+    : path.join(options.homeDir, ".codex", "skills", "socrates-contract");
   const legacySkillDirs = repoInstall
     ? [path.join(repoRoot, ".agents", "skills", "socrates")]
     : [
+        path.join(options.homeDir, ".agents", "skills", "socrates-contract"),
         path.join(options.homeDir, ".agents", "skills", "socrates"),
         path.join(options.homeDir, ".codex", "skills", "socrates"),
       ];

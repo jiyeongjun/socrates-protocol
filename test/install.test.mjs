@@ -752,10 +752,13 @@ test("global install writes into the provided home directory", async () => {
   const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-home-"));
   const legacySkillPath = path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md");
   const legacyAgentsSkillPath = path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md");
+  const legacyAgentsContractPath = path.join(fakeHome, ".agents", "skills", "socrates-contract", "SKILL.md");
   await mkdir(path.dirname(legacySkillPath), { recursive: true });
   await mkdir(path.dirname(legacyAgentsSkillPath), { recursive: true });
+  await mkdir(path.dirname(legacyAgentsContractPath), { recursive: true });
   await writeFile(legacySkillPath, "legacy Socrates skill\n", "utf8");
   await writeFile(legacyAgentsSkillPath, "legacy agents Socrates skill\n", "utf8");
+  await writeFile(legacyAgentsContractPath, "legacy agents Socrates Contract skill\n", "utf8");
 
   await installSocrates({
     platform: "codex",
@@ -773,15 +776,16 @@ test("global install writes into the provided home directory", async () => {
     `node ${JSON.stringify(path.join(fakeHome, ".codex", "hooks", "session_start_socrates_context.mjs"))}`
   );
   await assert.doesNotReject(() =>
-    readFile(path.join(fakeHome, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
+    readFile(path.join(fakeHome, ".codex", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   await assertMissing(legacySkillPath);
   await assertMissing(legacyAgentsSkillPath);
+  await assertMissing(legacyAgentsContractPath);
   await assert.doesNotReject(() =>
     readFile(
       path.join(
         fakeHome,
-        ".agents",
+        ".codex",
         "skills",
         "socrates-contract",
         "references",
@@ -914,7 +918,7 @@ test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
 
   assert.match(stdout, /Installed Socrates to:/);
   await assert.doesNotReject(() =>
-    readFile(path.join(fakeHome, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
+    readFile(path.join(fakeHome, ".codex", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   const config = await readFile(path.join(fakeHome, ".codex", "config.toml"), "utf8");
   assert.match(config, /codex_hooks = true/);

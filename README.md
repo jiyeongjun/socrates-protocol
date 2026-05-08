@@ -136,7 +136,7 @@ VERSION=v0.6.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrat
 
 Codex hook activation:
 
-- for global Codex installs, the skill is written to `~/.agents/skills/socrates-contract`; hook scripts and config remain under `~/.codex`
+- for global Codex installs, the skill is written to `~/.codex/skills/socrates-contract`; hook scripts and config also remain under `~/.codex`
 - the recommended install command above already enables `codex_hooks = true` in `~/.codex/config.toml`
 - if you installed earlier without `--enable-codex-hooks`, the skill still works, but the `SessionStart` sources (`startup`, `resume`, `clear`, `compact`) and optional `Stop` hook do not run until you enable that feature flag
 - you can fix an existing install by rerunning the installer with `--enable-codex-hooks`, or by running this one-time fallback command:
@@ -173,7 +173,7 @@ Update in place:
 
 - rerun the same install command with the version you want
 - the installer overwrites stale Socrates files, keeps unrelated hook entries, and installs the hook support files needed for self-contained execution
-- on global Codex installs, rerunning also removes legacy `~/.agents/skills/socrates` and `~/.codex/skills/socrates` copies after writing the current `~/.agents/skills/socrates-contract` copy
+- on global Codex installs, rerunning also removes older `~/.agents/skills/socrates-contract`, legacy `~/.agents/skills/socrates`, and legacy `~/.codex/skills/socrates` copies after writing the current `~/.codex/skills/socrates-contract` copy
 
 Uninstall:
 
@@ -214,7 +214,7 @@ Optional Codex hook:
 - the included hook script is therefore intentionally a no-op unless it finds `SOCRATES_CONTEXT.md`
 - the search walks upward only until the nearest git root, so a nested repo does not accidentally adopt a parent repo's `SOCRATES_CONTEXT.md`
 - the quick-install command above installs the Socrates Contract skill, mirrored `references/` files, and the Socrates `SessionStart` hook, merging into any existing `hooks.json`
-- repo-scoped Codex installs put the skill under `.agents/skills/socrates-contract`; global installs put it under `~/.agents/skills/socrates-contract`
+- repo-scoped Codex installs put the skill under `.agents/skills/socrates-contract`; global installs put it under `~/.codex/skills/socrates-contract`
 - the recommended Codex install command above also enables the required `codex_hooks = true` feature flag for you
 
 Optional Stop hook:

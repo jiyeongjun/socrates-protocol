@@ -136,7 +136,7 @@ VERSION=v0.6.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrat
 
 Codex hook 활성화:
 
-- Codex global 설치 시 스킬은 `~/.agents/skills/socrates-contract`에 설치되고, hook 스크립트와 설정은 기존처럼 `~/.codex` 아래에 둡니다
+- Codex global 설치 시 스킬은 `~/.codex/skills/socrates-contract`에 설치되고, hook 스크립트와 설정도 `~/.codex` 아래에 둡니다
 - 위 권장 install 명령은 `~/.codex/config.toml`에 `codex_hooks = true`까지 함께 반영합니다
 - 예전에 `--enable-codex-hooks` 없이 설치했다면 스킬 자체는 동작하지만 `SessionStart` source들(`startup`, `resume`, `clear`, `compact`)과 선택적 `Stop` hook은 이 feature flag를 켜기 전까지 실행되지 않습니다
 - 이미 설치한 상태라면 installer를 `--enable-codex-hooks`와 함께 다시 실행하거나, 아래 fallback 명령을 한 번만 실행하면 됩니다:
@@ -173,7 +173,7 @@ EOF
 
 - 원하는 버전 태그로 같은 install 명령을 다시 실행하면 됩니다
 - installer는 오래된 Socrates 파일은 최신으로 덮어쓰고, 관련 없는 hook 엔트리는 유지하며, hook이 독립 실행되도록 필요한 지원 파일도 함께 설치합니다
-- Codex global 설치에서는 현재 `~/.agents/skills/socrates-contract` 사본을 쓴 뒤 legacy `~/.agents/skills/socrates`와 `~/.codex/skills/socrates` 사본도 제거합니다
+- Codex global 설치에서는 현재 `~/.codex/skills/socrates-contract` 사본을 쓴 뒤 이전 `~/.agents/skills/socrates-contract`, legacy `~/.agents/skills/socrates`, `~/.codex/skills/socrates` 사본도 제거합니다
 
 제거:
 
@@ -214,7 +214,7 @@ Codex/OpenAI 참고:
 - 그래서 포함된 hook 스크립트는 `SOCRATES_CONTEXT.md`를 찾지 못하면 아무것도 하지 않도록 구현되어 있습니다
 - 탐색은 가장 가까운 git root까지만 올라가므로, nested repo가 상위 repo의 `SOCRATES_CONTEXT.md`를 잘못 집는 일은 막습니다
 - 위 quick install 명령은 Socrates Contract 스킬, 미러된 `references/` 파일들, 그리고 Socrates `SessionStart` hook을 함께 설치하고, 기존 `hooks.json`과 병합합니다
-- repo scope Codex 설치는 스킬을 `.agents/skills/socrates-contract` 아래에 두고, global 설치는 `~/.agents/skills/socrates-contract` 아래에 둡니다
+- repo scope Codex 설치는 스킬을 `.agents/skills/socrates-contract` 아래에 두고, global 설치는 `~/.codex/skills/socrates-contract` 아래에 둡니다
 - 위 권장 Codex install 명령은 필요한 `codex_hooks = true` feature flag까지 함께 켭니다
 
 선택적 Stop hook:
