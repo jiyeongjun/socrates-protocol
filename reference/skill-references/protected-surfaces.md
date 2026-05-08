@@ -16,7 +16,7 @@ Use this when the mutation may affect compatibility, safety, rollback, cost, per
 - automations, schedules, monitors, or recurring jobs
 
 ## Rules
-- On first detection of a protected surface whose migration, compatibility, rollback, cost, permission, or safety policy is still unclear, run `protected_surface_planner` before mutating.
+- On first detection of a protected surface whose migration, compatibility, rollback, cost, permission, or safety policy is still unclear, perform a `protected_surface_planner` pass before mutating. In Codex, do this inline unless host instructions explicitly allow delegation.
 - Do not mutate immediately if migration, compatibility, rollback, cost, permission, or safety policy is not already clear.
 - Before planning or patching, complete a deeper exploration pass that identifies the public entrypoints or callers, persistence, config, migration, or contract touchpoints, the compatibility boundary, the rollback lever, and the minimal verification path.
 - If one of those items is still unknown but discoverable from the repo, keep exploring instead of patching or asking a broad question.

@@ -1,1 +1,1 @@
-Use $socrates-contract to align the macro goal, document visible contract files when the work is multi-step, split the goal into bounded subcontracts, execute one subcontract at a time, and close each contract only after verification.
+Use $socrates-contract to align risky changes before editing, create contract files only for durable multi-step or protected-surface work, and verify each contract before closing.

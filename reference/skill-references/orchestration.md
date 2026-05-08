@@ -7,7 +7,7 @@ Use this when Socrates Contract coordinates macro alignment, decomposition, muta
 2. Decide whether the request is a low-risk single-step mutation. If yes, execute directly and verify without writing contract files.
 3. For nontrivial mutation, draft the macro contract: goal, scope, non-goals, success criteria, protected surfaces, risks, verification, knowns, unknowns, and decisions.
 4. Ask exactly one load-bearing question if the macro contract or first mutation path is not aligned.
-5. For large, multi-turn, protected-surface, or multi-problem goals, create `contract-index.md` and one subcontract file per bounded problem. Keep a single-file, single-check, reversible-decision change inline.
+5. For large, multi-turn, protected-surface, or multi-problem goals, create `contract-index.md` and one subcontract file per bounded problem. Keep narrow, reversible changes inline when they have one coherent verification path, even if they touch implementation plus tests or docs.
 6. Mark only one subcontract as active. Execute it, verify it, update it, then update the macro index.
 7. If verification fails, repair the smallest relevant issue and re-run the narrowest useful check.
 8. If a subcontract exposes a new load-bearing decision, mark it `blocked`, update the index, ask one question, and stop.
@@ -25,7 +25,8 @@ Use this when Socrates Contract coordinates macro alignment, decomposition, muta
 - Keep model names out of the main skill text.
 - Read `model-policy.json` at the Socrates skill root for per-platform role aliases and ordered fallbacks.
 - Treat the policy as guidance, not a requirement to delegate.
-- Keep role work inline unless the host supports an isolated worker or subagent and delegation will not block the next step.
+- Keep role work inline unless the host supports an isolated worker or subagent, delegation is allowed by the host instructions, and delegation will not block the next step.
+- In Codex, role names describe planning and verification passes; they are not permission to spawn agents by themselves.
 
 ## Rules
 - Contract files are visible user-agent state, not hidden task management.

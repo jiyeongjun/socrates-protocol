@@ -238,26 +238,38 @@ test("OpenAI agent prompt stays aligned with the router and on-demand references
   );
   assert.match(prompt, /allow_implicit_invocation: true/);
   assert.match(prompt, /display_name: "Socrates Contract"/);
-  assert.match(prompt, /short_description: "Align goals and execute subcontracts\."/);
+  assert.doesNotMatch(prompt, /Generated from reference\/openai-default-prompt\.txt/);
+  assert.match(prompt, /short_description: "Align risky changes before editing"/);
   assert.match(
     prompt,
-    /default_prompt: "Use \$socrates-contract to align the macro goal, document visible contract files when the work is multi-step, split the goal into bounded subcontracts, execute one subcontract at a time, and close each contract only after verification\."/
+    /default_prompt: "Use \$socrates-contract to align risky changes before editing, create contract files only for durable multi-step or protected-surface work, and verify each contract before closing\."/
   );
 });
 
 test("Reference files encode contract file and anti-scope-creep rules", async () => {
+  const skillBody = await readSkillBody();
   const contextFile = await readSkillReferenceSource("context-file.md");
   const contractFiles = await readSkillReferenceSource("contract-files.md");
   const orchestration = await readSkillReferenceSource("orchestration.md");
+  const protectedSurfaces = await readSkillReferenceSource("protected-surfaces.md");
   const verifyRepair = await readSkillReferenceSource("verify-repair.md");
   const evaluator = await readClaudeAgentSource("socrates-evaluate.md");
 
+  assert.match(skillBody, /multiple independent problems/);
+  assert.match(skillBody, /narrow, reversible work inline/);
+  assert.match(skillBody, /implementation or verification artifacts/);
   assert.match(contractFiles, /contract-index\.md/);
   assert.match(contractFiles, /contracts\/contract-001\.md/);
+  assert.match(contractFiles, /do not overwrite it/);
+  assert.match(contractFiles, /Required body sections/);
   assert.match(contractFiles, /Keep references one level deep/);
   assert.match(contractFiles, /500 lines/);
   assert.match(contextFile, /Prefer `contract-index\.md` plus `contracts\/contract-NNN\.md`/);
+  assert.match(orchestration, /role names describe planning and verification passes/);
   assert.match(orchestration, /Treat unrequested behavior expansion as contract drift/);
+  assert.match(orchestration, /implementation plus tests or docs/);
+  assert.match(protectedSurfaces, /perform a `protected_surface_planner` pass/);
+  assert.match(protectedSurfaces, /In Codex, do this inline/);
   assert.match(verifyRepair, /Do not add tests for new semantics/);
   assert.match(
     evaluator,

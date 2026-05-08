@@ -134,5 +134,5 @@ export function normalizeAgentPrompt(source) {
 
 export function buildOpenAIYaml({ promptSource }) {
   const prompt = normalizeAgentPrompt(promptSource);
-  return `# Generated from reference/openai-default-prompt.txt. Edit the shared source instead.\ninterface:\n  display_name: "Socrates Contract"\n  short_description: "Align goals and execute subcontracts."\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
+  return `interface:\n  display_name: "Socrates Contract"\n  short_description: "Align risky changes before editing"\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
 }
