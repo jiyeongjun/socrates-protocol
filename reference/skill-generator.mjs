@@ -25,14 +25,14 @@ export const skillTargets = {
     path: path.resolve(__dirname, "../.agents/skills/socrates-contract/SKILL.md"),
     frontmatter: [
       "name: socrates-contract",
-      `description: ${SOCRATES_DESCRIPTION}`,
+      `description: ${JSON.stringify(SOCRATES_DESCRIPTION)}`,
     ],
   },
   claude: {
     path: path.resolve(__dirname, "../.claude/skills/socrates-contract/SKILL.md"),
     frontmatter: [
       "name: socrates-contract",
-      `description: ${SOCRATES_DESCRIPTION}`,
+      `description: ${JSON.stringify(SOCRATES_DESCRIPTION)}`,
     ],
   },
 };

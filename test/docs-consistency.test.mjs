@@ -30,7 +30,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.6.1");
+  assert.equal(pkg.version, "0.6.2");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
   assert.equal(
@@ -52,9 +52,9 @@ test("README documents contract workflow, legacy context, and quick install", as
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.6\.1/);
-  assert.match(readme, /release tag `v0\.6\.1`/i);
-  assert.match(readme, /current package version in this worktree is `0\.6\.1`/i);
+  assert.match(readme, /VERSION=v0\.6\.2/);
+  assert.match(readme, /release tag `v0\.6\.2`/i);
+  assert.match(readme, /current package version in this worktree is `0\.6\.2`/i);
   assert.match(readme, /Every contract file should stay under 500 lines/);
   assert.match(readme, /Subcontract status values are `proposed`, `aligned`, `executing`, `blocked`, `verifying`, and `done`/);
   assert.match(readme, /If you decline twice/);
@@ -111,9 +111,9 @@ test("Korean README documents contract workflow and legacy context", async () =>
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
   assert.match(readme, /SOCRATES_CONTEXT\.md/);
-  assert.match(readme, /VERSION=v0\.6\.1/);
-  assert.match(readme, /현재 릴리즈 태그는 `v0\.6\.1`입니다/);
-  assert.match(readme, /현재 worktree의 package version은 `0\.6\.1`입니다/);
+  assert.match(readme, /VERSION=v0\.6\.2/);
+  assert.match(readme, /현재 릴리즈 태그는 `v0\.6\.2`입니다/);
+  assert.match(readme, /현재 worktree의 package version은 `0\.6\.2`입니다/);
   assert.match(readme, /모든 contract 파일은 500줄 미만으로 유지합니다/);
   assert.match(readme, /`proposed`, `aligned`, `executing`, `blocked`, `verifying`, `done`/);
   assert.match(readme, /두 번 연속 거부/);
@@ -190,6 +190,10 @@ test("Codex and Claude skills are generated from the shared skill body source", 
       body,
     })
   );
+  assert.match(codex, /^description: "/m);
+  assert.match(claude, /^description: "/m);
+  assert.doesNotMatch(codex, /^description: [^"\n]*\bExamples:/m);
+  assert.doesNotMatch(claude, /^description: [^"\n]*\bExamples:/m);
 });
 
 test("Skill references are mirrored from the shared source without nested reference links", async () => {
