@@ -1,6 +1,7 @@
 {
   "skillReferences": [
     "artifact-recovery.md",
+    "contract-files.md",
     "orchestration.md",
     "protected-surfaces.md",
     "clarification.md",

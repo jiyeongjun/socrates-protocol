@@ -1,7 +1,0 @@
-# Generated from reference/openai-default-prompt.txt. Edit the shared source instead.
-interface:
-  display_name: "Socrates"
-  short_description: "Recover artifacts and guard risky changes."
-  default_prompt: "Use $socrates to recover missing artifacts, expand to deeper exploration when risk signals appear, surface one load-bearing question when needed, and keep risky changes on a narrow verified path."
-policy:
-  allow_implicit_invocation: true

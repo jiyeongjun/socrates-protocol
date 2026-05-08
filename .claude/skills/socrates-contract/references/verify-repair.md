@@ -1,6 +1,6 @@
 # Verify and Repair
 
-Use this after patching.
+Use this after a subcontract mutation.
 
 ## Loop
 1. Run the narrowest relevant check first.
@@ -8,14 +8,15 @@ Use this after patching.
 3. If it fails, summarize the blocker in 1 to 3 bullets.
 4. Repair and retry.
 5. Stop after 2 repair attempts or when the failure indicates a missing requirement or decision.
-6. If verification passes on a repo-tracked protected-surface, cross-module, deeper-exploration, or otherwise nontrivial Socrates change, hand off inline to the read-only quality evaluator before ending the Socrates loop.
+6. If verification passes on a protected-surface, cross-boundary, multi-step, or otherwise nontrivial Socrates Contract change, run a read-only contract verification pass before closing the subcontract.
 
 ## Verification Order
 - targeted repro or single failing test
-- touched module or package tests
+- touched module, package, document, or workflow checks
 - lint, typecheck, or build
 - snapshot or regression tests
 - broader suite only if warranted
+- manual inspection when no executable check exists
 
 ## Rules
 - Keep diffs minimal.
@@ -23,5 +24,5 @@ Use this after patching.
 - Do not add tests for new semantics that the user did not ask for just to justify a broader patch.
 - Example: do not add tests for `null`, blank strings, or scalar inputs when the request only asked for numeric strings plus empty-array handling.
 - If the blocker is a missing decision, ask that one question.
-- Keep verification separate from evaluation. Verification proves the change still runs; evaluation decides whether one more inline repair loop is warranted.
-- Keep the verify -> evaluate -> repair -> re-verify -> re-evaluate loop inside the current turn by default instead of writing execution micro-state into `SOCRATES_CONTEXT.md`.
+- Keep verification separate from contract closure. Verification proves the changed surface works; contract verification decides whether the active subcontract can close.
+- Keep the verify -> repair -> re-verify loop inside the current turn by default instead of writing execution micro-state into contract files.

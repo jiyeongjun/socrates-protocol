@@ -1,0 +1,77 @@
+# Contract Files
+
+Use this when a macro goal needs durable context, several independent problems, several turns, or explicit user-agent alignment before mutation.
+
+## Paths
+- Put `contract-index.md` at the workspace root unless the user names another location.
+- Put subcontracts under `contracts/contract-001.md`, `contracts/contract-002.md`, etc.
+- If background detail would push a contract over 500 lines, put it under `reference/` and link to it directly from the index or a subcontract.
+- Keep references one level deep. A contract file may link to `reference/foo.md`; that reference file must not point to another reference file.
+- If the workspace already uses `reference/` for another purpose, use `contracts/reference/` and note that choice in `contract-index.md`.
+
+## Macro Index
+`contract-index.md` is the contract ledger and routing index. It summarizes the macro goal and points to each subcontract.
+
+Required sections:
+- `Macro Goal`
+- `Success Criteria`
+- `Scope`
+- `Non-Goals`
+- `Protected Surfaces`
+- `Decisions`
+- `Open Questions`
+- `Subcontracts`
+- `Current Status`
+
+Each subcontract entry must include:
+- path
+- one-line task summary
+- status
+- current next step
+- verification method
+
+## Subcontract Frontmatter
+Each `contracts/contract-NNN.md` file must start with YAML frontmatter containing at least:
+
+```yaml
+---
+task: "..."
+status: "proposed"
+knowns:
+  - "..."
+unknowns:
+  - "..."
+next_step: "..."
+updated_at: "YYYY-MM-DDTHH:mm:ss.sssZ"
+---
+```
+
+Allowed `status` values:
+- `proposed`: drafted but not aligned
+- `aligned`: ready to execute
+- `executing`: mutation started
+- `blocked`: waiting on user, environment, or dependency
+- `verifying`: mutation done and checks running
+- `done`: completion criteria met
+
+Recommended body sections:
+- `Inputs`
+- `Completion Criteria`
+- `Mutation Plan`
+- `Verification`
+- `Work Log`
+- `Result`
+
+## Contract Sizing
+- Make each subcontract independently verifiable.
+- Prefer fewer useful contracts over many tiny chores.
+- Split a contract when it has unrelated mutation surfaces, different verification paths, or separate user decisions.
+- Merge a contract when two steps cannot be verified separately.
+
+## Update Rules
+- Before mutating, make the active subcontract `aligned` or ask one load-bearing question.
+- When mutation starts, set the active subcontract to `executing`.
+- After mutation, set it to `verifying`, run checks, and record the commands or inspection performed.
+- Set it to `done` only when its completion criteria pass.
+- Update `contract-index.md` immediately after a subcontract reaches `done`, `blocked`, or materially changes scope.
+- Do not keep private state outside these visible files.

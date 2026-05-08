@@ -1,4 +1,4 @@
-# Socrates Protocol
+# Socrates Contract Protocol
 
 [![Version](https://img.shields.io/github/v/tag/jiyeongjun/socrates-protocol?label=version)](https://github.com/jiyeongjun/socrates-protocol/tags)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
@@ -6,35 +6,35 @@
 
 [한국어](./README.ko.md)
 
-A coding skill for cases where ambiguity, risk, or implementation branch choice would materially change the result.
+A mutation skill for cases where the user and agent need an explicit contract before changing files, data, settings, external systems, or other user-visible state.
 
 ## What It Does
 
-Socrates stays out of the way when the request is already explicit and single-path.
-It steps in only when clarification would change the implementation.
-When the same ambiguous task needs continued context across turns, it can keep one shared file at the workspace root: `SOCRATES_CONTEXT.md`.
+Socrates Contract stays out of the way when the request is already explicit, low-risk, and single-step.
+It steps in when the goal, scope, success criteria, protected surface, or decomposition would change the mutation.
+For larger goals, it documents a macro contract in `contract-index.md` and breaks the work into `contracts/contract-001.md`, `contracts/contract-002.md`, and so on.
 
 Core behavior:
 
-- clear request: execute directly
-- missing artifact or target: look for it in the codebase first; otherwise ask for it
+- clear low-risk request: execute directly and verify
+- missing artifact or target: look for it in the workspace first; otherwise ask for it
 - high-risk unresolved work: ask the most safety-critical question first
-- multiple valid implementation branches: surface the main tradeoff before coding
-- continued multi-turn context: ask before creating `SOCRATES_CONTEXT.md`
-- successful completion: automatically delete `SOCRATES_CONTEXT.md`
+- multiple valid mutation branches: align the macro contract before acting
+- large goal: create visible contract files and close one subcontract at a time
+- successful completion: verify every subcontract and then verify the macro contract
 
 Typical triggers:
 
 - vague preference words like `elegant`, `clean`, `good`, `robust`
 - API, schema, migration, auth, billing, deletion, or production changes
-- requests that still allow multiple materially different implementations
+- requests that still allow multiple materially different mutation paths
 - renames of env vars, config keys, public APIs, or persisted fields
-- tasks likely to require several clarification rounds across turns
+- tasks likely to require several clarification rounds, visible state tracking, or several independently verifiable subgoals
 
 ## How It Flows
 
-Socrates is one router skill.
-It tries the lightest safe path first instead of asking questions by default.
+Socrates Contract is one router skill.
+It tries the lightest safe path first, then escalates to macro-contract and subcontract files only when the work needs durable alignment.
 
 ```mermaid
 flowchart TB
@@ -52,18 +52,18 @@ flowchart TB
 
     subgraph R["2. Resolve Only What Matters"]
         direction TB
-        F[Look in the<br/>codebase first]:::action
+        F[Look in the<br/>workspace first]:::action
         G[Ask one safety-critical<br/>question or short plan]:::action
         H[Ask one load-bearing<br/>question]:::action
-        I[Offer<br/>SOCRATES_CONTEXT.md]:::action
+        I[Create macro contract<br/>and subcontracts]:::action
     end
 
-    subgraph X["3. Execute, Verify, Evaluate"]
+    subgraph X["3. Execute, Verify, Close"]
         direction TB
         J[Implement]:::action --> K[Run the smallest<br/>useful check first]:::action
-        K --> L[Read-only evaluation<br/>pass]:::action
+        K --> L[Read-only contract<br/>verification]:::action
         L --> M{Passes?}:::decision
-        M -- Yes --> N([Complete and clean up]):::emphasis
+        M -- Yes --> N([Close contract]):::emphasis
         M -- One actionable drift --> O[Repair once,<br/>then evaluate again]:::emphasis
         M -- Still not acceptable --> P[Report status and ask<br/>the user what to do next]:::emphasis
     end
@@ -71,7 +71,7 @@ flowchart TB
     E -- Missing file / symbol / test / target --> F
     E -- Risky change / external contract --> G
     E -- Key choice still open --> H
-    E -- Cross-turn context needed --> I
+    E -- Multi-step contract needed --> I
 
     C --> K
     F --> J
@@ -90,12 +90,12 @@ In short:
 - clear request: do the work
 - missing target: explore and search first, ask later
 - risky change: stop and clarify the safety decision
-- shared context: use one file, `SOCRATES_CONTEXT.md`
-- after changes: verify narrowly, then run one evaluation pass and at most one repair loop
+- large goal: use `contract-index.md` and one file per subcontract
+- after each subcontract: verify narrowly, repair if needed, then update the contract files
 
 ## Limitations
 
-Socrates still relies on LLM judgment to decide whether ambiguity is load-bearing.
+Socrates Contract still relies on LLM judgment to decide whether ambiguity is load-bearing.
 That means the entry check has the same basic limitation as the model it is guiding.
 
 It is most effective when:
@@ -103,7 +103,7 @@ It is most effective when:
 - high-risk signals are explicit in the prompt or visible in the code context
 - the unresolved fork or missing constraint is already textually grounded
 - the user can answer a small number of concrete clarification questions
-- continued context across turns is genuinely necessary for the same task
+- continued contract state across turns is genuinely necessary for the same task
 
 It may miss:
 
@@ -112,31 +112,31 @@ It may miss:
 - ambiguity that only becomes obvious deeper into implementation
 
 Use it as a risk-reduction aid, not as a guarantee that every load-bearing ambiguity has been surfaced.
-`SOCRATES_CONTEXT.md` is a shared current-context file, not a task manager.
+Contract files are visible user-agent state, not hidden task management.
 
 ## Quick Install
 
-These examples target release tag `v0.5.0`.
+These examples target release tag `v0.6.0`.
 If you are reading this worktree before that tag is pushed, run the checked-out repo's `scripts/install.mjs` directly.
-The current package version in this worktree is `0.5.0`.
+The current package version in this worktree is `0.6.0`.
 
 ### Codex
 
 Recommended quick install:
 
 ```bash
-VERSION=v0.5.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION" --enable-codex-hooks
+VERSION=v0.6.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION" --enable-codex-hooks
 ```
 
 Want the Stop hook from the start:
 
 ```bash
-VERSION=v0.5.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
+VERSION=v0.6.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
 ```
 
 Codex hook activation:
 
-- for global Codex installs, the skill is written to `~/.agents/skills/socrates`; hook scripts and config remain under `~/.codex`
+- for global Codex installs, the skill is written to `~/.agents/skills/socrates-contract`; hook scripts and config remain under `~/.codex`
 - the recommended install command above already enables `codex_hooks = true` in `~/.codex/config.toml`
 - if you installed earlier without `--enable-codex-hooks`, the skill still works, but the `SessionStart` sources (`startup`, `resume`, `clear`, `compact`) and optional `Stop` hook do not run until you enable that feature flag
 - you can fix an existing install by rerunning the installer with `--enable-codex-hooks`, or by running this one-time fallback command:
@@ -173,24 +173,24 @@ Update in place:
 
 - rerun the same install command with the version you want
 - the installer overwrites stale Socrates files, keeps unrelated hook entries, and installs the hook support files needed for self-contained execution
-- on global Codex installs, rerunning also removes the legacy `~/.codex/skills/socrates` copy after writing the current `~/.agents/skills/socrates` copy
+- on global Codex installs, rerunning also removes legacy `~/.agents/skills/socrates` and `~/.codex/skills/socrates` copies after writing the current `~/.agents/skills/socrates-contract` copy
 
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.5.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.6.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.5.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION" --enable-codex-hooks
+VERSION=v0.6.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION" --enable-codex-hooks
 ```
 
 Explicit invocation example:
 
 ```text
-$socrates Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
+$socrates-contract Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
 ```
 
 Auto-load example:
@@ -202,7 +202,7 @@ Design the account deletion API for our production SaaS. It must be GDPR-complia
 Codex/OpenAI note:
 
 - the generated agent metadata enables implicit invocation when the host supports it
-- explicit `$socrates` remains the most deterministic path when you want to force the skill
+- explicit `$socrates-contract` remains the most deterministic path when you want to force the skill
 
 Optional Codex hook:
 
@@ -213,8 +213,8 @@ Optional Codex hook:
 - Codex hooks are configured by `hooks.json` layers, not by per-skill activation, so this hook file is loaded whenever the repo hook layer is active
 - the included hook script is therefore intentionally a no-op unless it finds `SOCRATES_CONTEXT.md`
 - the search walks upward only until the nearest git root, so a nested repo does not accidentally adopt a parent repo's `SOCRATES_CONTEXT.md`
-- the quick-install command above installs the Socrates router skill, mirrored `references/` files, and the Socrates `SessionStart` hook, merging into any existing `hooks.json`
-- repo-scoped Codex installs put the skill under `.agents/skills/socrates`; global installs put it under `~/.agents/skills/socrates`
+- the quick-install command above installs the Socrates Contract skill, mirrored `references/` files, and the Socrates `SessionStart` hook, merging into any existing `hooks.json`
+- repo-scoped Codex installs put the skill under `.agents/skills/socrates-contract`; global installs put it under `~/.agents/skills/socrates-contract`
 - the recommended Codex install command above also enables the required `codex_hooks = true` feature flag for you
 
 Optional Stop hook:
@@ -231,13 +231,13 @@ Optional Stop hook:
 Install the optional Codex Stop hook:
 
 ```bash
-VERSION=v0.5.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
+VERSION=v0.6.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
 ```
 
 Remove only the optional Codex Stop hook:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.5.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.6.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
 ```
 
 ### Claude Code
@@ -245,13 +245,13 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.5.0
 Recommended quick install:
 
 ```bash
-VERSION=v0.5.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
+VERSION=v0.6.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
 ```
 
 Want the Stop hook from the start:
 
 ```bash
-VERSION=v0.5.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
+VERSION=v0.6.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
 ```
 
 Claude hook behavior:
@@ -268,19 +268,19 @@ Update in place:
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.5.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.6.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.5.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.6.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Explicit invocation example:
 
 ```text
-/socrates Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
+/socrates-contract Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe.
 ```
 
 Auto-load example:
@@ -293,15 +293,16 @@ Claude setup notes:
 
 - skill path: `.claude/skills/<skill-name>/SKILL.md`
 - Claude-only Socrates subagents: `.claude/agents/socrates-explore.md`, `.claude/agents/socrates-plan.md`, `.claude/agents/socrates-verify.md`, `.claude/agents/socrates-evaluate.md`
-- detailed on-demand guidance lives one level deep under `.claude/skills/socrates/references/`
+- detailed on-demand guidance lives one level deep under `.claude/skills/socrates-contract/references/`
+- global Claude installs write the skill to `~/.claude/skills/socrates-contract` and remove the legacy `~/.claude/skills/socrates` copy on rerun
 - role-based model guidance lives in `model-policy.json`; Claude subagents use current `model` aliases in their frontmatter
-- current repo version supports explicit `/socrates` use and auto-load when relevant
+- current repo version supports explicit `/socrates-contract` use and auto-load when relevant
 - this repo also ships a conservative project hook at `.claude/settings.json`
 - it only runs on `SessionStart` and only adds context when `SOCRATES_CONTEXT.md` already exists
 - it restores shared context on `startup`, `resume`, `clear`, and `compact`, so long-running work can survive compaction without inventing another state file
 - Claude hooks are configured by settings layers, not by per-skill activation, so the included hook is intentionally a no-op unless it finds the shared context doc
 - the search walks upward only until the nearest git root, so a nested repo does not accidentally adopt a parent repo's `SOCRATES_CONTEXT.md`
-- the quick-install command above installs the Socrates router skill, mirrored `references/` files, Claude-only subagents, and the Socrates `SessionStart` hook, merging into any existing `.claude/settings.json`
+- the quick-install command above installs the Socrates Contract skill, mirrored `references/` files, Claude-only subagents, and the Socrates `SessionStart` hook, merging into any existing `.claude/settings.json`
 
 Optional Claude Stop hook:
 
@@ -321,21 +322,33 @@ Install the optional Claude Stop hook:
 Remove only the optional Claude Stop hook:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.5.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.6.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
 ```
 
 ## Versioning
 
-Socrates Protocol uses SemVer-style tags.
-The current release tag is `v0.5.0`.
-The current package version in this worktree is `0.5.0`.
+Socrates Contract Protocol uses SemVer-style tags.
+The current release tag is `v0.6.0`.
+The current package version in this worktree is `0.6.0`.
 
 - the quick-install examples pin to the current release tag for reproducible installs
 - `npm run verify:release-assets` checks the current worktree by default
-- run `npm run verify:release-assets -- --ref v0.5.0` to confirm every installer asset exists in that release ref
+- run `npm run verify:release-assets -- --ref v0.6.0` to confirm every installer asset exists in that release ref
 - treat `0.x` releases as unstable contracts that may still change between minor versions
 
-### Context File Format
+### Contract File Format
+
+New multi-step work uses visible contract files:
+
+- `contract-index.md` defines the macro goal, success criteria, scope, non-goals, protected surfaces, fixed decisions, open questions, and overall progress.
+- `contracts/contract-001.md`, `contracts/contract-002.md`, and later files hold one bounded subcontract each.
+- Each subcontract uses YAML frontmatter with `task`, `status`, `knowns`, `unknowns`, `next_step`, and `updated_at`.
+- Subcontract status values are `proposed`, `aligned`, `executing`, `blocked`, `verifying`, and `done`.
+- Every contract file should stay under 500 lines.
+- References are one level deep. Use `reference/` for long background files, or `contracts/reference/` if the project already owns `reference/`.
+- Close the macro contract only after every subcontract is `done` and the macro success criteria are verified.
+
+### Legacy Context File Format
 
 `SOCRATES_CONTEXT.md` currently uses `version: 3` in YAML frontmatter.
 
@@ -345,9 +358,22 @@ The current package version in this worktree is `0.5.0`.
 
 To run the local validation scripts exactly as CI does, use Node `24+`.
 
-## How Shared Context Works
+## How Contract Files Work
 
-Socrates only proposes `SOCRATES_CONTEXT.md` when continued context across turns would materially change the implementation.
+Socrates Contract proposes `contract-index.md` and `contracts/contract-NNN.md` when a goal needs several decisions, several mutation surfaces, or several independently verifiable subgoals.
+
+- The macro index lives at the workspace root by default.
+- The index is the routing file: it records the macro goal, progress, decisions, open questions, and each subcontract path.
+- Subcontract files live under `contracts/` and contain the active task, inputs, completion criteria, mutation plan, verification, work log, and result.
+- Only one subcontract should be active at a time.
+- Before mutation, the active subcontract must be aligned or blocked on one explicit user question.
+- After mutation, run the narrowest relevant verification first, repair if needed, and only then mark the subcontract `done`.
+- Update `contract-index.md` whenever a subcontract becomes `done`, `blocked`, or materially changes scope.
+- Do not store private state outside these visible files.
+
+## Legacy Shared Context
+
+Older Socrates versions used `SOCRATES_CONTEXT.md` when continued context across turns would materially change the implementation. New multi-step work should prefer contract files, but the hook and helper still support this legacy file.
 
 - The file lives at the workspace root: prefer the git repo root; otherwise use the current working directory.
 - The file is the only persisted state. There is no hidden JSON, archive log, or task registry behind it.
@@ -423,25 +449,24 @@ Keep verify -> evaluate -> repair -> re-verify -> re-evaluate inline inside the 
 ## Representative Interactions
 
 ```bash
-/socrates "write a JavaScript function sum(numbers) that returns 0 for an empty array"
+/socrates-contract "write a JavaScript function sum(numbers) that returns 0 for an empty array"
 # Execute directly.
-# Do not create SOCRATES_CONTEXT.md.
+# Do not create contract files.
 ```
 
 ```bash
-/socrates "Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe."
-# Socrates: This task looks like it needs shared context. Should I keep it in SOCRATES_CONTEXT.md at the workspace root?
-# User: yes
-# Socrates creates SOCRATES_CONTEXT.md and continues with the next load-bearing question.
+/socrates-contract "Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe."
+# Socrates Contract drafts the macro goal, protected surfaces, success criteria, and first load-bearing question.
+# After alignment, it creates contract-index.md and contracts/contract-001.md for the first bounded problem.
 ```
 
 ```bash
-/socrates "show the current context"
-# Socrates reads SOCRATES_CONTEXT.md and shows the current task, knowns, unknowns, next question, decisions, and status.
+/socrates-contract "show the current contract"
+# Socrates Contract reads contract-index.md and the active subcontract, then reports progress and blockers.
 ```
 
 ```bash
-/socrates "we're done"
-# If the task succeeded, Socrates automatically deletes SOCRATES_CONTEXT.md.
-# If the task stopped incomplete, Socrates asks whether to keep or delete it.
+/socrates-contract "close the contract"
+# Socrates Contract verifies all subcontracts and the macro success criteria before closing.
+# If the task stopped incomplete, it leaves the visible contract files for handoff.
 ```

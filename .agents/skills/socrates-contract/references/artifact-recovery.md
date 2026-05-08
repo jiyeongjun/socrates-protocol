@@ -1,9 +1,9 @@
 # Artifact Recovery
 
-Use this only when a required file, symbol, test, target, or repro path is missing or ambiguous.
+Use this only when a required file, symbol, target, contract, test, repro path, or external artifact is missing or ambiguous.
 
 ## Rules
-- Search the codebase before asking the user.
+- Search the workspace and visible project artifacts before asking the user.
 - Prefer host-native file search and read tools over clarification when the artifact is discoverable. In Codex, prefer `rg` and `rg --files`; in Claude Code, use `Read`, `Grep`, and `Glob`.
 - If exactly one candidate is clearly dominant, continue without asking.
 - If multiple plausible candidates remain, ask one compact disambiguation question.
@@ -16,6 +16,7 @@ Use this only when a required file, symbol, test, target, or repro path is missi
 - public entrypoint or API surface
 - config or env usage
 - migration or persistence touchpoints
+- existing contract files or prior decisions
 
 ## Output
 Return only:

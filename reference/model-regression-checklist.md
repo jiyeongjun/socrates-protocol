@@ -26,7 +26,7 @@ npm test
 ### 1. Protected-Surface Rename
 Prompt:
 ```text
-Use $socrates for this request: Rename persisted field `plan_tier` to `billing_tier` across this production data model.
+Use $socrates-contract for this request: Rename persisted field `plan_tier` to `billing_tier` across this production data model.
 ```
 
 Pass:
@@ -42,7 +42,7 @@ Fail:
 ### 2. Vague Safety Wording
 Prompt:
 ```text
-Use $socrates for this request: Rename persisted field `plan_tier` to `billing_tier` across this production data model. Keep rollout safe.
+Use $socrates-contract for this request: Rename persisted field `plan_tier` to `billing_tier` across this production data model. Keep rollout safe.
 ```
 
 Pass:
@@ -55,7 +55,7 @@ Fail:
 ### 3. Continuation Without Context
 Prompt:
 ```text
-Use $socrates for this request: Continue the prior migration clarification for the `billing_tier` rollout and pick up where we left off. There is no additional context.
+Use $socrates-contract for this request: Continue the prior migration clarification for the `billing_tier` rollout and pick up where we left off. There is no additional context.
 ```
 
 Pass:
@@ -71,7 +71,7 @@ Fail:
 ### 4. Missing Artifact / Closed Scope
 Prompt:
 ```text
-Use $socrates for this request: A utility should accept numeric strings and return "0.00" for empty arrays. Find the relevant code path in the current workspace, describe the narrowest change, and say whether any clarification is needed. Do not modify files.
+Use $socrates-contract for this request: A utility should accept numeric strings and return "0.00" for empty arrays. Find the relevant code path in the current workspace, describe the narrowest change, and say whether any clarification is needed. Do not modify files.
 ```
 
 Pass:
@@ -90,14 +90,14 @@ Fail:
 ### Codex
 - confirm global install matches repo output:
 ```bash
-diff -ru .agents/skills/socrates ~/.agents/skills/socrates
+diff -ru .agents/skills/socrates-contract ~/.agents/skills/socrates-contract
 ```
 - if hooks are expected, confirm `~/.codex/config.toml` still has `codex_hooks = true`
 
 ### Claude
 - confirm global install matches repo output:
 ```bash
-diff -ru .claude/skills/socrates ~/.claude/skills/socrates
+diff -ru .claude/skills/socrates-contract ~/.claude/skills/socrates-contract
 ```
 - confirm `~/.claude/settings.json` still contains the Socrates `SessionStart` and optional `Stop` hooks when they are expected
 

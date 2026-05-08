@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v0.5.0";
+export const DEFAULT_VERSION = "v0.6.0";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];
@@ -31,15 +31,15 @@ function buildNodeCommand(scriptPath) {
 const ASSETS = {
   skillLayout: "reference/skill-layout.json",
   modelPolicy: "reference/model-policy.json",
-  codexSkill: ".agents/skills/socrates/SKILL.md",
-  codexAgent: ".agents/skills/socrates/agents/openai.yaml",
-  codexModelPolicy: ".agents/skills/socrates/model-policy.json",
-  codexReferencesDir: ".agents/skills/socrates/references",
+  codexSkill: ".agents/skills/socrates-contract/SKILL.md",
+  codexAgent: ".agents/skills/socrates-contract/agents/openai.yaml",
+  codexModelPolicy: ".agents/skills/socrates-contract/model-policy.json",
+  codexReferencesDir: ".agents/skills/socrates-contract/references",
   codexHookScript: ".codex/hooks/session_start_socrates_context.mjs",
   codexStopHookScript: ".codex/hooks/stop_socrates_clarifying.mjs",
-  claudeSkill: ".claude/skills/socrates/SKILL.md",
-  claudeModelPolicy: ".claude/skills/socrates/model-policy.json",
-  claudeReferencesDir: ".claude/skills/socrates/references",
+  claudeSkill: ".claude/skills/socrates-contract/SKILL.md",
+  claudeModelPolicy: ".claude/skills/socrates-contract/model-policy.json",
+  claudeReferencesDir: ".claude/skills/socrates-contract/references",
   claudeAgentsDir: ".claude/agents",
   claudeHookScript: ".claude/hooks/session_start_socrates_context.mjs",
   claudeStopHookScript: ".claude/hooks/stop_socrates_clarifying.mjs",
@@ -322,7 +322,7 @@ async function installCodex(options, loadAsset, skillLayout) {
     stopHookCorePath,
     stopHookScriptPath,
     hooksConfigPath,
-    legacySkillDir,
+    legacySkillDirs,
   } = getCodexTargets(options, skillLayout);
   const referenceAssets = buildRelativeAssetMap(
     ASSETS.codexReferencesDir,
@@ -395,7 +395,7 @@ async function installCodex(options, loadAsset, skillLayout) {
   }
 
   await writeJsonFile(hooksConfigPath, merged);
-  if (legacySkillDir) {
+  for (const legacySkillDir of legacySkillDirs) {
     await rm(legacySkillDir, { recursive: true, force: true });
   }
 
@@ -431,6 +431,7 @@ async function installClaude(options, loadAsset, skillLayout) {
     stopHookCorePath,
     stopHookScriptPath,
     settingsPath,
+    legacySkillDirs,
   } =
     getClaudeTargets(options, skillLayout);
   const referenceAssets = buildRelativeAssetMap(
@@ -519,6 +520,9 @@ async function installClaude(options, loadAsset, skillLayout) {
   }
 
   await writeJsonFile(settingsPath, merged);
+  for (const legacySkillDir of legacySkillDirs) {
+    await rm(legacySkillDir, { recursive: true, force: true });
+  }
 
   return [
     skillPath,
@@ -552,7 +556,7 @@ async function uninstallCodex(options, skillLayout) {
     stopHookCorePath,
     stopHookScriptPath,
     hooksConfigPath,
-    legacySkillDir,
+    legacySkillDirs,
   } = getCodexTargets(options, skillLayout);
 
   const removeOptionalOnly = options.features.length > 0;
@@ -569,7 +573,7 @@ async function uninstallCodex(options, skillLayout) {
     await deleteFile(hookContextDocPath);
     await deleteFile(contextDocHelperCorePath);
     await deleteFile(contextDocHelperPath);
-    if (legacySkillDir) {
+    for (const legacySkillDir of legacySkillDirs) {
       await rm(legacySkillDir, { recursive: true, force: true });
     }
   }
@@ -644,6 +648,7 @@ async function uninstallClaude(options, skillLayout) {
     stopHookCorePath,
     stopHookScriptPath,
     settingsPath,
+    legacySkillDirs,
   } =
     getClaudeTargets(options, skillLayout);
 
@@ -663,6 +668,9 @@ async function uninstallClaude(options, skillLayout) {
     await deleteFile(hookContextDocPath);
     await deleteFile(contextDocHelperCorePath);
     await deleteFile(contextDocHelperPath);
+    for (const legacySkillDir of legacySkillDirs) {
+      await rm(legacySkillDir, { recursive: true, force: true });
+    }
   }
   if (options.features.includes("stop-hook") || !removeOptionalOnly) {
     await deleteFile(stopHookCorePath);
@@ -758,15 +766,18 @@ function getCodexTargets(options, skillLayout) {
   const repoRoot = repoInstall ? path.resolve(options.targetRepo) : null;
   const hooksRoot = repoInstall ? repoRoot : path.join(options.homeDir, ".codex");
   const skillDir = repoInstall
-    ? path.join(repoRoot, ".agents", "skills", "socrates")
-    : path.join(options.homeDir, ".agents", "skills", "socrates");
-  const legacySkillDir = repoInstall
-    ? null
-    : path.join(options.homeDir, ".codex", "skills", "socrates");
+    ? path.join(repoRoot, ".agents", "skills", "socrates-contract")
+    : path.join(options.homeDir, ".agents", "skills", "socrates-contract");
+  const legacySkillDirs = repoInstall
+    ? [path.join(repoRoot, ".agents", "skills", "socrates")]
+    : [
+        path.join(options.homeDir, ".agents", "skills", "socrates"),
+        path.join(options.homeDir, ".codex", "skills", "socrates"),
+      ];
 
   return {
     repoInstall,
-    legacySkillDir,
+    legacySkillDirs,
     skillPath: path.join(skillDir, "SKILL.md"),
     agentPath: path.join(skillDir, "agents", "openai.yaml"),
     modelPolicyPath: path.join(skillDir, "model-policy.json"),
@@ -808,14 +819,18 @@ function getClaudeTargets(options, skillLayout) {
       : path.join(options.homeDir, ".claude");
   const repoInstall = options.scope === "repo";
   const skillDir = repoInstall
-    ? path.join(root, ".claude", "skills", "socrates")
-    : path.join(root, "skills", "socrates");
+    ? path.join(root, ".claude", "skills", "socrates-contract")
+    : path.join(root, "skills", "socrates-contract");
+  const legacySkillDirs = repoInstall
+    ? [path.join(root, ".claude", "skills", "socrates")]
+    : [path.join(root, "skills", "socrates")];
   const agentDir = repoInstall
     ? path.join(root, ".claude", "agents")
     : path.join(root, "agents");
 
   return {
     repoInstall,
+    legacySkillDirs,
     skillPath: path.join(skillDir, "SKILL.md"),
     modelPolicyPath: path.join(skillDir, "model-policy.json"),
     referencePaths: buildTargetPathMap(

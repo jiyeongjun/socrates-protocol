@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOCRATES_DESCRIPTION =
-  "Use when a coding task has missing target artifacts, protected surfaces such as API/schema/auth/billing/deletion/config/production changes, or unresolved choices that would materially change implementation. Guides artifact recovery, one-question clarification, protected-surface planning, and bounded verify/evaluate/repair. Skip explicit low-risk single-path edits, formatting-only work, and read-only explanations.";
+  "Use when a requested mutation needs explicit agreement on the macro goal, scope, success criteria, protected surfaces, or decomposition into subcontracts before work proceeds. Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, or vague preference words like \"elegant\" or \"robust\". Guides macro-contract alignment, subcontract files, one-question clarification, execution, verification, and closure. Skip read-only explanations, formatting-only work, and explicit low-risk single-step edits.";
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");
@@ -22,16 +22,16 @@ export const claudeAgentNames = skillLayout.claudeAgents;
 
 export const skillTargets = {
   codex: {
-    path: path.resolve(__dirname, "../.agents/skills/socrates/SKILL.md"),
+    path: path.resolve(__dirname, "../.agents/skills/socrates-contract/SKILL.md"),
     frontmatter: [
-      "name: socrates",
+      "name: socrates-contract",
       `description: ${SOCRATES_DESCRIPTION}`,
     ],
   },
   claude: {
-    path: path.resolve(__dirname, "../.claude/skills/socrates/SKILL.md"),
+    path: path.resolve(__dirname, "../.claude/skills/socrates-contract/SKILL.md"),
     frontmatter: [
-      "name: socrates",
+      "name: socrates-contract",
       `description: ${SOCRATES_DESCRIPTION}`,
     ],
   },
@@ -39,23 +39,23 @@ export const skillTargets = {
 
 export const agentTargetPath = path.resolve(
   __dirname,
-  "../.agents/skills/socrates/agents/openai.yaml"
+  "../.agents/skills/socrates-contract/agents/openai.yaml"
 );
 
 export const skillReferenceTargets = {
   codex: buildNamedTargetPaths(
-    path.resolve(__dirname, "../.agents/skills/socrates/references"),
+    path.resolve(__dirname, "../.agents/skills/socrates-contract/references"),
     skillReferenceNames
   ),
   claude: buildNamedTargetPaths(
-    path.resolve(__dirname, "../.claude/skills/socrates/references"),
+    path.resolve(__dirname, "../.claude/skills/socrates-contract/references"),
     skillReferenceNames
   ),
 };
 
 export const modelPolicyTargetPaths = {
-  codex: path.resolve(__dirname, "../.agents/skills/socrates/model-policy.json"),
-  claude: path.resolve(__dirname, "../.claude/skills/socrates/model-policy.json"),
+  codex: path.resolve(__dirname, "../.agents/skills/socrates-contract/model-policy.json"),
+  claude: path.resolve(__dirname, "../.claude/skills/socrates-contract/model-policy.json"),
 };
 
 export const claudeAgentTargets = buildNamedTargetPaths(
@@ -125,7 +125,7 @@ export async function readClaudeAgentSource(name) {
 
 export function buildSkillDocument({ frontmatter, body }) {
   const header = ["---", ...frontmatter, "---", ""].join("\n");
-  return `${header}\n<!-- Generated from reference/skill-body.md. Edit the shared source instead. -->\n\n${body.trim()}\n`;
+  return `${header}\n${body.trim()}\n`;
 }
 
 export function normalizeAgentPrompt(source) {
@@ -134,5 +134,5 @@ export function normalizeAgentPrompt(source) {
 
 export function buildOpenAIYaml({ promptSource }) {
   const prompt = normalizeAgentPrompt(promptSource);
-  return `# Generated from reference/openai-default-prompt.txt. Edit the shared source instead.\ninterface:\n  display_name: "Socrates"\n  short_description: "Recover artifacts and guard risky changes."\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
+  return `# Generated from reference/openai-default-prompt.txt. Edit the shared source instead.\ninterface:\n  display_name: "Socrates Contract"\n  short_description: "Align goals and execute subcontracts."\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
 }

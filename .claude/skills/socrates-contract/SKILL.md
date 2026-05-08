@@ -1,3 +1,8 @@
+---
+name: socrates-contract
+description: Use when a requested mutation needs explicit agreement on the macro goal, scope, success criteria, protected surfaces, or decomposition into subcontracts before work proceeds. Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, or vague preference words like "elegant" or "robust". Guides macro-contract alignment, subcontract files, one-question clarification, execution, verification, and closure. Skip read-only explanations, formatting-only work, and explicit low-risk single-step edits.
+---
+
 # Socrates Contract Protocol
 
 Socrates Contract is the mutation protocol for work where the user and agent must agree on the goal before changing files, data, settings, external systems, or other user-visible state.

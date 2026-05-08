@@ -38,23 +38,25 @@ async function buildFetchAssetMap() {
   return new Map([
     ["reference/skill-layout.json", await readFile(path.join(repoRoot, "reference/skill-layout.json"), "utf8")],
     ["reference/model-policy.json", await readFile(path.join(repoRoot, "reference/model-policy.json"), "utf8")],
-    [".agents/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/SKILL.md"), "utf8")],
-    [".agents/skills/socrates/agents/openai.yaml", await readFile(path.join(repoRoot, ".agents/skills/socrates/agents/openai.yaml"), "utf8")],
-    [".agents/skills/socrates/model-policy.json", await readFile(path.join(repoRoot, ".agents/skills/socrates/model-policy.json"), "utf8")],
-    [".agents/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/artifact-recovery.md"), "utf8")],
-    [".agents/skills/socrates/references/orchestration.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/orchestration.md"), "utf8")],
-    [".agents/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/protected-surfaces.md"), "utf8")],
-    [".agents/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/clarification.md"), "utf8")],
-    [".agents/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/verify-repair.md"), "utf8")],
-    [".agents/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".agents/skills/socrates/references/context-file.md"), "utf8")],
-    [".claude/skills/socrates/SKILL.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/SKILL.md"), "utf8")],
-    [".claude/skills/socrates/model-policy.json", await readFile(path.join(repoRoot, ".claude/skills/socrates/model-policy.json"), "utf8")],
-    [".claude/skills/socrates/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/artifact-recovery.md"), "utf8")],
-    [".claude/skills/socrates/references/orchestration.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/orchestration.md"), "utf8")],
-    [".claude/skills/socrates/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/protected-surfaces.md"), "utf8")],
-    [".claude/skills/socrates/references/clarification.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/clarification.md"), "utf8")],
-    [".claude/skills/socrates/references/verify-repair.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/verify-repair.md"), "utf8")],
-    [".claude/skills/socrates/references/context-file.md", await readFile(path.join(repoRoot, ".claude/skills/socrates/references/context-file.md"), "utf8")],
+    [".agents/skills/socrates-contract/SKILL.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/SKILL.md"), "utf8")],
+    [".agents/skills/socrates-contract/agents/openai.yaml", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/agents/openai.yaml"), "utf8")],
+    [".agents/skills/socrates-contract/model-policy.json", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/model-policy.json"), "utf8")],
+    [".agents/skills/socrates-contract/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/artifact-recovery.md"), "utf8")],
+    [".agents/skills/socrates-contract/references/contract-files.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/contract-files.md"), "utf8")],
+    [".agents/skills/socrates-contract/references/orchestration.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/orchestration.md"), "utf8")],
+    [".agents/skills/socrates-contract/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/protected-surfaces.md"), "utf8")],
+    [".agents/skills/socrates-contract/references/clarification.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/clarification.md"), "utf8")],
+    [".agents/skills/socrates-contract/references/verify-repair.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/verify-repair.md"), "utf8")],
+    [".agents/skills/socrates-contract/references/context-file.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/context-file.md"), "utf8")],
+    [".claude/skills/socrates-contract/SKILL.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/SKILL.md"), "utf8")],
+    [".claude/skills/socrates-contract/model-policy.json", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/model-policy.json"), "utf8")],
+    [".claude/skills/socrates-contract/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/artifact-recovery.md"), "utf8")],
+    [".claude/skills/socrates-contract/references/contract-files.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/contract-files.md"), "utf8")],
+    [".claude/skills/socrates-contract/references/orchestration.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/orchestration.md"), "utf8")],
+    [".claude/skills/socrates-contract/references/protected-surfaces.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/protected-surfaces.md"), "utf8")],
+    [".claude/skills/socrates-contract/references/clarification.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/clarification.md"), "utf8")],
+    [".claude/skills/socrates-contract/references/verify-repair.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/verify-repair.md"), "utf8")],
+    [".claude/skills/socrates-contract/references/context-file.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/context-file.md"), "utf8")],
     [".claude/agents/socrates-explore.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-explore.md"), "utf8")],
     [".claude/agents/socrates-plan.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-plan.md"), "utf8")],
     [".claude/agents/socrates-verify.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-verify.md"), "utf8")],
@@ -583,7 +585,7 @@ test("fresh repo install writes both platforms from an empty directory", async (
   assert.equal(claudeSettings.hooks.SessionStart.length, 1);
   assert.equal(claudeSettings.hooks.SessionStart[0].hooks.length, 1);
   await assert.doesNotReject(() =>
-    readFile(path.join(root, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   await assert.doesNotReject(() =>
     readFile(
@@ -591,7 +593,7 @@ test("fresh repo install writes both platforms from an empty directory", async (
         root,
         ".agents",
         "skills",
-        "socrates",
+        "socrates-contract",
         "references",
         "artifact-recovery.md"
       ),
@@ -599,7 +601,7 @@ test("fresh repo install writes both platforms from an empty directory", async (
     )
   );
   await assert.doesNotReject(() =>
-    readFile(path.join(root, ".claude", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(root, ".claude", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   await assert.doesNotReject(() =>
     readFile(
@@ -607,7 +609,7 @@ test("fresh repo install writes both platforms from an empty directory", async (
         root,
         ".claude",
         "skills",
-        "socrates",
+        "socrates-contract",
         "references",
         "context-file.md"
       ),
@@ -734,7 +736,7 @@ test("repo install merges hooks and remains idempotent across reruns", async () 
 
   await assert.doesNotReject(() =>
     readFile(
-      path.join(root, ".agents", "skills", "socrates", "agents", "openai.yaml"),
+      path.join(root, ".agents", "skills", "socrates-contract", "agents", "openai.yaml"),
       "utf8"
     )
   );
@@ -749,8 +751,11 @@ test("repo install merges hooks and remains idempotent across reruns", async () 
 test("global install writes into the provided home directory", async () => {
   const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-home-"));
   const legacySkillPath = path.join(fakeHome, ".codex", "skills", "socrates", "SKILL.md");
+  const legacyAgentsSkillPath = path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md");
   await mkdir(path.dirname(legacySkillPath), { recursive: true });
+  await mkdir(path.dirname(legacyAgentsSkillPath), { recursive: true });
   await writeFile(legacySkillPath, "legacy Socrates skill\n", "utf8");
+  await writeFile(legacyAgentsSkillPath, "legacy agents Socrates skill\n", "utf8");
 
   await installSocrates({
     platform: "codex",
@@ -768,16 +773,17 @@ test("global install writes into the provided home directory", async () => {
     `node ${JSON.stringify(path.join(fakeHome, ".codex", "hooks", "session_start_socrates_context.mjs"))}`
   );
   await assert.doesNotReject(() =>
-    readFile(path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(fakeHome, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   await assertMissing(legacySkillPath);
+  await assertMissing(legacyAgentsSkillPath);
   await assert.doesNotReject(() =>
     readFile(
       path.join(
         fakeHome,
         ".agents",
         "skills",
-        "socrates",
+        "socrates-contract",
         "references",
         "artifact-recovery.md"
       ),
@@ -848,8 +854,8 @@ test("importing install.mjs from a stdin module does not auto-run the installer"
   });
 
   assert.match(stdout, /import ok/);
-  await assertMissing(path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md"));
-  await assertMissing(path.join(fakeHome, ".claude", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(fakeHome, ".agents", "skills", "socrates-contract", "SKILL.md"));
+  await assertMissing(path.join(fakeHome, ".claude", "skills", "socrates-contract", "SKILL.md"));
 });
 
 test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
@@ -908,7 +914,7 @@ test("stdin install runs only when SOCRATES_INSTALL_RUN is set", async () => {
 
   assert.match(stdout, /Installed Socrates to:/);
   await assert.doesNotReject(() =>
-    readFile(path.join(fakeHome, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(fakeHome, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   const config = await readFile(path.join(fakeHome, ".codex", "config.toml"), "utf8");
   assert.match(config, /codex_hooks = true/);
@@ -1132,7 +1138,7 @@ test("install fails fast when an existing config file contains invalid JSON", as
     /Unexpected token|JSON/
   );
 
-  await assertMissing(path.join(root, ".claude", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".claude", "skills", "socrates-contract", "SKILL.md"));
   await assertMissing(path.join(root, ".claude", "agents", "socrates-explore.md"));
   await assertMissing(
     path.join(root, ".claude", "hooks", "session_start_socrates_context.mjs")
@@ -1156,7 +1162,7 @@ test("install fails when hooks has an invalid schema", async () => {
     /hooks field must be a JSON object/
   );
 
-  await assertMissing(path.join(root, ".agents", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"));
   await assertMissing(
     path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs")
   );
@@ -1181,7 +1187,7 @@ test("install fails when SessionStart exists but is not an array", async () => {
     /SessionStart hook list must be an array/
   );
 
-  await assertMissing(path.join(root, ".agents", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"));
   await assertMissing(
     path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs")
   );
@@ -1225,7 +1231,7 @@ test("install falls back to fetch when local source assets are unavailable", asy
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 15);
+  assert.equal(requested.length, 16);
   await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".codex", "hooks.json"), "utf8")
   );
@@ -1270,7 +1276,7 @@ test("install falls back to fetch for stop-hook assets when requested", async ()
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 17);
+  assert.equal(requested.length, 18);
   await assert.doesNotReject(() =>
     readFile(
       path.join(fakeHome, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"),
@@ -1512,6 +1518,9 @@ clarifying
 test("global install produces self-contained hook scripts for both runtimes", async () => {
   const fakeHome = await mkdtemp(path.join(tmpdir(), "socrates-install-self-contained-home-"));
   const workspace = await mkdtemp(path.join(tmpdir(), "socrates-install-self-contained-workspace-"));
+  const legacyClaudeSkillPath = path.join(fakeHome, ".claude", "skills", "socrates", "SKILL.md");
+  await mkdir(path.dirname(legacyClaudeSkillPath), { recursive: true });
+  await writeFile(legacyClaudeSkillPath, "legacy Claude Socrates skill\n", "utf8");
   await writeFile(path.join(workspace, "SOCRATES_CONTEXT.md"), buildContextDoc(), "utf8");
 
   await installSocrates({
@@ -1579,6 +1588,10 @@ test("global install produces self-contained hook scripts for both runtimes", as
   await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".claude", "hooks", "socrates_context_doc_helper.mjs"), "utf8")
   );
+  await assert.doesNotReject(() =>
+    readFile(path.join(fakeHome, ".claude", "skills", "socrates-contract", "SKILL.md"), "utf8")
+  );
+  await assertMissing(legacyClaudeSkillPath);
 });
 
 test("install surfaces fetch failures when an asset cannot be downloaded", async () => {
@@ -1616,9 +1629,15 @@ test("reinstall updates stale installed files back to the tracked contents", asy
     sourceRoot: repoRoot,
   });
 
-  const staleSkillPath = path.join(root, ".claude", "skills", "socrates", "SKILL.md");
+  const staleSkillPath = path.join(root, ".claude", "skills", "socrates-contract", "SKILL.md");
+  const legacyCodexSkillPath = path.join(root, ".agents", "skills", "socrates", "SKILL.md");
+  const legacyClaudeSkillPath = path.join(root, ".claude", "skills", "socrates", "SKILL.md");
   const staleHookPath = path.join(root, ".codex", "hooks", "session_start_socrates_context.mjs");
   await writeFile(staleSkillPath, "stale skill\n", "utf8");
+  await mkdir(path.dirname(legacyCodexSkillPath), { recursive: true });
+  await mkdir(path.dirname(legacyClaudeSkillPath), { recursive: true });
+  await writeFile(legacyCodexSkillPath, "legacy repo codex skill\n", "utf8");
+  await writeFile(legacyClaudeSkillPath, "legacy repo claude skill\n", "utf8");
   await writeFile(staleHookPath, "stale hook\n", "utf8");
 
   await installSocrates({
@@ -1630,12 +1649,14 @@ test("reinstall updates stale installed files back to the tracked contents", asy
 
   assert.equal(
     await readFile(staleSkillPath, "utf8"),
-    await readFile(path.join(repoRoot, ".claude", "skills", "socrates", "SKILL.md"), "utf8")
+    await readFile(path.join(repoRoot, ".claude", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   assert.equal(
     await readFile(staleHookPath, "utf8"),
     await readFile(path.join(repoRoot, ".codex", "hooks", "session_start_socrates_context.mjs"), "utf8")
   );
+  await assertMissing(legacyCodexSkillPath);
+  await assertMissing(legacyClaudeSkillPath);
 });
 
 test("uninstall removes Socrates files and deletes empty config files on a clean install", async () => {
@@ -1656,24 +1677,24 @@ test("uninstall removes Socrates files and deletes empty config files on a clean
 
   await assertMissing(path.join(root, ".codex", "hooks.json"));
   await assertMissing(path.join(root, ".claude", "settings.json"));
-  await assertMissing(path.join(root, ".agents", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"));
   await assertMissing(
     path.join(
       root,
       ".agents",
       "skills",
-      "socrates",
+      "socrates-contract",
       "references",
       "artifact-recovery.md"
     )
   );
-  await assertMissing(path.join(root, ".claude", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".claude", "skills", "socrates-contract", "SKILL.md"));
   await assertMissing(
     path.join(
       root,
       ".claude",
       "skills",
-      "socrates",
+      "socrates-contract",
       "references",
       "context-file.md"
     )
@@ -1719,7 +1740,7 @@ test("feature uninstall removes stop-hook only and keeps the base install", asyn
   assert.equal(codexHooks.hooks.Stop, undefined);
   assert.equal(claudeSettings.hooks.Stop, undefined);
   await assert.doesNotReject(() =>
-    readFile(path.join(root, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
   await assert.doesNotReject(() =>
     readFile(
@@ -1870,13 +1891,13 @@ test("platform-specific uninstall removes only the requested platform", async ()
   });
 
   await assertMissing(path.join(root, ".claude", "settings.json"));
-  await assertMissing(path.join(root, ".claude", "skills", "socrates", "SKILL.md"));
+  await assertMissing(path.join(root, ".claude", "skills", "socrates-contract", "SKILL.md"));
   await assertMissing(path.join(root, ".claude", "agents", "socrates-explore.md"));
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".codex", "hooks.json"), "utf8")
   );
   await assert.doesNotReject(() =>
-    readFile(path.join(root, ".agents", "skills", "socrates", "SKILL.md"), "utf8")
+    readFile(path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
   );
 });
 
