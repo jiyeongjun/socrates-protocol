@@ -14,12 +14,26 @@ Use this when Socrates Contract coordinates macro alignment, decomposition, muta
 9. When every subcontract is `done`, verify the macro success criteria and close or renegotiate the macro contract.
 
 ## Roles
+Roles are mental phases of the work. Run them inline within the current turn by default. Delegate to a subagent only when the host supports it and the role's surface is large enough that delegation will not block the next step.
+
 - `fast_explorer`: read-only discovery pass that recovers current state, target artifacts, protected surfaces, and narrow verification paths
 - `goal_contractor`: read-only pass that turns the user goal into a macro contract and surfaces the single highest-impact unresolved question
 - `subgoal_planner`: read-only pass that decomposes a macro contract into bounded, independently verifiable subcontracts
 - `protected_surface_planner`: read-only planning pass for migrations, compatibility, rollback, and safety policy
 - `fast_verifier`: cheap verification pass that runs the narrowest relevant checks first
 - `contract_verifier`: read-only quality gate that checks whether a subcontract or macro contract can close
+
+## Claude Subagent Mapping
+On Claude hosts, the following subagents live under `.claude/agents/` and map to the roles above. Use these names when delegating; do not invent role aliases.
+
+| Role | Claude subagent | When to delegate |
+|---|---|---|
+| `fast_explorer` | `socrates-explore` | Before asking the user or mutating, when current state is unclear |
+| `goal_contractor`, `subgoal_planner`, `protected_surface_planner` | `socrates-plan` | When the macro goal needs decomposition, or a protected surface needs a migration plan |
+| `fast_verifier` | `socrates-verify` | After a subcontract mutation, before closure |
+| `contract_verifier` | `socrates-evaluate` | After narrow verification passes on protected-surface or multi-step changes, to gate subcontract or macro contract closure |
+
+If the host has no subagent support, run the role inline. The role's purpose matters more than the delegation.
 
 ## Host Model Guidance
 - Keep model names out of the main skill text.

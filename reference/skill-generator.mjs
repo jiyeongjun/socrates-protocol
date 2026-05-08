@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOCRATES_DESCRIPTION =
-  "Use when a requested mutation needs explicit agreement on the macro goal, scope, success criteria, protected surfaces, or decomposition into subcontracts before work proceeds. Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, or vague preference words like \"elegant\" or \"robust\". Guides macro-contract alignment, subcontract files, one-question clarification, execution, verification, and closure. Skip read-only explanations, formatting-only work, and explicit low-risk single-step edits.";
+  "Use whenever a user request will mutate files, data, configuration, external systems, or any user-visible state. Default to triggering for any change that crosses more than one verification path, alters persisted or shared state, or hides a load-bearing decision — even when the user did not explicitly ask for \"a contract.\" Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, deployment, environment config, vague preference words like \"elegant\" or \"robust\", and any phrase that names a protected surface (production, rollout, safe). Skip only for read-only explanations, formatting-only edits, single-file low-risk single-step changes the user explicitly scoped, and pure conversational replies.";
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");

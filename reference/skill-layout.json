@@ -6,7 +6,8 @@
     "protected-surfaces.md",
     "clarification.md",
     "verify-repair.md",
-    "context-file.md"
+    "context-file.md",
+    "example.md"
   ],
   "claudeAgents": [
     "socrates-explore.md",

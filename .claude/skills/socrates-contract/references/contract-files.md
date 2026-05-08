@@ -2,6 +2,15 @@
 
 Use this when a macro goal needs durable context, several independent problems, several turns, or explicit user-agent alignment before mutation.
 
+## Quick Scaffold
+For a fresh contract, run the bundled scaffolder from the workspace root:
+
+```bash
+node scripts/scaffold-contract.mjs "<one-line macro goal>"
+```
+
+It creates `contract-index.md` with all required sections plus `contracts/contract-001.md` with YAML frontmatter and the body sections required below. Edit the placeholders rather than recreating the structure each time. Why: the boilerplate is identical every run; bundling it removes a class of schema drift errors and keeps the agent focused on decisions, not on YAML formatting. The script refuses to overwrite existing files.
+
 ## Paths
 - Put `contract-index.md` at the workspace root unless the user names another location.
 - Put subcontracts under `contracts/contract-001.md`, `contracts/contract-002.md`, etc.

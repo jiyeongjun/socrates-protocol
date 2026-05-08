@@ -48,6 +48,7 @@ async function buildFetchAssetMap() {
     [".agents/skills/socrates-contract/references/clarification.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/clarification.md"), "utf8")],
     [".agents/skills/socrates-contract/references/verify-repair.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/verify-repair.md"), "utf8")],
     [".agents/skills/socrates-contract/references/context-file.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/context-file.md"), "utf8")],
+    [".agents/skills/socrates-contract/references/example.md", await readFile(path.join(repoRoot, ".agents/skills/socrates-contract/references/example.md"), "utf8")],
     [".claude/skills/socrates-contract/SKILL.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/SKILL.md"), "utf8")],
     [".claude/skills/socrates-contract/model-policy.json", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/model-policy.json"), "utf8")],
     [".claude/skills/socrates-contract/references/artifact-recovery.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/artifact-recovery.md"), "utf8")],
@@ -57,6 +58,7 @@ async function buildFetchAssetMap() {
     [".claude/skills/socrates-contract/references/clarification.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/clarification.md"), "utf8")],
     [".claude/skills/socrates-contract/references/verify-repair.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/verify-repair.md"), "utf8")],
     [".claude/skills/socrates-contract/references/context-file.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/context-file.md"), "utf8")],
+    [".claude/skills/socrates-contract/references/example.md", await readFile(path.join(repoRoot, ".claude/skills/socrates-contract/references/example.md"), "utf8")],
     [".claude/agents/socrates-explore.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-explore.md"), "utf8")],
     [".claude/agents/socrates-plan.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-plan.md"), "utf8")],
     [".claude/agents/socrates-verify.md", await readFile(path.join(repoRoot, ".claude/agents/socrates-verify.md"), "utf8")],
@@ -68,6 +70,7 @@ async function buildFetchAssetMap() {
     ["reference/context-doc-helper-core.mjs", await readFile(path.join(repoRoot, "reference/context-doc-helper-core.mjs"), "utf8")],
     ["reference/context-doc-helper.mjs", await readFile(path.join(repoRoot, "reference/context-doc-helper.mjs"), "utf8")],
     ["reference/stop-clarifying-core.mjs", await readFile(path.join(repoRoot, "reference/stop-clarifying-core.mjs"), "utf8")],
+    ["scripts/scaffold-contract.mjs", await readFile(path.join(repoRoot, "scripts/scaffold-contract.mjs"), "utf8")],
   ]);
 }
 
@@ -1235,7 +1238,7 @@ test("install falls back to fetch when local source assets are unavailable", asy
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 16);
+  assert.equal(requested.length, 18);
   await assert.doesNotReject(() =>
     readFile(path.join(fakeHome, ".codex", "hooks.json"), "utf8")
   );
@@ -1280,7 +1283,7 @@ test("install falls back to fetch for stop-hook assets when requested", async ()
     globalThis.fetch = originalFetch;
   }
 
-  assert.equal(requested.length, 18);
+  assert.equal(requested.length, 20);
   await assert.doesNotReject(() =>
     readFile(
       path.join(fakeHome, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs"),

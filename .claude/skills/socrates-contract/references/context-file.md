@@ -13,10 +13,18 @@ Use this only for compatibility with existing Socrates installs or workspaces th
 
 ## Migration
 1. Read the legacy task, knowns, unknowns, decisions, next question, and status.
-2. Draft `contract-index.md` from the task, decisions, and open questions.
+2. Draft `contract-index.md` from the task, decisions, and open questions (use `node scripts/scaffold-contract.mjs "<macro goal>"` for the boilerplate).
 3. Create one subcontract for the next bounded problem.
 4. Ask one load-bearing question if the macro goal is still not aligned.
-5. After migration succeeds, ask whether to delete the legacy file.
+5. After migration succeeds, propose deleting the legacy `SOCRATES_CONTEXT.md` in your next reply unless the user has explicitly asked to preserve it. Why: keeping both files alive is the most common source of stale state, because future turns may read the legacy file and act on outdated decisions.
+
+## Auto-Cleanup End Condition
+Migration is complete when all three hold:
+- All durable decisions, knowns, unknowns, and the active next step have been moved into contract files.
+- `contract-index.md` references the active subcontract.
+- The user has either confirmed deletion of `SOCRATES_CONTEXT.md` or explicitly asked to preserve it.
+
+After the end condition is met, do not write to `SOCRATES_CONTEXT.md` for this task again. If a session-start hook re-injects legacy context after migration, treat it as informational only and do not let it overwrite contract-file decisions.
 
 ## Do Not
 - Do not create `SOCRATES_CONTEXT.md` for new multi-step work.

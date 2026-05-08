@@ -6,7 +6,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v0.6.2";
+export const DEFAULT_VERSION = "v0.7.0";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const OPTIONAL_FEATURES = ["stop-hook"];
@@ -48,6 +48,7 @@ const ASSETS = {
   contextDocHelperCore: "reference/context-doc-helper-core.mjs",
   contextDocHelper: "reference/context-doc-helper.mjs",
   stopClarifyingCore: "reference/stop-clarifying-core.mjs",
+  scaffoldContract: "scripts/scaffold-contract.mjs",
 };
 
 export function listReleaseAssetPaths(skillLayout) {
@@ -66,6 +67,7 @@ export function listReleaseAssetPaths(skillLayout) {
 
   return [
     "scripts/install.mjs",
+    ASSETS.scaffoldContract,
     ASSETS.skillLayout,
     ASSETS.modelPolicy,
     ASSETS.codexSkill,
@@ -314,6 +316,7 @@ async function installCodex(options, loadAsset, skillLayout) {
     agentPath,
     modelPolicyPath,
     referencePaths,
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -371,6 +374,10 @@ async function installCodex(options, loadAsset, skillLayout) {
       await loadAsset(referenceAssets[name])
     );
   }
+  await writeTextFile(
+    scaffoldScriptPath,
+    await loadAsset(ASSETS.scaffoldContract)
+  );
   await writeTextFile(hookScriptPath, await loadAsset(ASSETS.codexHookScript));
   await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
   await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
@@ -404,6 +411,7 @@ async function installCodex(options, loadAsset, skillLayout) {
     agentPath,
     modelPolicyPath,
     ...Object.values(referencePaths),
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -423,6 +431,7 @@ async function installClaude(options, loadAsset, skillLayout) {
     modelPolicyPath,
     referencePaths,
     agentPaths,
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -494,6 +503,10 @@ async function installClaude(options, loadAsset, skillLayout) {
     );
   }
   await writeTextFile(
+    scaffoldScriptPath,
+    await loadAsset(ASSETS.scaffoldContract)
+  );
+  await writeTextFile(
     hookScriptPath,
     await loadAsset(ASSETS.claudeHookScript)
   );
@@ -529,6 +542,7 @@ async function installClaude(options, loadAsset, skillLayout) {
     modelPolicyPath,
     ...Object.values(referencePaths),
     ...Object.values(agentPaths),
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -548,6 +562,7 @@ async function uninstallCodex(options, skillLayout) {
     agentPath,
     modelPolicyPath,
     referencePaths,
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -568,6 +583,7 @@ async function uninstallCodex(options, skillLayout) {
     for (const target of Object.values(referencePaths)) {
       await deleteFile(target);
     }
+    await deleteFile(scaffoldScriptPath);
     await deleteFile(hookScriptPath);
     await deleteFile(hookUtilsPath);
     await deleteFile(hookContextDocPath);
@@ -622,6 +638,7 @@ async function uninstallCodex(options, skillLayout) {
     agentPath,
     modelPolicyPath,
     ...Object.values(referencePaths),
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -640,6 +657,7 @@ async function uninstallClaude(options, skillLayout) {
     modelPolicyPath,
     referencePaths,
     agentPaths,
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -663,6 +681,7 @@ async function uninstallClaude(options, skillLayout) {
     for (const target of Object.values(agentPaths)) {
       await deleteFile(target);
     }
+    await deleteFile(scaffoldScriptPath);
     await deleteFile(hookScriptPath);
     await deleteFile(hookUtilsPath);
     await deleteFile(hookContextDocPath);
@@ -720,6 +739,7 @@ async function uninstallClaude(options, skillLayout) {
     modelPolicyPath,
     ...Object.values(referencePaths),
     ...Object.values(agentPaths),
+    scaffoldScriptPath,
     hookScriptPath,
     hookUtilsPath,
     hookContextDocPath,
@@ -786,6 +806,7 @@ function getCodexTargets(options, skillLayout) {
       path.join(skillDir, "references"),
       skillLayout.skillReferences
     ),
+    scaffoldScriptPath: path.join(skillDir, "scripts", "scaffold-contract.mjs"),
     hookScriptPath: repoInstall
       ? path.join(hooksRoot, ".codex", "hooks", "session_start_socrates_context.mjs")
       : path.join(hooksRoot, "hooks", "session_start_socrates_context.mjs"),
@@ -839,6 +860,7 @@ function getClaudeTargets(options, skillLayout) {
       skillLayout.skillReferences
     ),
     agentPaths: buildTargetPathMap(agentDir, skillLayout.claudeAgents),
+    scaffoldScriptPath: path.join(skillDir, "scripts", "scaffold-contract.mjs"),
     hookScriptPath: repoInstall
       ? path.join(root, ".claude", "hooks", "session_start_socrates_context.mjs")
       : path.join(root, "hooks", "session_start_socrates_context.mjs"),
