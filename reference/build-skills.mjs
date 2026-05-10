@@ -11,9 +11,12 @@ import {
   readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
+  readSkillScriptSource,
   modelPolicyTargetPaths,
   skillReferenceNames,
   skillReferenceTargets,
+  skillScriptNames,
+  skillScriptTargets,
   skillTargets,
 } from "./skill-generator.mjs";
 
@@ -43,6 +46,13 @@ await writeFile(
 for (const [platform, targets] of Object.entries(skillReferenceTargets)) {
   for (const name of skillReferenceNames) {
     const contents = await readSkillReferenceSource(name);
+    await writeTextFile(targets[name], contents);
+  }
+}
+
+for (const [platform, targets] of Object.entries(skillScriptTargets)) {
+  for (const name of skillScriptNames) {
+    const contents = await readSkillScriptSource(name);
     await writeTextFile(targets[name], contents);
   }
 }

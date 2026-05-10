@@ -14,7 +14,7 @@ It creates `contract-index.md` with all required sections plus `contracts/contra
 ## Paths
 - Put `contract-index.md` at the workspace root unless the user names another location.
 - Put subcontracts under `contracts/contract-001.md`, `contracts/contract-002.md`, etc.
-- Before creating new contract files, check for an existing `contract-index.md`, `contracts/`, or `SOCRATES_CONTEXT.md`. If one tracks an unrelated active task, do not overwrite it; ask one load-bearing location or replacement question unless the user already named a location.
+- Before creating new contract files, check for an existing `contract-index.md` or `contracts/`. If one tracks an unrelated active task, do not overwrite it; ask one load-bearing location or replacement question unless the user already named a location.
 - If background detail would push a contract over 500 lines, put it under `reference/` and link to it directly from the index or a subcontract.
 - Keep references one level deep. A contract file may link to `reference/foo.md`; that reference file must not point to another reference file.
 - If the workspace already uses `reference/` for another purpose, use `contracts/reference/` and note that choice in `contract-index.md`.

@@ -12,12 +12,14 @@ export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");
 export const modelPolicySourcePath = path.join(__dirname, "model-policy.json");
 export const skillReferenceSourceDir = path.join(__dirname, "skill-references");
+export const skillScriptSourceDir = path.resolve(__dirname, "../scripts");
 export const claudeAgentSourceDir = path.join(__dirname, "claude-agents");
 export const skillLayoutPath = path.join(__dirname, "skill-layout.json");
 
 const skillLayout = readSkillLayout();
 
 export const skillReferenceNames = skillLayout.skillReferences;
+export const skillScriptNames = skillLayout.skillScripts;
 export const claudeAgentNames = skillLayout.claudeAgents;
 
 export const skillTargets = {
@@ -53,6 +55,17 @@ export const skillReferenceTargets = {
   ),
 };
 
+export const skillScriptTargets = {
+  codex: buildNamedTargetPaths(
+    path.resolve(__dirname, "../.agents/skills/socrates-contract/scripts"),
+    skillScriptNames
+  ),
+  claude: buildNamedTargetPaths(
+    path.resolve(__dirname, "../.claude/skills/socrates-contract/scripts"),
+    skillScriptNames
+  ),
+};
+
 export const modelPolicyTargetPaths = {
   codex: path.resolve(__dirname, "../.agents/skills/socrates-contract/model-policy.json"),
   claude: path.resolve(__dirname, "../.claude/skills/socrates-contract/model-policy.json"),
@@ -76,13 +89,15 @@ function readSkillLayout() {
     !parsed ||
     typeof parsed !== "object" ||
     !Array.isArray(parsed.skillReferences) ||
+    !Array.isArray(parsed.skillScripts) ||
     !Array.isArray(parsed.claudeAgents)
   ) {
-    throw new Error("reference/skill-layout.json must define skillReferences and claudeAgents arrays");
+    throw new Error("reference/skill-layout.json must define skillReferences, skillScripts, and claudeAgents arrays");
   }
 
   return {
     skillReferences: [...parsed.skillReferences],
+    skillScripts: [...parsed.skillScripts],
     claudeAgents: [...parsed.claudeAgents],
   };
 }
@@ -111,6 +126,14 @@ export async function readSkillReferenceSource(name) {
   return readNamedSource({
     dir: skillReferenceSourceDir,
     names: skillReferenceNames,
+    name,
+  });
+}
+
+export async function readSkillScriptSource(name) {
+  return readNamedSource({
+    dir: skillScriptSourceDir,
+    names: skillScriptNames,
     name,
   });
 }

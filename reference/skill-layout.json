@@ -6,8 +6,10 @@
     "protected-surfaces.md",
     "clarification.md",
     "verify-repair.md",
-    "context-file.md",
     "example.md"
+  ],
+  "skillScripts": [
+    "scaffold-contract.mjs"
   ],
   "claudeAgents": [
     "socrates-explore.md",

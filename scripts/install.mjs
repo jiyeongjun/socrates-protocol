@@ -6,26 +6,14 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v0.7.0";
+export const DEFAULT_VERSION = "v0.8.0";
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
-const OPTIONAL_FEATURES = ["stop-hook"];
-const SESSION_START_MATCHER = "startup|resume|clear|compact";
-const LEGACY_SESSION_START_MATCHERS = ["startup|resume"];
-// Stop hooks do not expose a source matcher, so the installer registers the
-// group broadly and leaves the Socrates-specific gating to the script itself.
-const STOP_MATCH_ALL = "";
-const CODEX_HOOK_STATUS = "Loading Socrates shared context";
-const CODEX_STOP_HOOK_STATUS = "Checking Socrates clarification state";
 
 function buildRelativeAssetMap(baseDir, names) {
   return Object.fromEntries(
     names.map((name) => [name, `${baseDir}/${name}`])
   );
-}
-
-function buildNodeCommand(scriptPath) {
-  return `node ${JSON.stringify(scriptPath)}`;
 }
 
 const ASSETS = {
@@ -35,20 +23,12 @@ const ASSETS = {
   codexAgent: ".agents/skills/socrates-contract/agents/openai.yaml",
   codexModelPolicy: ".agents/skills/socrates-contract/model-policy.json",
   codexReferencesDir: ".agents/skills/socrates-contract/references",
-  codexHookScript: ".codex/hooks/session_start_socrates_context.mjs",
-  codexStopHookScript: ".codex/hooks/stop_socrates_clarifying.mjs",
+  codexScriptsDir: ".agents/skills/socrates-contract/scripts",
   claudeSkill: ".claude/skills/socrates-contract/SKILL.md",
   claudeModelPolicy: ".claude/skills/socrates-contract/model-policy.json",
   claudeReferencesDir: ".claude/skills/socrates-contract/references",
+  claudeScriptsDir: ".claude/skills/socrates-contract/scripts",
   claudeAgentsDir: ".claude/agents",
-  claudeHookScript: ".claude/hooks/session_start_socrates_context.mjs",
-  claudeStopHookScript: ".claude/hooks/stop_socrates_clarifying.mjs",
-  hookUtils: "reference/hook-utils.mjs",
-  contextDoc: "reference/context-doc.mjs",
-  contextDocHelperCore: "reference/context-doc-helper-core.mjs",
-  contextDocHelper: "reference/context-doc-helper.mjs",
-  stopClarifyingCore: "reference/stop-clarifying-core.mjs",
-  scaffoldContract: "scripts/scaffold-contract.mjs",
 };
 
 export function listReleaseAssetPaths(skillLayout) {
@@ -60,6 +40,14 @@ export function listReleaseAssetPaths(skillLayout) {
     ASSETS.claudeReferencesDir,
     skillLayout.skillReferences
   );
+  const codexScriptAssets = buildRelativeAssetMap(
+    ASSETS.codexScriptsDir,
+    skillLayout.skillScripts
+  );
+  const claudeScriptAssets = buildRelativeAssetMap(
+    ASSETS.claudeScriptsDir,
+    skillLayout.skillScripts
+  );
   const claudeAgentAssets = buildRelativeAssetMap(
     ASSETS.claudeAgentsDir,
     skillLayout.claudeAgents
@@ -67,26 +55,18 @@ export function listReleaseAssetPaths(skillLayout) {
 
   return [
     "scripts/install.mjs",
-    ASSETS.scaffoldContract,
     ASSETS.skillLayout,
     ASSETS.modelPolicy,
     ASSETS.codexSkill,
     ASSETS.codexAgent,
     ASSETS.codexModelPolicy,
     ...Object.values(codexReferenceAssets),
+    ...Object.values(codexScriptAssets),
     ASSETS.claudeSkill,
     ASSETS.claudeModelPolicy,
     ...Object.values(claudeReferenceAssets),
+    ...Object.values(claudeScriptAssets),
     ...Object.values(claudeAgentAssets),
-    ASSETS.codexHookScript,
-    ASSETS.codexStopHookScript,
-    ASSETS.claudeHookScript,
-    ASSETS.claudeStopHookScript,
-    ASSETS.hookUtils,
-    ASSETS.contextDoc,
-    ASSETS.contextDocHelperCore,
-    ASSETS.contextDocHelper,
-    ASSETS.stopClarifyingCore,
   ];
 }
 
@@ -98,8 +78,6 @@ export function parseArgs(argv) {
     targetRepo: null,
     sourceRoot: inferLocalSourceRoot(),
     version: DEFAULT_VERSION,
-    features: [],
-    enableCodexHooks: false,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -131,13 +109,6 @@ export function parseArgs(argv) {
         options.version = requireValue(current, next);
         index += 1;
         break;
-      case "--feature":
-        options.features.push(...parseFeatureValue(requireValue(current, next)));
-        index += 1;
-        break;
-      case "--enable-codex-hooks":
-        options.enableCodexHooks = true;
-        break;
       case "--help":
       case "-h":
         options.help = true;
@@ -158,13 +129,6 @@ function requireValue(flag, value) {
   return value;
 }
 
-function parseFeatureValue(value) {
-  return value
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-}
-
 function validateArgs(options) {
   if (!["install", "uninstall"].includes(options.mode)) {
     throw new Error("--mode must be one of: install, uninstall");
@@ -180,26 +144,6 @@ function validateArgs(options) {
 
   if (options.scope === "repo" && !options.targetRepo) {
     throw new Error("--target-repo is required when --scope repo is used");
-  }
-
-  if (options.enableCodexHooks) {
-    if (options.mode !== "install") {
-      throw new Error("--enable-codex-hooks can only be used with --mode install");
-    }
-    if (!["codex", "both"].includes(options.platform)) {
-      throw new Error(
-        "--enable-codex-hooks requires --platform codex or --platform both"
-      );
-    }
-  }
-
-  const invalidFeatures = (options.features ?? []).filter(
-    (feature) => !OPTIONAL_FEATURES.includes(feature)
-  );
-  if (invalidFeatures.length > 0) {
-    throw new Error(
-      `--feature must be one of: ${OPTIONAL_FEATURES.join(", ")}`
-    );
   }
 }
 
@@ -231,10 +175,6 @@ export async function installSocrates(rawOptions = {}) {
     if (platform === "claude") {
       summary.push(...(await installClaude(options, assetLoader, skillLayout)));
     }
-  }
-
-  if (options.enableCodexHooks) {
-    summary.push(await enableCodexHooks(options));
   }
 
   return summary;
@@ -274,24 +214,18 @@ function normalizeOptions(rawOptions) {
       rawOptions.sourceRoot === undefined ? inferLocalSourceRoot() : rawOptions.sourceRoot,
     version: rawOptions.version ?? DEFAULT_VERSION,
     homeDir: rawOptions.homeDir ?? homedir(),
-    features: [...new Set(rawOptions.features ?? [])],
-    enableCodexHooks: rawOptions.enableCodexHooks ?? false,
   };
 }
 
 function resolvePlatforms(platform) {
-  if (platform === "both") {
-    return ["codex", "claude"];
-  }
-  return [platform];
+  return platform === "both" ? ["codex", "claude"] : [platform];
 }
 
 function createAssetLoader(options) {
   return async function loadAsset(relativePath) {
     if (options.sourceRoot) {
       try {
-        const localPath = path.join(options.sourceRoot, relativePath);
-        return await readFile(localPath, "utf8");
+        return await readFile(path.join(options.sourceRoot, relativePath), "utf8");
       } catch (error) {
         if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT") {
           throw error;
@@ -310,495 +244,134 @@ function createAssetLoader(options) {
 }
 
 async function installCodex(options, loadAsset, skillLayout) {
-  const {
-    repoInstall,
-    skillPath,
-    agentPath,
-    modelPolicyPath,
-    referencePaths,
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    stopHookCorePath,
-    stopHookScriptPath,
-    hooksConfigPath,
-    legacySkillDirs,
-  } = getCodexTargets(options, skillLayout);
+  const targets = getCodexTargets(options, skillLayout);
   const referenceAssets = buildRelativeAssetMap(
     ASSETS.codexReferencesDir,
     skillLayout.skillReferences
   );
+  const scriptAssets = buildRelativeAssetMap(
+    ASSETS.codexScriptsDir,
+    skillLayout.skillScripts
+  );
 
-  const hookConfig = await readJsonFileOrDefault(hooksConfigPath, {});
-  let merged = mergeSessionStartHookDocument(hookConfig, {
-    matcher: SESSION_START_MATCHER,
-    handler: {
-      type: "command",
-      command: buildNodeCommand(hookScriptPath),
-      statusMessage: CODEX_HOOK_STATUS,
-    },
-  });
-  merged = removeLegacySessionStartHookDocuments(merged, {
-    matcher: SESSION_START_MATCHER,
-    legacyMatchers: LEGACY_SESSION_START_MATCHERS,
-    handler: {
-      type: "command",
-      command: buildNodeCommand(hookScriptPath),
-      statusMessage: CODEX_HOOK_STATUS,
-    },
-  });
-
-  if (options.features.includes("stop-hook")) {
-    merged = mergeStopHookDocument(merged, {
-      matcher: STOP_MATCH_ALL,
-      handler: {
-        type: "command",
-        command: buildNodeCommand(stopHookScriptPath),
-        statusMessage: CODEX_STOP_HOOK_STATUS,
-      },
-    });
-  }
-
-  await writeTextFile(skillPath, await loadAsset(ASSETS.codexSkill));
-  await writeTextFile(agentPath, await loadAsset(ASSETS.codexAgent));
+  await rm(targets.skillDir, { recursive: true, force: true });
+  await writeTextFile(targets.skillPath, await loadAsset(ASSETS.codexSkill));
+  await writeTextFile(targets.agentPath, await loadAsset(ASSETS.codexAgent));
   await writeTextFile(
-    modelPolicyPath,
+    targets.modelPolicyPath,
     await loadAsset(ASSETS.codexModelPolicy)
   );
   for (const name of skillLayout.skillReferences) {
     await writeTextFile(
-      referencePaths[name],
+      targets.referencePaths[name],
       await loadAsset(referenceAssets[name])
     );
   }
-  await writeTextFile(
-    scaffoldScriptPath,
-    await loadAsset(ASSETS.scaffoldContract)
-  );
-  await writeTextFile(hookScriptPath, await loadAsset(ASSETS.codexHookScript));
-  await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
-  await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
-  await writeTextFile(
-    contextDocHelperCorePath,
-    await loadAsset(ASSETS.contextDocHelperCore)
-  );
-  await writeTextFile(
-    contextDocHelperPath,
-    await loadAsset(ASSETS.contextDocHelper)
-  );
-
-  if (options.features.includes("stop-hook")) {
+  for (const name of skillLayout.skillScripts) {
     await writeTextFile(
-      stopHookCorePath,
-      await loadAsset(ASSETS.stopClarifyingCore)
+      targets.scriptPaths[name],
+      await loadAsset(scriptAssets[name])
     );
-    await writeTextFile(
-      stopHookScriptPath,
-      await loadAsset(ASSETS.codexStopHookScript)
-    );
-  }
-
-  await writeJsonFile(hooksConfigPath, merged);
-  for (const legacySkillDir of legacySkillDirs) {
-    await rm(legacySkillDir, { recursive: true, force: true });
   }
 
   return [
-    skillPath,
-    agentPath,
-    modelPolicyPath,
-    ...Object.values(referencePaths),
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    ...(options.features.includes("stop-hook")
-      ? [stopHookCorePath, stopHookScriptPath]
-      : []),
-    hooksConfigPath,
+    targets.skillPath,
+    targets.agentPath,
+    targets.modelPolicyPath,
+    ...Object.values(targets.referencePaths),
+    ...Object.values(targets.scriptPaths),
   ];
 }
 
 async function installClaude(options, loadAsset, skillLayout) {
-  const {
-    repoInstall,
-    skillPath,
-    modelPolicyPath,
-    referencePaths,
-    agentPaths,
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    stopHookCorePath,
-    stopHookScriptPath,
-    settingsPath,
-    legacySkillDirs,
-  } =
-    getClaudeTargets(options, skillLayout);
+  const targets = getClaudeTargets(options, skillLayout);
   const referenceAssets = buildRelativeAssetMap(
     ASSETS.claudeReferencesDir,
     skillLayout.skillReferences
+  );
+  const scriptAssets = buildRelativeAssetMap(
+    ASSETS.claudeScriptsDir,
+    skillLayout.skillScripts
   );
   const claudeAgentAssets = buildRelativeAssetMap(
     ASSETS.claudeAgentsDir,
     skillLayout.claudeAgents
   );
 
-  const settings = await readJsonFileOrDefault(settingsPath, {});
-  let merged = mergeSessionStartHookDocument(settings, {
-    matcher: SESSION_START_MATCHER,
-    handler: {
-      type: "command",
-      command: repoInstall
-        ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"'
-        : `node ${JSON.stringify(hookScriptPath)}`,
-    },
-  });
-  merged = removeLegacySessionStartHookDocuments(merged, {
-    matcher: SESSION_START_MATCHER,
-    legacyMatchers: LEGACY_SESSION_START_MATCHERS,
-    handler: {
-      type: "command",
-      command: repoInstall
-        ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"'
-        : `node ${JSON.stringify(hookScriptPath)}`,
-    },
-  });
-
-  if (options.features.includes("stop-hook")) {
-    merged = mergeStopHookDocument(merged, {
-      matcher: STOP_MATCH_ALL,
-      handler: {
-        type: "command",
-        command: repoInstall
-          ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/stop_socrates_clarifying.mjs"'
-          : `node ${JSON.stringify(stopHookScriptPath)}`,
-      },
-    });
-  }
-
-  await writeTextFile(skillPath, await loadAsset(ASSETS.claudeSkill));
+  await rm(targets.skillDir, { recursive: true, force: true });
+  await writeTextFile(targets.skillPath, await loadAsset(ASSETS.claudeSkill));
   await writeTextFile(
-    modelPolicyPath,
+    targets.modelPolicyPath,
     await loadAsset(ASSETS.claudeModelPolicy)
   );
   for (const name of skillLayout.skillReferences) {
     await writeTextFile(
-      referencePaths[name],
+      targets.referencePaths[name],
       await loadAsset(referenceAssets[name])
+    );
+  }
+  for (const name of skillLayout.skillScripts) {
+    await writeTextFile(
+      targets.scriptPaths[name],
+      await loadAsset(scriptAssets[name])
     );
   }
   for (const name of skillLayout.claudeAgents) {
     await writeTextFile(
-      agentPaths[name],
+      targets.agentPaths[name],
       await loadAsset(claudeAgentAssets[name])
     );
   }
-  await writeTextFile(
-    scaffoldScriptPath,
-    await loadAsset(ASSETS.scaffoldContract)
-  );
-  await writeTextFile(
-    hookScriptPath,
-    await loadAsset(ASSETS.claudeHookScript)
-  );
-  await writeTextFile(hookUtilsPath, await loadAsset(ASSETS.hookUtils));
-  await writeTextFile(hookContextDocPath, await loadAsset(ASSETS.contextDoc));
-  await writeTextFile(
-    contextDocHelperCorePath,
-    await loadAsset(ASSETS.contextDocHelperCore)
-  );
-  await writeTextFile(
-    contextDocHelperPath,
-    await loadAsset(ASSETS.contextDocHelper)
-  );
-
-  if (options.features.includes("stop-hook")) {
-    await writeTextFile(
-      stopHookCorePath,
-      await loadAsset(ASSETS.stopClarifyingCore)
-    );
-    await writeTextFile(
-      stopHookScriptPath,
-      await loadAsset(ASSETS.claudeStopHookScript)
-    );
-  }
-
-  await writeJsonFile(settingsPath, merged);
-  for (const legacySkillDir of legacySkillDirs) {
-    await rm(legacySkillDir, { recursive: true, force: true });
-  }
 
   return [
-    skillPath,
-    modelPolicyPath,
-    ...Object.values(referencePaths),
-    ...Object.values(agentPaths),
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    ...(options.features.includes("stop-hook")
-      ? [stopHookCorePath, stopHookScriptPath]
-      : []),
-    settingsPath,
+    targets.skillPath,
+    targets.modelPolicyPath,
+    ...Object.values(targets.referencePaths),
+    ...Object.values(targets.scriptPaths),
+    ...Object.values(targets.agentPaths),
   ];
 }
 
 async function uninstallCodex(options, skillLayout) {
-  const {
-    repoInstall,
-    skillPath,
-    agentPath,
-    modelPolicyPath,
-    referencePaths,
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    stopHookCorePath,
-    stopHookScriptPath,
-    hooksConfigPath,
-    legacySkillDirs,
-  } = getCodexTargets(options, skillLayout);
+  const targets = getCodexTargets(options, skillLayout);
 
-  const removeOptionalOnly = options.features.length > 0;
-
-  if (!removeOptionalOnly) {
-    await deleteFile(skillPath);
-    await deleteFile(agentPath);
-    await deleteFile(modelPolicyPath);
-    for (const target of Object.values(referencePaths)) {
-      await deleteFile(target);
-    }
-    await deleteFile(scaffoldScriptPath);
-    await deleteFile(hookScriptPath);
-    await deleteFile(hookUtilsPath);
-    await deleteFile(hookContextDocPath);
-    await deleteFile(contextDocHelperCorePath);
-    await deleteFile(contextDocHelperPath);
-    for (const legacySkillDir of legacySkillDirs) {
-      await rm(legacySkillDir, { recursive: true, force: true });
-    }
-  }
-  if (options.features.includes("stop-hook") || !removeOptionalOnly) {
-    await deleteFile(stopHookCorePath);
-    await deleteFile(stopHookScriptPath);
-  }
-
-  const hookConfig = await readJsonFileIfExists(hooksConfigPath);
-  if (hookConfig !== null) {
-    let updated = hookConfig;
-    if (!removeOptionalOnly) {
-      updated = removeSessionStartHookDocument(updated, {
-        matcher: SESSION_START_MATCHER,
-        handler: {
-          type: "command",
-          command: buildNodeCommand(hookScriptPath),
-          statusMessage: CODEX_HOOK_STATUS,
-        },
-      });
-      updated = removeLegacySessionStartHookDocuments(updated, {
-        matcher: SESSION_START_MATCHER,
-        legacyMatchers: LEGACY_SESSION_START_MATCHERS,
-        handler: {
-          type: "command",
-          command: buildNodeCommand(hookScriptPath),
-          statusMessage: CODEX_HOOK_STATUS,
-        },
-      });
-    }
-    if (options.features.includes("stop-hook") || !removeOptionalOnly) {
-      updated = removeStopHookDocument(updated, {
-        matcher: STOP_MATCH_ALL,
-        handler: {
-          type: "command",
-          command: buildNodeCommand(stopHookScriptPath),
-          statusMessage: CODEX_STOP_HOOK_STATUS,
-        },
-      });
-    }
-    await writeJsonFileOrDelete(hooksConfigPath, updated);
-  }
+  await rm(targets.skillDir, { recursive: true, force: true });
 
   return [
-    skillPath,
-    agentPath,
-    modelPolicyPath,
-    ...Object.values(referencePaths),
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    stopHookCorePath,
-    stopHookScriptPath,
-    hooksConfigPath,
+    targets.skillPath,
+    targets.agentPath,
+    targets.modelPolicyPath,
+    ...Object.values(targets.referencePaths),
+    ...Object.values(targets.scriptPaths),
   ];
 }
 
 async function uninstallClaude(options, skillLayout) {
-  const {
-    repoInstall,
-    skillPath,
-    modelPolicyPath,
-    referencePaths,
-    agentPaths,
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    stopHookCorePath,
-    stopHookScriptPath,
-    settingsPath,
-    legacySkillDirs,
-  } =
-    getClaudeTargets(options, skillLayout);
+  const targets = getClaudeTargets(options, skillLayout);
 
-  const removeOptionalOnly = options.features.length > 0;
-
-  if (!removeOptionalOnly) {
-    await deleteFile(skillPath);
-    await deleteFile(modelPolicyPath);
-    for (const target of Object.values(referencePaths)) {
-      await deleteFile(target);
-    }
-    for (const target of Object.values(agentPaths)) {
-      await deleteFile(target);
-    }
-    await deleteFile(scaffoldScriptPath);
-    await deleteFile(hookScriptPath);
-    await deleteFile(hookUtilsPath);
-    await deleteFile(hookContextDocPath);
-    await deleteFile(contextDocHelperCorePath);
-    await deleteFile(contextDocHelperPath);
-    for (const legacySkillDir of legacySkillDirs) {
-      await rm(legacySkillDir, { recursive: true, force: true });
-    }
-  }
-  if (options.features.includes("stop-hook") || !removeOptionalOnly) {
-    await deleteFile(stopHookCorePath);
-    await deleteFile(stopHookScriptPath);
-  }
-
-  const settings = await readJsonFileIfExists(settingsPath);
-  if (settings !== null) {
-    let updated = settings;
-    if (!removeOptionalOnly) {
-      updated = removeSessionStartHookDocument(updated, {
-        matcher: SESSION_START_MATCHER,
-        handler: {
-          type: "command",
-          command: repoInstall
-            ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"'
-            : `node ${JSON.stringify(hookScriptPath)}`,
-        },
-      });
-      updated = removeLegacySessionStartHookDocuments(updated, {
-        matcher: SESSION_START_MATCHER,
-        legacyMatchers: LEGACY_SESSION_START_MATCHERS,
-        handler: {
-          type: "command",
-          command: repoInstall
-            ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_socrates_context.mjs"'
-            : `node ${JSON.stringify(hookScriptPath)}`,
-        },
-      });
-    }
-    if (options.features.includes("stop-hook") || !removeOptionalOnly) {
-      updated = removeStopHookDocument(updated, {
-        matcher: STOP_MATCH_ALL,
-        handler: {
-          type: "command",
-          command: repoInstall
-            ? 'node "$CLAUDE_PROJECT_DIR/.claude/hooks/stop_socrates_clarifying.mjs"'
-            : `node ${JSON.stringify(stopHookScriptPath)}`,
-        },
-      });
-    }
-    await writeJsonFileOrDelete(settingsPath, updated);
+  await rm(targets.skillDir, { recursive: true, force: true });
+  for (const target of Object.values(targets.agentPaths)) {
+    await deleteFile(target);
   }
 
   return [
-    skillPath,
-    modelPolicyPath,
-    ...Object.values(referencePaths),
-    ...Object.values(agentPaths),
-    scaffoldScriptPath,
-    hookScriptPath,
-    hookUtilsPath,
-    hookContextDocPath,
-    contextDocHelperCorePath,
-    contextDocHelperPath,
-    stopHookCorePath,
-    stopHookScriptPath,
-    settingsPath,
+    targets.skillPath,
+    targets.modelPolicyPath,
+    ...Object.values(targets.referencePaths),
+    ...Object.values(targets.scriptPaths),
+    ...Object.values(targets.agentPaths),
   ];
-}
-
-async function enableCodexHooks(options) {
-  const configPath = path.join(options.homeDir, ".codex", "config.toml");
-  const existing = (await readTextFileIfExists(configPath)) ?? "";
-  await writeTextFile(configPath, mergeCodexHooksFeature(existing));
-  return configPath;
-}
-
-export function mergeCodexHooksFeature(toml) {
-  const normalized = toml.replace(/\r\n/g, "\n");
-  const featuresPattern = /^\[features\]\s*$(?:\n(?!\[).*)*/m;
-
-  if (!featuresPattern.test(normalized)) {
-    const prefix = normalized.trimEnd();
-    const next =
-      prefix === ""
-        ? "[features]\ncodex_hooks = true\n"
-        : `${prefix}\n\n[features]\ncodex_hooks = true\n`;
-    return ensureTrailingNewline(next);
-  }
-
-  const next = normalized.replace(featuresPattern, (section) => {
-    if (/^\s*codex_hooks\s*=.*$/m.test(section)) {
-      return section.replace(/^\s*codex_hooks\s*=.*$/m, "codex_hooks = true");
-    }
-    return `${section}\ncodex_hooks = true`;
-  });
-
-  return ensureTrailingNewline(next);
 }
 
 function getCodexTargets(options, skillLayout) {
   const repoInstall = options.scope === "repo";
   const repoRoot = repoInstall ? path.resolve(options.targetRepo) : null;
-  const hooksRoot = repoInstall ? repoRoot : path.join(options.homeDir, ".codex");
   const skillDir = repoInstall
     ? path.join(repoRoot, ".agents", "skills", "socrates-contract")
     : path.join(options.homeDir, ".codex", "skills", "socrates-contract");
-  const legacySkillDirs = repoInstall
-    ? [path.join(repoRoot, ".agents", "skills", "socrates")]
-    : [
-        path.join(options.homeDir, ".agents", "skills", "socrates-contract"),
-        path.join(options.homeDir, ".agents", "skills", "socrates"),
-        path.join(options.homeDir, ".codex", "skills", "socrates"),
-      ];
 
   return {
-    repoInstall,
-    legacySkillDirs,
+    skillDir,
     skillPath: path.join(skillDir, "SKILL.md"),
     agentPath: path.join(skillDir, "agents", "openai.yaml"),
     modelPolicyPath: path.join(skillDir, "model-policy.json"),
@@ -806,53 +379,27 @@ function getCodexTargets(options, skillLayout) {
       path.join(skillDir, "references"),
       skillLayout.skillReferences
     ),
-    scaffoldScriptPath: path.join(skillDir, "scripts", "scaffold-contract.mjs"),
-    hookScriptPath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks", "session_start_socrates_context.mjs")
-      : path.join(hooksRoot, "hooks", "session_start_socrates_context.mjs"),
-    hookUtilsPath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_hook_utils.mjs")
-      : path.join(hooksRoot, "hooks", "_socrates_hook_utils.mjs"),
-    hookContextDocPath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_context_doc.mjs")
-      : path.join(hooksRoot, "hooks", "_socrates_context_doc.mjs"),
-    contextDocHelperCorePath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_context_doc_helper_core.mjs")
-      : path.join(hooksRoot, "hooks", "_socrates_context_doc_helper_core.mjs"),
-    contextDocHelperPath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks", "socrates_context_doc_helper.mjs")
-      : path.join(hooksRoot, "hooks", "socrates_context_doc_helper.mjs"),
-    stopHookCorePath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks", "_socrates_stop_clarifying_core.mjs")
-      : path.join(hooksRoot, "hooks", "_socrates_stop_clarifying_core.mjs"),
-    stopHookScriptPath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks", "stop_socrates_clarifying.mjs")
-      : path.join(hooksRoot, "hooks", "stop_socrates_clarifying.mjs"),
-    hooksConfigPath: repoInstall
-      ? path.join(hooksRoot, ".codex", "hooks.json")
-      : path.join(hooksRoot, "hooks.json"),
+    scriptPaths: buildTargetPathMap(
+      path.join(skillDir, "scripts"),
+      skillLayout.skillScripts
+    ),
   };
 }
 
 function getClaudeTargets(options, skillLayout) {
-  const root =
-    options.scope === "repo"
-      ? path.resolve(options.targetRepo)
-      : path.join(options.homeDir, ".claude");
   const repoInstall = options.scope === "repo";
+  const root = repoInstall
+    ? path.resolve(options.targetRepo)
+    : path.join(options.homeDir, ".claude");
   const skillDir = repoInstall
     ? path.join(root, ".claude", "skills", "socrates-contract")
     : path.join(root, "skills", "socrates-contract");
-  const legacySkillDirs = repoInstall
-    ? [path.join(root, ".claude", "skills", "socrates")]
-    : [path.join(root, "skills", "socrates")];
   const agentDir = repoInstall
     ? path.join(root, ".claude", "agents")
     : path.join(root, "agents");
 
   return {
-    repoInstall,
-    legacySkillDirs,
+    skillDir,
     skillPath: path.join(skillDir, "SKILL.md"),
     modelPolicyPath: path.join(skillDir, "model-policy.json"),
     referencePaths: buildTargetPathMap(
@@ -860,31 +407,10 @@ function getClaudeTargets(options, skillLayout) {
       skillLayout.skillReferences
     ),
     agentPaths: buildTargetPathMap(agentDir, skillLayout.claudeAgents),
-    scaffoldScriptPath: path.join(skillDir, "scripts", "scaffold-contract.mjs"),
-    hookScriptPath: repoInstall
-      ? path.join(root, ".claude", "hooks", "session_start_socrates_context.mjs")
-      : path.join(root, "hooks", "session_start_socrates_context.mjs"),
-    hookUtilsPath: repoInstall
-      ? path.join(root, ".claude", "hooks", "_socrates_hook_utils.mjs")
-      : path.join(root, "hooks", "_socrates_hook_utils.mjs"),
-    hookContextDocPath: repoInstall
-      ? path.join(root, ".claude", "hooks", "_socrates_context_doc.mjs")
-      : path.join(root, "hooks", "_socrates_context_doc.mjs"),
-    contextDocHelperCorePath: repoInstall
-      ? path.join(root, ".claude", "hooks", "_socrates_context_doc_helper_core.mjs")
-      : path.join(root, "hooks", "_socrates_context_doc_helper_core.mjs"),
-    contextDocHelperPath: repoInstall
-      ? path.join(root, ".claude", "hooks", "socrates_context_doc_helper.mjs")
-      : path.join(root, "hooks", "socrates_context_doc_helper.mjs"),
-    stopHookCorePath: repoInstall
-      ? path.join(root, ".claude", "hooks", "_socrates_stop_clarifying_core.mjs")
-      : path.join(root, "hooks", "_socrates_stop_clarifying_core.mjs"),
-    stopHookScriptPath: repoInstall
-      ? path.join(root, ".claude", "hooks", "stop_socrates_clarifying.mjs")
-      : path.join(root, "hooks", "stop_socrates_clarifying.mjs"),
-    settingsPath: repoInstall
-      ? path.join(root, ".claude", "settings.json")
-      : path.join(root, "settings.json"),
+    scriptPaths: buildTargetPathMap(
+      path.join(skillDir, "scripts"),
+      skillLayout.skillScripts
+    ),
   };
 }
 
@@ -900,244 +426,26 @@ async function loadSkillLayout(loadAsset) {
   if (
     !isPlainObject(parsed) ||
     !Array.isArray(parsed.skillReferences) ||
+    !Array.isArray(parsed.skillScripts) ||
     !Array.isArray(parsed.claudeAgents)
   ) {
-    throw new Error("reference/skill-layout.json must define skillReferences and claudeAgents arrays");
+    throw new Error("reference/skill-layout.json must define skillReferences, skillScripts, and claudeAgents arrays");
   }
 
   return {
     skillReferences: [...parsed.skillReferences],
+    skillScripts: [...parsed.skillScripts],
     claudeAgents: [...parsed.claudeAgents],
   };
-}
-
-export function mergeSessionStartHookDocument(document, { matcher, handler }) {
-  return mergeHookDocument(document, {
-    eventName: "SessionStart",
-    matcher,
-    handler,
-  });
-}
-
-export function mergeStopHookDocument(document, { matcher, handler }) {
-  return mergeHookDocument(document, {
-    eventName: "Stop",
-    matcher,
-    handler,
-  });
-}
-
-function mergeHookDocument(document, { eventName, matcher, handler }) {
-  if (!isPlainObject(document)) {
-    throw new Error("Existing config must be a JSON object");
-  }
-
-  const next = structuredClone(document);
-
-  if (next.hooks === undefined) {
-    next.hooks = {};
-  }
-  if (!isPlainObject(next.hooks)) {
-    throw new Error("The existing hooks field must be a JSON object");
-  }
-
-  const groups = next.hooks[eventName];
-  if (groups === undefined) {
-    next.hooks[eventName] = [];
-  } else if (!Array.isArray(groups)) {
-    throw new Error(`The existing ${eventName} hook list must be an array`);
-  }
-
-  let group = next.hooks[eventName].find(
-    (entry) => isPlainObject(entry) && (entry.matcher ?? "") === matcher
-  );
-
-  if (!group) {
-    group = {
-      matcher,
-      hooks: [],
-    };
-    next.hooks[eventName].push(group);
-  }
-
-  if (!Array.isArray(group.hooks)) {
-    throw new Error(`The matched ${eventName} hook group must contain a hooks array`);
-  }
-
-  if (!group.hooks.some((entry) => hookEquals(entry, handler))) {
-    group.hooks.push(handler);
-  }
-
-  return next;
-}
-
-export function removeSessionStartHookDocument(document, { matcher, handler }) {
-  return removeHookDocument(document, {
-    eventName: "SessionStart",
-    matcher,
-    handler,
-  });
-}
-
-export function removeLegacySessionStartHookDocuments(
-  document,
-  { matcher, legacyMatchers, handler }
-) {
-  let next = document;
-  for (const legacyMatcher of legacyMatchers) {
-    if (legacyMatcher === matcher) {
-      continue;
-    }
-    next = removeSessionStartHookDocument(next, {
-      matcher: legacyMatcher,
-      handler,
-    });
-  }
-  return next;
-}
-
-export function removeStopHookDocument(document, { matcher, handler }) {
-  return removeHookDocument(document, {
-    eventName: "Stop",
-    matcher,
-    handler,
-  });
-}
-
-function removeHookDocument(document, { eventName, matcher, handler }) {
-  if (!isPlainObject(document)) {
-    throw new Error("Existing config must be a JSON object");
-  }
-
-  const next = structuredClone(document);
-
-  if (next.hooks === undefined) {
-    return next;
-  }
-  if (!isPlainObject(next.hooks)) {
-    throw new Error("The existing hooks field must be a JSON object");
-  }
-
-  const groups = next.hooks[eventName];
-  if (groups === undefined) {
-    return next;
-  }
-  if (!Array.isArray(groups)) {
-    throw new Error(`The existing ${eventName} hook list must be an array`);
-  }
-
-  next.hooks[eventName] = groups.flatMap((group) => {
-    if (!isPlainObject(group)) {
-      throw new Error(`Each ${eventName} hook group must be a JSON object`);
-    }
-
-    if ((group.matcher ?? "") !== matcher) {
-      return [group];
-    }
-
-    if (!Array.isArray(group.hooks)) {
-      throw new Error(`The matched ${eventName} hook group must contain a hooks array`);
-    }
-
-    const filteredHooks = group.hooks.filter((entry) => !hookEquals(entry, handler));
-    if (filteredHooks.length === 0) {
-      return [];
-    }
-
-    return [
-      {
-        ...group,
-        hooks: filteredHooks,
-      },
-    ];
-  });
-
-  if (next.hooks[eventName].length === 0) {
-    delete next.hooks[eventName];
-  }
-  if (Object.keys(next.hooks).length === 0) {
-    delete next.hooks;
-  }
-
-  return next;
-}
-
-function hookEquals(left, right) {
-  const leftStatusMessage =
-    isPlainObject(left) && typeof left.statusMessage === "string"
-      ? left.statusMessage
-      : null;
-  const rightStatusMessage =
-    typeof right.statusMessage === "string" ? right.statusMessage : null;
-
-  return (
-    isPlainObject(left) &&
-    left.type === right.type &&
-    left.command === right.command &&
-    (
-      leftStatusMessage === rightStatusMessage ||
-      leftStatusMessage === null ||
-      rightStatusMessage === null
-    )
-  );
 }
 
 function isPlainObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function ensureTrailingNewline(value) {
-  return value.endsWith("\n") ? value : `${value}\n`;
-}
-
-async function readJsonFileOrDefault(target, fallback) {
-  const parsed = await readJsonFileIfExists(target);
-  return parsed === null ? structuredClone(fallback) : parsed;
-}
-
-async function readJsonFileIfExists(target) {
-  try {
-    const contents = await readFile(target, "utf8");
-    const parsed = JSON.parse(contents);
-    if (!isPlainObject(parsed)) {
-      throw new Error(`${target} must contain a top-level JSON object`);
-    }
-    return parsed;
-  } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      return null;
-    }
-    throw error;
-  }
-}
-
-async function readTextFileIfExists(target) {
-  try {
-    return await readFile(target, "utf8");
-  } catch (error) {
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") {
-      return null;
-    }
-    throw error;
-  }
-}
-
 async function writeTextFile(target, contents) {
   await mkdir(path.dirname(target), { recursive: true });
   await writeFile(target, contents, "utf8");
-}
-
-async function writeJsonFile(target, value) {
-  await writeTextFile(target, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-async function writeJsonFileOrDelete(target, value) {
-  if (isPlainObject(value) && Object.keys(value).length === 0) {
-    await deleteFile(target);
-    return;
-  }
-
-  await writeJsonFile(target, value);
 }
 
 async function deleteFile(target) {
@@ -1159,12 +467,9 @@ Options:
   --target-repo /absolute/path
   --source-root /absolute/path/to/local/repo
   --version git-ref-or-tag
-  --feature ${OPTIONAL_FEATURES.join("|")}
-  --enable-codex-hooks
 
 Notes:
-  - Socrates installs only the canonical version 3 shared-context format.
-  - Existing version 1 and version 2 SOCRATES_CONTEXT.md files are treated as legacy and must be repaired or deleted before runtime hooks trust them.
+  - Socrates installs the contract-file workflow only.
 `;
 }
 

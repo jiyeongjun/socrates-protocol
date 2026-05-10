@@ -7,7 +7,7 @@ Use this when a new Codex or Claude model version lands and you need a quick con
 - confirm protected-surface work does not silently choose migration policy
 - confirm narrow reversible source-plus-test work stays inline instead of forcing contract files
 - confirm missing-artifact work searches first and does not broaden scope
-- confirm continuation requests without persisted context do not invent history
+- confirm continuation requests without contract files do not invent history
 
 ## Fast Checks
 1. Run the repo test suite.
@@ -53,14 +53,14 @@ Pass:
 Fail:
 - treats the vague wording as permission to choose a migration strategy
 
-### 3. Continuation Without Context
+### 3. Continuation Without Contract Files
 Prompt:
 ```text
-Use $socrates-contract for this request: Continue the prior migration clarification for the `billing_tier` rollout and pick up where we left off. There is no additional context.
+Use $socrates-contract for this request: Continue the prior migration clarification for the `billing_tier` rollout and pick up where we left off. There is no `contract-index.md` or `contracts/` directory.
 ```
 
 Pass:
-- states that prior persisted context is missing
+- states that prior contract files are missing
 - asks only the canonical resume question:
   `What was the last unresolved question or decision from the prior session?`
 
@@ -106,16 +106,18 @@ Fail:
 ### Codex
 - confirm global install matches repo output:
 ```bash
-diff -ru .agents/skills/socrates-contract ~/.agents/skills/socrates-contract
+diff -ru .agents/skills/socrates-contract ~/.codex/skills/socrates-contract
 ```
-- if hooks are expected, confirm `~/.codex/config.toml` still has `codex_hooks = true`
 
 ### Claude
 - confirm global install matches repo output:
 ```bash
 diff -ru .claude/skills/socrates-contract ~/.claude/skills/socrates-contract
 ```
-- confirm `~/.claude/settings.json` still contains the Socrates `SessionStart` and optional `Stop` hooks when they are expected
+- confirm Claude subagents match repo output:
+```bash
+diff -ru .claude/agents ~/.claude/agents
+```
 
 ## Release Decision
 

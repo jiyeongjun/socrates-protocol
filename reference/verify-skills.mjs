@@ -11,8 +11,11 @@ import {
   readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
+  readSkillScriptSource,
   skillReferenceNames,
   skillReferenceTargets,
+  skillScriptNames,
+  skillScriptTargets,
   skillTargets,
 } from "./skill-generator.mjs";
 
@@ -43,6 +46,20 @@ for (const [platform, targets] of Object.entries(skillReferenceTargets)) {
       hasMismatch = true;
       console.error(
         `${platform} skill reference ${name} is out of sync with reference/skill-references/${name}`
+      );
+    }
+  }
+}
+
+for (const [platform, targets] of Object.entries(skillScriptTargets)) {
+  for (const name of skillScriptNames) {
+    const expected = `${await readSkillScriptSource(name)}\n`;
+    const actual = await readFile(targets[name], "utf8");
+
+    if (actual !== expected) {
+      hasMismatch = true;
+      console.error(
+        `${platform} skill script ${name} is out of sync with scripts/${name}`
       );
     }
   }

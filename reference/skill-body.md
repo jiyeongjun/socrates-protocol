@@ -55,7 +55,6 @@ A full request → classification → contract files → one question → execut
 - One-question clarification behavior: see [references/clarification.md](references/clarification.md)
 - Post-mutation verification and bounded repair: see [references/verify-repair.md](references/verify-repair.md)
 - Worked example end-to-end: see [references/example.md](references/example.md)
-- Legacy `SOCRATES_CONTEXT.md` compatibility for older installs: see [references/context-file.md](references/context-file.md)
 
 ## Output Rules
 - Keep outputs compact, contract-oriented, and action-specific. — Long discursive replies dilute the next decision; the user usually needs the move, not the lecture.

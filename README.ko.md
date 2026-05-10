@@ -6,468 +6,182 @@
 
 [English](./README.md)
 
-파일, 데이터, 설정, 외부 시스템, 사용자에게 보이는 상태를 바꾸기 전에 사용자와 에이전트가 명시적인 계약을 맞춰야 하는 경우를 위한 mutation 스킬입니다.
+파일, 데이터, 설정, 외부 시스템, 사용자에게 보이는 상태를 바꾸기 전에 사용자와 에이전트가 명시적인 contract를 맞춰야 하는 경우를 위한 mutation skill입니다.
 
 ## 하는 일
 
-요청이 이미 명확하고, 낮은 위험이며, 단일 단계라면 Socrates Contract는 개입하지 않습니다.
-목표, 범위, 성공 기준, 보호면, 분해 방식이 mutation 결과를 바꿀 때 개입합니다.
-큰 목표는 `contract-index.md`에 거시 contract를 문서화하고 `contracts/contract-001.md`, `contracts/contract-002.md` 같은 소계약 파일로 쪼갭니다.
+Socrates Contract는 요청이 이미 명확하고 위험이 낮으며 한 단계로 끝날 때는 개입하지 않습니다. 목표, 범위, 성공 기준, 보호면, 분해 방식이 실제 변경 결과를 바꿀 수 있을 때만 개입합니다.
 
 핵심 동작:
 
 - 명확하고 낮은 위험의 요청: 바로 실행하고 검증
-- 아티팩트나 대상 누락: 먼저 workspace에서 찾아보고, 그래도 없으면 질문
-- 고위험 미결정 작업: 가장 안전을 좌우하는 질문부터 먼저
-- 여러 유효한 mutation 경로: 실제 변경 전에 거시 contract를 정렬
-- 큰 목표: 보이는 contract 파일을 만들고 소계약을 하나씩 닫음
-- 작업 성공: 모든 소계약과 거시 contract의 성공 기준을 검증
+- 누락된 파일이나 대상: 먼저 workspace에서 찾고, 그래도 없을 때 질문
+- 위험한 미해결 작업: 가장 중요한 안전 결정 하나를 먼저 질문
+- 여러 mutation 경로가 가능함: 실행 전에 macro contract 정렬
+- 큰 목표: `contract-index.md`와 subcontract별 파일 생성
+- 완료: 모든 subcontract와 macro contract를 검증한 뒤 닫기
 
-주로 이런 경우에 발동합니다:
+대표 trigger:
 
-- `elegant`, `clean`, `good`, `robust` 같은 미정의 선호어
-- API, 스키마, 마이그레이션, 인증, 결제, 삭제, 프로덕션 변경
-- 여러 mutation 방향이 실질적으로 달라질 수 있는 요청
-- 환경 변수, 설정 키, 공개 API, 영속 필드 이름 변경
-- 여러 clarification, 보이는 상태 추적, 독립 검증 가능한 여러 하위 목표가 필요한 작업
+- `elegant`, `clean`, `good`, `robust` 같은 모호한 선호 표현
+- API, schema, migration, auth, billing, deletion, production 변경
+- 실질적으로 다른 mutation 경로가 여러 개 남아 있는 요청
+- env var, config key, public API, persisted field rename
+- 여러 clarification round, 보이는 상태 추적, 독립 검증 가능한 하위 목표가 필요한 작업
 
-## 동작 흐름
+## 흐름
 
-Socrates Contract는 하나의 라우터 스킬입니다.
-가장 가벼우면서도 안전한 경로를 먼저 고르고, durable alignment가 필요할 때만 거시 contract와 소계약 파일로 올라갑니다.
+Socrates Contract는 하나의 router skill입니다. 가능한 가장 가벼운 안전 경로부터 시도하고, durable alignment가 필요할 때만 macro contract와 subcontract 파일로 올라갑니다.
 
 ```mermaid
 flowchart TB
-    classDef decision fill:#ffffff,stroke:#374151,stroke-width:1.4px,color:#111827;
-    classDef action fill:#ffffff,stroke:#9ca3af,stroke-width:1.1px,color:#111827;
-    classDef emphasis fill:#ffffff,stroke:#111827,stroke-width:1.3px,color:#111827;
-
-    subgraph T["1. 판단"]
-        direction TB
-        A([사용자 요청]):::action --> B{명확하고<br/>단일 경로인가?}:::decision
-        B -- 예 --> C[바로 작업 실행]:::action
-        B -- 아니오 --> D[짧은 현황 탐색]:::action
-        D --> E{핵심 걸림돌}:::decision
-    end
-
-    subgraph R["2. 필요한 것만 해결"]
-        direction TB
-        F[먼저 workspace에서<br/>찾아보기]:::action
-        G[안전 질문 1개 또는<br/>짧은 계획]:::action
-        H[핵심 질문 1개만]:::action
-        I[거시 contract와<br/>소계약 생성]:::action
-    end
-
-    subgraph X["3. 실행, 검증, 닫기"]
-        direction TB
-        J[구현]:::action --> K[가장 작은 검증부터<br/>실행]:::action
-        K --> L[읽기 전용 contract<br/>검증]:::action
-        L --> M{통과했는가?}:::decision
-        M -- 예 --> N([contract 닫기]):::emphasis
-        M -- 수정 가능 드리프트 1회 --> O[한 번만 수정하고<br/>다시 평가]:::emphasis
-        M -- 여전히 불합격 --> P[현재 상태를 보고하고<br/>사용자에게 다음 조치 질문]:::emphasis
-    end
-
-    E -- 파일 / 심볼 / 테스트 / 대상 누락 --> F
-    E -- 위험한 변경 / 외부 계약 영향 --> G
-    E -- 결과를 바꾸는 핵심 선택지가 남아 있음 --> H
-    E -- 여러 단계 contract 필요 --> I
-
-    C --> K
-    F --> J
-    G --> J
-    H --> J
-    I --> J
-    O --> K
-
-    style T fill:#ffffff,stroke:#d1d5db,stroke-width:1px,color:#111827
-    style R fill:#ffffff,stroke:#d1d5db,stroke-width:1px,color:#111827
-    style X fill:#ffffff,stroke:#d1d5db,stroke-width:1px,color:#111827
+    A([User request]) --> B{Clear and single-path?}
+    B -- Yes --> C[Execute directly]
+    B -- No --> D[Explore current state]
+    D --> E{Primary blocker}
+    E -- Missing artifact --> F[Search workspace first]
+    E -- Risky choice --> G[Ask one load-bearing question]
+    E -- Multi-step work --> H[Create contract files]
+    C --> I[Verify narrowly]
+    F --> I
+    G --> I
+    H --> J[Execute one subcontract]
+    J --> I
+    I --> K{Passes?}
+    K -- Yes --> L[Close or update contract]
+    K -- No --> M[Repair narrowly and re-run]
+    M --> I
 ```
 
-짧게 요약하면:
+요약:
 
-- 명확한 요청: 바로 실행
-- 대상 누락: 짧게 탐색하고 먼저 찾아본 뒤, 없으면 질문
-- 위험한 변경: 안전 결정을 먼저 확인
-- 큰 목표: `contract-index.md`와 소계약별 파일 사용
-- 각 소계약 이후: 좁게 검증하고 필요한 경우 복구한 뒤 contract 파일 갱신
+- 명확한 요청: 바로 작업
+- 누락된 대상: 먼저 탐색하고 검색, 질문은 나중에
+- 위험한 변경: 멈추고 안전 결정을 명확히 함
+- 큰 목표: `contract-index.md`와 subcontract별 파일 사용
+- 각 subcontract 뒤: 좁게 검증하고, 필요하면 고친 뒤 contract 파일 갱신
 
 ## 한계
 
-Socrates Contract는 어떤 모호함이 실제로 구현을 바꾸는지 판단할 때도 결국 LLM 추론에 의존합니다.
-즉, 입구 판정 자체가 이 스킬이 안내하는 모델과 같은 기본 한계를 가집니다.
+Socrates Contract는 ambiguity가 load-bearing인지 판단할 때 여전히 모델 판단에 의존합니다. 모든 숨은 제약을 반드시 찾아내는 보장이 아니라 위험을 줄이는 도구입니다.
 
-특히 다음 경우에 가장 효과적입니다:
+효과적인 경우:
 
-- 고위험 신호가 프롬프트나 코드 맥락에 명시적으로 드러날 때
-- 미결정 분기나 누락된 제약이 이미 텍스트로 드러나 있을 때
-- 사용자가 몇 개의 구체적인 질문에 짧게 답해 방향을 결정할 수 있을 때
-- 같은 작업의 contract 상태를 여러 턴에 걸쳐 실제로 유지해야 할 때
-
-반대로 다음은 놓칠 수 있습니다:
-
-- 텍스트로 드러나지 않은 미묘한 암묵적 가정
-- 프롬프트나 리포지토리에서 보이지 않는 팀 관례나 비즈니스 제약
-- 구현을 더 진행해야 비로소 드러나는 모호함
-
-이 스킬은 리스크를 줄이기 위한 보조 장치이지, 구현을 좌우하는 핵심 모호함을 빠짐없이 드러낸다는 보장은 아닙니다.
-Contract 파일은 숨겨진 task manager가 아니라 사용자와 에이전트가 함께 보는 상태입니다.
+- prompt나 code context에 high-risk signal이 명시되어 있음
+- 미해결 분기나 누락 제약이 텍스트로 근거를 가짐
+- 사용자가 소수의 구체적인 clarification question에 답할 수 있음
+- 같은 작업의 durable contract state가 여러 턴에 걸쳐 실제로 필요함
 
 ## 빠른 설치
 
-아래 예시는 릴리즈 태그 `v0.7.0`을 기준으로 적었습니다.
-이 worktree를 읽는 시점에 그 태그가 아직 push되지 않았다면 체크아웃한 리포의 `scripts/install.mjs`를 직접 실행하세요.
-현재 worktree의 package version은 `0.7.0`입니다.
+아래 예시는 release tag `v0.8.0` 기준입니다. 이 tag가 아직 push되기 전 worktree를 보고 있다면 checkout된 repo의 `scripts/install.mjs`를 직접 실행하세요. 현재 worktree의 package version은 `0.8.0`입니다.
+
+설치기는 Node `24+`가 필요합니다.
 
 ### Codex
 
-권장 quick install:
+권장 global install:
 
 ```bash
-VERSION=v0.7.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION" --enable-codex-hooks
+VERSION=v0.8.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION"
 ```
 
-처음부터 Stop hook까지 포함해서 설치:
+repo에 설치:
 
 ```bash
-VERSION=v0.7.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
+VERSION=v0.8.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
-Codex hook 활성화:
-
-- Codex global 설치 시 스킬은 `~/.codex/skills/socrates-contract`에 설치되고, hook 스크립트와 설정도 `~/.codex` 아래에 둡니다
-- 위 권장 install 명령은 `~/.codex/config.toml`에 `codex_hooks = true`까지 함께 반영합니다
-- 예전에 `--enable-codex-hooks` 없이 설치했다면 스킬 자체는 동작하지만 `SessionStart` source들(`startup`, `resume`, `clear`, `compact`)과 선택적 `Stop` hook은 이 feature flag를 켜기 전까지 실행되지 않습니다
-- 이미 설치한 상태라면 installer를 `--enable-codex-hooks`와 함께 다시 실행하거나, 아래 fallback 명령을 한 번만 실행하면 됩니다:
+삭제:
 
 ```bash
-mkdir -p ~/.codex && node --input-type=module - <<'EOF'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import path from "node:path";
-
-const configPath = path.join(homedir(), ".codex", "config.toml");
-mkdirSync(path.dirname(configPath), { recursive: true });
-const existing = existsSync(configPath) ? readFileSync(configPath, "utf8") : "";
-const featuresPattern = /^\[features\]\s*$(?:\n(?!\[).*)*/m;
-
-let next = existing;
-if (!featuresPattern.test(existing)) {
-  next = `${existing.trimEnd()}\n\n[features]\ncodex_hooks = true\n`.trimStart();
-} else {
-  next = existing.replace(featuresPattern, (section) => {
-    if (/^\s*codex_hooks\s*=.*$/m.test(section)) {
-      return section.replace(/^\s*codex_hooks\s*=.*$/m, "codex_hooks = true");
-    }
-    return `${section}\ncodex_hooks = true`;
-  });
-}
-
-writeFileSync(configPath, next.endsWith("\n") ? next : `${next}\n`, "utf8");
-console.log(`Updated ${configPath}`);
-EOF
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.8.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
 ```
 
-업데이트:
+Codex 설치 메모:
 
-- 원하는 버전 태그로 같은 install 명령을 다시 실행하면 됩니다
-- installer는 오래된 Socrates 파일은 최신으로 덮어쓰고, 관련 없는 hook 엔트리는 유지하며, hook이 독립 실행되도록 필요한 지원 파일도 함께 설치합니다
-- Codex global 설치에서는 현재 `~/.codex/skills/socrates-contract` 사본을 쓴 뒤 이전 `~/.agents/skills/socrates-contract`, legacy `~/.agents/skills/socrates`, `~/.codex/skills/socrates` 사본도 제거합니다
-
-제거:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.7.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
-```
-
-리포지토리에 설치:
-
-```bash
-VERSION=v0.7.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION" --enable-codex-hooks
-```
-
-명시적 호출 예시:
-
-```text
-$socrates-contract 프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
-```
-
-자동 개입 예시:
-
-```text
-프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
-```
-
-Codex/OpenAI 참고:
-
-- 생성되는 agent 메타데이터는 호스트가 지원할 때 implicit invocation을 켜 둡니다
-- 다만 스킬을 확실히 강제하고 싶다면 여전히 명시적 `$socrates-contract` 호출이 가장 확실합니다
-
-선택적 Codex hook:
-
-- 이 저장소에는 보수적으로 동작하는 repo-local hook인 `.codex/hooks.json`도 포함되어 있습니다
-- 이 hook은 `SessionStart`에서만 실행되고 `SOCRATES_CONTEXT.md`가 이미 있을 때만 컨텍스트를 추가합니다
-- `startup`, `resume`, `clear`, `compact`에서 shared context를 다시 주입하므로, 긴 작업이 compact를 거쳐도 별도 상태 파일을 새로 만들지 않고 이어갈 수 있습니다
-- 즉, 빠른 경로 작업은 건드리지 않고 여러 턴에 걸친 Socrates 작업을 다시 열었을 때만 도움이 되도록 설계했습니다
-- Codex hook은 스킬별 활성화가 아니라 `hooks.json` 레이어 기준으로 로드되므로, 이 hook 파일도 repo hook layer가 활성화되어 있으면 로드됩니다
-- 그래서 포함된 hook 스크립트는 `SOCRATES_CONTEXT.md`를 찾지 못하면 아무것도 하지 않도록 구현되어 있습니다
-- 탐색은 가장 가까운 git root까지만 올라가므로, nested repo가 상위 repo의 `SOCRATES_CONTEXT.md`를 잘못 집는 일은 막습니다
-- 위 quick install 명령은 Socrates Contract 스킬, 미러된 `references/` 파일들, 그리고 Socrates `SessionStart` hook을 함께 설치하고, 기존 `hooks.json`과 병합합니다
-- repo scope Codex 설치는 스킬을 `.agents/skills/socrates-contract` 아래에 두고, global 설치는 `~/.codex/skills/socrates-contract` 아래에 둡니다
-- 위 권장 Codex install 명령은 필요한 `codex_hooks = true` feature flag까지 함께 켭니다
-
-선택적 Stop hook:
-
-- 기본 설치에는 `Stop` hook이 포함되지 않습니다
-- context-backed 작업이 아직 안정적인 중단 지점에 도달하지 않았을 때, clarification 턴을 한 번 더 강제하고 싶을 때만 별도로 설치하세요
-- 이 hook은 `SessionStart`보다 강합니다. 단순히 맥락을 복구하는 것이 아니라 턴을 한 번 더 이어갈 수 있습니다
-- hook은 스킬 스코프가 아니라 설정 스코프이므로, 오래된 context 파일이 남아 있으면 같은 repo의 비-Socrates 작업에도 영향을 줄 수 있습니다
-- 포함된 구현은 엄격한 명시적 상태 기준으로만 동작합니다. canonical `SOCRATES_CONTEXT.md`가 있고, `status: "clarifying"`에서 `clarifying_phase: "needs_question"`일 때만 개입합니다
-- 마지막 assistant 메시지를 해석해서 질문을 “충분히 이미 물었는지” 추측하지 않습니다
-- Stop hook이 빠지려면 공유 맥락 파일이 `clarifying_phase: "needs_question"` 상태를 벗어나야 합니다
-- 오래된 clarifying 상태 파일이 repo에 남아 있으면, `SOCRATES_CONTEXT.md`를 갱신·교체·삭제할 때까지 Stop hook이 계속 개입합니다
-
-선택적 Codex Stop hook 설치:
-
-```bash
-VERSION=v0.7.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform codex --scope global --version "$VERSION" --feature stop-hook --enable-codex-hooks
-```
-
-선택적 Codex Stop hook만 제거:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.7.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global --feature stop-hook
-```
+- global install은 skill을 `~/.codex/skills/socrates-contract`에 씁니다
+- repo install은 skill을 `.agents/skills/socrates-contract`에 씁니다
+- 생성된 `agents/openai.yaml`은 host가 지원하는 경우 implicit invocation을 켭니다
+- 명시적 `$socrates-contract` 호출이 skill을 강제로 쓰는 가장 결정적인 방법입니다
+- install을 다시 실행하면 이 installer가 관리하는 Socrates Contract 파일을 덮어씁니다
 
 ### Claude Code
 
-권장 quick install:
+권장 global install:
 
 ```bash
-VERSION=v0.7.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
+VERSION=v0.8.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
 ```
 
-처음부터 Stop hook까지 포함해서 설치:
+repo에 설치:
 
 ```bash
-VERSION=v0.7.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode install --platform claude --scope global --version "$VERSION" --feature stop-hook
+VERSION=v0.8.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
-Claude hook 동작:
-
-- 위 권장 install 명령은 Socrates 라우터 스킬, 미러된 `references/` 파일들, `.claude/agents/` 아래의 Claude 전용 subagent들, 그리고 보수적인 `SessionStart` hook을 함께 설치합니다
-- 기본 설치에는 더 강하게 개입하는 `Stop` hook이 포함되지 않습니다
-- 바로 위 두 번째 명령은 그 `Stop` hook까지 처음부터 같이 설치합니다
-
-업데이트:
-
-- 원하는 버전 태그로 같은 install 명령을 다시 실행하면 됩니다
-- installer는 오래된 Socrates 파일은 최신으로 덮어쓰고, 관련 없는 settings는 유지하며, hook이 독립 실행되도록 필요한 지원 파일도 함께 설치합니다
-
-제거:
+삭제:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.7.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.8.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
 ```
 
-리포지토리에 설치:
+Claude 설치 메모:
 
-```bash
-VERSION=v0.7.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
-```
+- global install은 skill을 `~/.claude/skills/socrates-contract`에 씁니다
+- repo install은 skill을 `.claude/skills/socrates-contract`에 씁니다
+- Claude 전용 Socrates subagent는 `.claude/agents/` 또는 `~/.claude/agents/`에 설치됩니다
+- 세부 on-demand guidance는 `references/` 아래 한 단계 깊이에 있습니다
+- role-based model guidance는 `model-policy.json`에 있습니다
+- install을 다시 실행하면 이 installer가 관리하는 Socrates Contract 파일을 덮어씁니다
 
-명시적 호출 예시:
+## 버전 정책
 
-```text
-/socrates-contract 프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
-```
+Socrates Contract Protocol은 SemVer 스타일 tag를 사용합니다. 현재 release tag는 `v0.8.0`이고, 현재 worktree의 package version은 `0.8.0`입니다.
 
-자동 개입 예시:
-
-```text
-프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해.
-```
-
-Claude 참고:
-
-- 스킬 경로: `.claude/skills/<skill-name>/SKILL.md`
-- Claude 전용 Socrates subagent 경로: `.claude/agents/socrates-explore.md`, `.claude/agents/socrates-plan.md`, `.claude/agents/socrates-verify.md`, `.claude/agents/socrates-evaluate.md`
-- 세부 on-demand 가이드는 `.claude/skills/socrates-contract/references/` 아래 한 단계 깊이에 위치합니다
-- Claude global 설치는 스킬을 `~/.claude/skills/socrates-contract`에 쓰고, 재실행 시 legacy `~/.claude/skills/socrates` 사본을 제거합니다
-- 역할 기반 모델 가이드는 `model-policy.json`에 두고, Claude subagent는 frontmatter의 현재 `model` alias를 사용합니다
-- 현재 버전은 `/socrates-contract` 수동 호출과 관련 맥락에서의 auto-load를 둘 다 지원합니다
-- 이 저장소에는 보수적으로 동작하는 프로젝트 hook 설정인 `.claude/settings.json`도 포함되어 있습니다
-- 이 hook은 `SessionStart`에서만 실행되고 `SOCRATES_CONTEXT.md`가 이미 있을 때만 컨텍스트를 추가합니다
-- `startup`, `resume`, `clear`, `compact`에서 shared context를 다시 주입하므로, 긴 작업이 compact를 거쳐도 별도 상태 파일을 새로 만들지 않고 이어갈 수 있습니다
-- Claude hook도 스킬별 활성화가 아니라 settings layer 기준으로 로드되므로, 포함된 hook은 공유 맥락 문서를 찾지 못하면 아무 일도 하지 않도록 만들었습니다
-- 탐색은 가장 가까운 git root까지만 올라가므로, nested repo가 상위 repo의 `SOCRATES_CONTEXT.md`를 잘못 집는 일은 막습니다
-- 위 quick install 명령은 Socrates Contract 스킬, 미러된 `references/` 파일들, Claude 전용 subagent들, 그리고 Socrates `SessionStart` hook을 함께 설치하고, 기존 `.claude/settings.json`과 병합합니다
-
-선택적 Claude Stop hook:
-
-- 기본 설치에는 `Stop` hook이 포함되지 않습니다
-- context-backed 작업이 아직 안정적인 중단 지점에 도달하지 않았을 때, clarification 턴을 한 번 더 강제하고 싶을 때만 별도로 설치하세요
-- 이 hook은 `SessionStart`보다 강합니다. 단순 맥락 복구가 아니라 턴을 한 번 더 이어갈 수 있습니다
-- hook은 스킬 스코프가 아니라 설정 스코프이므로, 오래된 context 파일이 남아 있으면 같은 프로젝트의 비-Socrates 작업에도 영향을 줄 수 있습니다
-- 포함된 구현은 엄격한 명시적 상태 기준으로만 동작합니다. canonical `SOCRATES_CONTEXT.md`가 있고, `status: "clarifying"`에서 `clarifying_phase: "needs_question"`일 때만 개입합니다
-- 마지막 assistant 메시지를 해석해서 질문을 “충분히 이미 물었는지” 추측하지 않습니다
-- Stop hook이 빠지려면 공유 맥락 파일이 `clarifying_phase: "needs_question"` 상태를 벗어나야 합니다
-- 오래된 clarifying 상태 파일이 프로젝트에 남아 있으면, `SOCRATES_CONTEXT.md`를 갱신·교체·삭제할 때까지 Stop hook이 계속 개입합니다
-
-선택적 Claude Stop hook 설치:
-
-- 위 quick note와 같은 명령입니다
-
-선택적 Claude Stop hook만 제거:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.7.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global --feature stop-hook
-```
-
-## 버저닝
-
-Socrates Protocol은 SemVer 스타일 태그를 사용합니다.
-현재 릴리즈 태그는 `v0.7.0`입니다.
-현재 worktree의 package version은 `0.7.0`입니다.
-
-- 빠른 설치 예시는 재현 가능한 설치를 위해 현재 릴리즈 태그에 고정합니다
-- `npm run verify:release-assets` 는 기본적으로 현재 worktree를 검사합니다
-- `npm run verify:release-assets -- --ref v0.7.0` 로 installer가 요구하는 asset이 그 release ref에 모두 들어 있는지 확인하세요
-- `0.x` 릴리스는 minor 버전 사이에서도 계약이 바뀔 수 있는 불안정한 단계로 보세요
-
-### Contract 파일 포맷
-
-오래 이어질 multi-step 작업, protected-surface 작업, 또는 handoff가 중요한 작업은 보이는 contract 파일을 사용합니다. 하나의 일관된 검증 경로가 있는 좁고 되돌리기 쉬운 수정은 구현 파일과 테스트 또는 문서를 함께 건드려도 inline으로 처리할 수 있습니다.
-
-- `contract-index.md`는 거시 목표, 성공 기준, 범위, 비목표, 보호면, 확정 결정, 열린 질문, 전체 진행 상태를 정의합니다.
-- `contracts/contract-001.md`, `contracts/contract-002.md` 이후 파일은 각각 하나의 bounded subcontract를 담습니다.
-- 각 subcontract는 YAML frontmatter에 `task`, `status`, `knowns`, `unknowns`, `next_step`, `updated_at`을 둡니다.
-- subcontract status 값은 `proposed`, `aligned`, `executing`, `blocked`, `verifying`, `done`입니다.
-- 모든 contract 파일은 500줄 미만으로 유지합니다.
-- 참조는 한 단계 깊이만 둡니다. 긴 배경 설명은 `reference/`에 두고, 프로젝트가 이미 `reference/`를 쓰고 있다면 `contracts/reference/`를 사용합니다.
-- 모든 subcontract가 `done`이고 거시 성공 기준이 검증된 뒤에만 macro contract를 닫습니다.
-
-### Legacy 맥락 파일 포맷
-
-`SOCRATES_CONTEXT.md`의 YAML frontmatter는 현재 `version: 3`를 사용합니다.
-
-- 프로젝트가 아직 `0.x` 단계인 동안에는 이 포맷을 안정적인 호환성 계약으로 보지 않습니다
-- 포맷이 비호환적으로 바뀌면 기존 파일을 조용히 다른 의미로 해석하지 말고 frontmatter 버전을 올립니다
-- `1.0` 전까지는 긴 마이그레이션 체인을 유지하기보다 다음 write 시점에 normalize 또는 rewrite하는 쪽을 우선합니다
-
-로컬 검증 스크립트를 CI와 동일하게 실행하려면 Node `24+`를 사용하세요.
+- 빠른 설치 예시는 재현 가능한 설치를 위해 현재 release tag에 고정합니다
+- `npm run verify:release-assets`는 기본적으로 현재 worktree를 검사합니다
+- `npm run verify:release-assets -- --ref v0.8.0`로 installer asset이 해당 release ref에 모두 들어 있는지 확인할 수 있습니다
+- `0.x` release는 minor version 사이에서도 contract가 바뀔 수 있는 불안정 contract로 봅니다
+- `v0.8.0`은 contract-file state만 유지합니다
 
 ## Contract 파일 동작 방식
+
+오래 이어질 multi-step 작업, protected-surface 작업, 또는 handoff가 중요한 작업은 보이는 contract 파일을 사용합니다. 하나의 일관된 검증 경로가 있는 좁고 되돌리기 쉬운 수정은 구현 파일과 테스트 또는 문서를 함께 건드려도 inline으로 처리할 수 있습니다.
 
 Socrates Contract는 목표에 오래 남길 handoff, protected-surface 계획, context loss 뒤에도 유지되어야 하는 미해결 결정, 또는 여러 독립 문제가 필요할 때 `contract-index.md`와 `contracts/contract-NNN.md`를 제안합니다.
 
 - macro index는 기본적으로 workspace root에 둡니다.
-- 관련 없는 `contract-index.md`, `contracts/`, 또는 `SOCRATES_CONTEXT.md`가 이미 있으면 덮어쓰지 않습니다. 사용자가 위치를 이미 지정하지 않았다면 위치 또는 교체 여부에 관한 질문 하나를 해야 합니다.
-- index는 routing file입니다. 거시 목표, 진행 상태, 결정, 열린 질문, 각 subcontract 경로를 기록합니다.
+- 관련 없는 `contract-index.md` 또는 `contracts/` directory가 이미 있으면 덮어쓰지 않습니다. 사용자가 위치를 이미 지정하지 않았다면 위치 또는 교체 여부에 관한 질문 하나를 해야 합니다.
+- index는 macro goal, 진행 상태, 결정, 열린 질문, 각 subcontract 경로를 기록합니다.
 - subcontract 파일은 `contracts/` 아래에 두며 active task, inputs, completion criteria, mutation plan, verification, work log, result를 담습니다.
 - 한 번에 하나의 subcontract만 active여야 합니다.
-- mutation 전에 active subcontract는 `aligned` 상태이거나 하나의 명시적 사용자 질문에 blocked 상태여야 합니다.
+- mutation 전에 active subcontract는 aligned 상태이거나 하나의 명시적 사용자 질문에 blocked 상태여야 합니다.
 - mutation 뒤에는 가장 좁은 관련 검증부터 실행하고, 필요하면 복구한 뒤에만 subcontract를 `done`으로 표시합니다.
 - subcontract가 `done`, `blocked`, 또는 중요한 scope 변경 상태가 될 때마다 `contract-index.md`를 갱신합니다.
-- 이 보이는 파일 밖에 private state를 저장하지 않습니다.
-
-## Legacy 공유 맥락
-
-이전 Socrates 버전은 여러 턴에 걸친 맥락 유지가 실제로 구현을 바꿀 때 `SOCRATES_CONTEXT.md`를 사용했습니다. 새로운 multi-step 작업은 contract 파일을 우선하지만, hook과 helper는 이 legacy 파일을 계속 지원합니다.
-
-- 파일은 워크스페이스 루트에 둡니다. 가능하면 git repo root를, 아니면 현재 작업 디렉터리를 사용합니다.
-- 이 파일이 유일한 persisted state입니다. 숨김 JSON, archive log, task registry는 두지 않습니다.
-- YAML frontmatter가 canonical machine-readable state입니다.
-- Markdown 본문은 그 상태를 사람이 읽기 좋게 보여주는 렌더링 결과이며 다음 갱신 때 다시 생성될 수 있습니다.
-- `clarifying_phase`는 마지막 assistant 메시지를 추측하지 않고 clarification 상태를 명시적으로 나타냅니다.
-- `clarifying_phase`가 `needs_question`이면 다음 질문을 먼저 하고, 턴을 끝내기 전에 파일을 `awaiting_user_answer`로 다시 써야 합니다.
-- `clarifying_phase`가 `awaiting_user_answer`이면 구현으로 넘어가지 말고 사용자 응답을 기다립니다.
-- 선택적 Stop hook을 켠 경우에도 이 상태를 그대로 강제하며, free-form assistant 문장에서 “이미 질문했는지”를 복원하려 들지 않습니다.
-- Socrates는 임의의 YAML이 아니라 표준 생성 형식의 frontmatter를 기대합니다.
-- Socrates는 YAML frontmatter와 고정 Markdown 섹션을 가진 전체 문서를 매번 통째로 다시 씁니다.
-- 한 번 거절하면 Socrates는 tradeoff를 짧게 설명하고 한 번만 더 묻습니다.
-- 두 번 연속 거부하면 Socrates는 persisted context 없이 진행하고 턴 간 맥락 보장은 없다고 경고합니다.
-- 같은 작업을 가리키는 `SOCRATES_CONTEXT.md`가 이미 있으면 먼저 읽고 계속 갱신합니다.
-- 다른 작업을 가리키는 `SOCRATES_CONTEXT.md`가 이미 있으면 그대로 쓸지, 덮어쓸지 먼저 묻습니다.
-- `ready`는 더 이상 load-bearing unknown이 없고 구현이 아직 시작되지 않았다는 뜻입니다.
-- `executing`은 공유 맥락이 `ready`에 도달한 뒤 구현이 시작됐다는 뜻입니다.
-- inline verification, evaluation, and repair flow는 현재 턴 안에서 처리하고, 그 루프를 파일의 execution micro-state로 기록하지 않습니다.
-- `version: 3`만 canonical runtime 포맷으로 신뢰합니다. legacy `version: 1`, `version: 2` 파일은 hook이 다시 믿기 전에 normalize하거나 삭제해야 합니다.
-- 파일이 손상됐거나 canonical body 섹션이 frontmatter와 어긋나면 canonical version 3 형식으로 정리할지 먼저 묻습니다.
-- `SessionStart` hook이 손상된 persisted context를 보면, 조용히 무시하지 않고 local Socrates context helper와 함께 repair 안내를 assistant에 다시 주입합니다.
-- 자동 정리는 frontmatter 기준으로만 동작합니다. body-only 파일이나 일부만 남은 파일은 진단 후 수동 재작성해야 할 수 있습니다.
-- 이미 있는 파일을 로컬에서 점검하거나 정리하려면 `node scripts/context-doc.mjs doctor --cwd /path/to/workspace` 또는 `node scripts/context-doc.mjs repair --cwd /path/to/workspace`를 실행하면 됩니다.
-- 설치 후에는 같은 helper를 `~/.codex/hooks/socrates_context_doc_helper.mjs`, `~/.claude/hooks/socrates_context_doc_helper.mjs`, 또는 repo-local `.codex/hooks/`, `.claude/hooks/` 아래 경로로도 바로 실행할 수 있습니다.
-- 작업이 성공적으로 끝나면 Socrates가 `SOCRATES_CONTEXT.md`를 자동으로 삭제합니다.
-- 작업이 중단되거나 미완료 상태로 멈추면 문서를 유지할지 삭제할지 묻습니다.
-- 이 기능은 사용자와 공유하는 현재 맥락 문서이지 task manager가 아니라는 점이 중요합니다.
-- 선택적으로 Codex repo hook을 켠 경우에도 세션 시작 시 `SOCRATES_CONTEXT.md`가 이미 있을 때만 맥락을 복구합니다.
-
-파일 형식은 고정입니다:
-
-```md
----
-version: 3
-status: "clarifying"
-task: "..."
-knowns:
-  - "..."
-unknowns:
-  - "..."
-next_question: "..."
-clarifying_phase: "needs_question"
-decisions: []
-updated_at: "2026-03-29T00:00:00.000Z"
----
-
-# Socrates Context
-
-## Task
-...
-
-## What Socrates Knows
-- ...
-
-## What Socrates Still Needs
-- ...
-
-## Next Question
-...
-
-## Fixed Decisions
-- None.
-
-## Status
-clarifying
-```
-
-`status` 값은 `clarifying`, `ready`, `executing` 중 하나만 사용합니다.
-`status`가 `clarifying`일 때 `clarifying_phase` 값은 `needs_question` 또는 `awaiting_user_answer`여야 합니다.
-해결되지 않은 `unknowns`가 남아 있으면 `executing`으로 올리지 않고, 먼저 `ready`에 도달해야 합니다.
-검증 -> 평가 -> 복구 -> 재검증 -> 재평가 루프는 현재 턴 안에서 inline으로 처리하고 파일에 저장하지 않습니다.
+- 모든 subcontract가 `done`이고 macro success criteria가 검증된 뒤에만 macro contract를 닫습니다.
+- contract 파일은 숨은 task manager가 아니라 보이는 user-agent state입니다.
 
 ## 대표 상호작용
 
-```bash
-/socrates-contract "빈 배열이면 0을 반환하는 sum(numbers) 함수를 작성해줘"
-# 바로 구현합니다.
-# contract 파일은 만들지 않습니다.
+```text
+$socrates-contract "write a JavaScript function sum(numbers) that returns 0 for an empty array"
+# 바로 실행합니다. contract 파일을 만들지 않습니다.
 ```
 
-```bash
-/socrates-contract "프로덕션 SaaS용 계정 삭제 API를 설계해줘. GDPR도 맞춰야 하고 안전해야 해."
-# Socrates Contract가 거시 목표, 보호면, 성공 기준, 첫 load-bearing question을 정리합니다.
+```text
+$socrates-contract "Design the account deletion API for our production SaaS. It must be GDPR-compliant and safe."
+# macro goal, protected surfaces, success criteria, 첫 load-bearing question을 정리합니다.
 # 정렬이 끝나면 contract-index.md와 첫 bounded problem용 contracts/contract-001.md를 만듭니다.
 ```
 
-```bash
-/socrates-contract "현재 contract 보여줘"
-# Socrates Contract가 contract-index.md와 active subcontract를 읽고 진행 상태와 blocker를 보여줍니다.
+```text
+$socrates-contract "show the current contract"
+# contract-index.md와 active subcontract를 읽고 진행 상태와 blocker를 보여줍니다.
 ```
 
-```bash
-/socrates-contract "contract 닫아줘"
-# Socrates Contract가 모든 subcontract와 macro success criteria를 검증한 뒤 닫습니다.
+```text
+$socrates-contract "close the contract"
+# 모든 subcontract와 macro success criteria를 검증한 뒤 닫습니다.
 # 작업이 미완료로 멈췄다면 handoff를 위해 보이는 contract 파일을 남깁니다.
 ```
