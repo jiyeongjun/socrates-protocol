@@ -103,7 +103,7 @@ Codex install notes:
 - global installs write the skill to `~/.codex/skills/socrates-contract`
 - repo installs write the skill to `.agents/skills/socrates-contract`
 - the generated `agents/openai.yaml` enables implicit invocation when the host supports it
-- explicit `$socrates-contract` remains the most deterministic way to force the skill
+- explicit `$socrates-contract` remains the most deterministic way to force the skill in Codex
 - install reruns overwrite the Socrates Contract files managed by this installer
 
 ### Claude Code
@@ -131,6 +131,7 @@ Claude install notes:
 - global installs write the skill to `~/.claude/skills/socrates-contract`
 - repo installs write the skill to `.claude/skills/socrates-contract`
 - Claude-only Socrates subagents install to `.claude/agents/` or `~/.claude/agents/`
+- explicit `/socrates-contract` remains the most deterministic way to force the skill in Claude Code or Claude CLI
 - detailed on-demand guidance lives one level deep under `references/`
 - role-based model guidance lives in `model-policy.json`
 - install reruns overwrite the Socrates Contract files managed by this installer

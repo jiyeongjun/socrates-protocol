@@ -103,7 +103,7 @@ Codex 설치 메모:
 - global install은 skill을 `~/.codex/skills/socrates-contract`에 씁니다
 - repo install은 skill을 `.agents/skills/socrates-contract`에 씁니다
 - 생성된 `agents/openai.yaml`은 host가 지원하는 경우 implicit invocation을 켭니다
-- 명시적 `$socrates-contract` 호출이 skill을 강제로 쓰는 가장 결정적인 방법입니다
+- Codex에서는 명시적 `$socrates-contract` 호출이 skill을 강제로 쓰는 가장 결정적인 방법입니다
 - install을 다시 실행하면 이 installer가 관리하는 Socrates Contract 파일을 덮어씁니다
 
 ### Claude Code
@@ -131,6 +131,7 @@ Claude 설치 메모:
 - global install은 skill을 `~/.claude/skills/socrates-contract`에 씁니다
 - repo install은 skill을 `.claude/skills/socrates-contract`에 씁니다
 - Claude 전용 Socrates subagent는 `.claude/agents/` 또는 `~/.claude/agents/`에 설치됩니다
+- Claude Code 또는 Claude CLI에서는 명시적 `/socrates-contract` 호출이 skill을 강제로 쓰는 가장 결정적인 방법입니다
 - 세부 on-demand guidance는 `references/` 아래 한 단계 깊이에 있습니다
 - role-based model guidance는 `model-policy.json`에 있습니다
 - install을 다시 실행하면 이 installer가 관리하는 Socrates Contract 파일을 덮어씁니다

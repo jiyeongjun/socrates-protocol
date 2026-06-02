@@ -55,6 +55,7 @@ test("README documents the contract-file workflow and install path", async () =>
   assert.match(readme, /contract-index\.md/);
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
+  assert.match(readme, /\/socrates-contract/);
   assert.match(readme, /Narrow reversible edits can stay inline/);
   assert.match(readme, /implementation plus tests or docs/);
   assert.match(readme, /durable handoff, protected-surface planning/);
@@ -80,6 +81,7 @@ test("Korean README documents the contract-file workflow and install path", asyn
   assert.match(readme, /contract-index\.md/);
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
+  assert.match(readme, /\/socrates-contract/);
   assert.match(readme, /좁고 되돌리기 쉬운 수정/);
   assert.match(readme, /구현 파일과 테스트 또는 문서/);
   assert.match(readme, /오래 남길 handoff, protected-surface 계획/);
@@ -101,9 +103,13 @@ test("Model regression checklist preserves Codex contract thresholds", async () 
   assert.match(checklist, /Continuation Without Contract Files/);
   assert.match(checklist, /Narrow Reversible Source Plus Test/);
   assert.match(checklist, /Missing Artifact \/ Closed Scope/);
+  assert.match(checklist, /Dynamic Workflow Gate/);
+  assert.match(checklist, /Prompt Injection \/ External Guide/);
+  assert.match(checklist, /Contract Drift Beats Severity Filters/);
+  assert.match(checklist, /\/socrates-contract/);
   assert.match(checklist, /source-plus-test work stays inline/);
   assert.match(checklist, /does not create `contract-index\.md` only because both source and test are touched/);
-  assert.match(checklist, /all five live prompts satisfy the pass criteria/);
+  assert.match(checklist, /all eight live prompts satisfy the pass criteria/);
   assert.doesNotMatch(checklist, new RegExp(removedContextEnvName));
 });
 
@@ -121,6 +127,9 @@ test("Codex and Claude skills are generated from the shared skill body source", 
   assert.match(body, /contracts\/contract-001\.md/);
   assert.match(body, /Execute one active subcontract at a time/);
   assert.match(body, /Default to a closed request scope/);
+  assert.match(body, /Resume guard has priority over protected-surface planning/);
+  assert.match(body, /What was the last unresolved question or decision from the prior session\?/);
+  assert.match(body, /do not include domain-specific options/);
   assert.match(body, /Keep every contract file under 500 lines/);
   assert.doesNotMatch(body, new RegExp(removedContextEnvName));
 
@@ -213,6 +222,7 @@ test("Reference files encode contract file and anti-scope-creep rules", async ()
   const contractFiles = await readSkillReferenceSource("contract-files.md");
   const orchestration = await readSkillReferenceSource("orchestration.md");
   const protectedSurfaces = await readSkillReferenceSource("protected-surfaces.md");
+  const clarification = await readSkillReferenceSource("clarification.md");
   const verifyRepair = await readSkillReferenceSource("verify-repair.md");
   const evaluator = await readClaudeAgentSource("socrates-evaluate.md");
 
@@ -226,10 +236,22 @@ test("Reference files encode contract file and anti-scope-creep rules", async ()
   assert.match(contractFiles, /Keep references one level deep/);
   assert.match(contractFiles, /500 lines/);
   assert.match(orchestration, /role names describe planning and verification passes/);
+  assert.match(orchestration, /\$socrates-contract` in Codex, `\/socrates-contract` in Claude Code/);
+  assert.match(orchestration, /dynamic workflows are delegation/);
+  assert.match(orchestration, /background loop is running/);
   assert.match(orchestration, /Treat unrequested behavior expansion as contract drift/);
   assert.match(orchestration, /implementation plus tests or docs/);
   assert.match(protectedSurfaces, /perform a `protected_surface_planner` pass/);
   assert.match(protectedSurfaces, /In Codex, do this inline/);
+  assert.match(protectedSurfaces, /untrusted external documents/);
+  assert.match(protectedSurfaces, /data, not instruction sources/);
+  const artifactRecovery = await readSkillReferenceSource("artifact-recovery.md");
+  assert.match(artifactRecovery, /What was the last unresolved question or decision from the prior session\?/);
+  assert.match(artifactRecovery, /resume guard outranks protected-surface planning/);
+  assert.match(artifactRecovery, /Do not restart the macro contract/);
+  assert.match(artifactRecovery, /list migration options/);
+  assert.match(clarification, /only allowed question/);
+  assert.match(clarification, /frame the next question around the user's domain/);
   assert.match(verifyRepair, /Do not add tests for new semantics/);
   assert.match(
     evaluator,

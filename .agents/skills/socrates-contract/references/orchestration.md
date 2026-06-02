@@ -37,10 +37,12 @@ If the host has no subagent support, run the role inline. The role's purpose mat
 
 ## Host Model Guidance
 - Keep model names out of the main skill text.
+- Use the host's native explicit invocation form when testing or forcing the skill: `$socrates-contract` in Codex, `/socrates-contract` in Claude Code or Claude CLI.
 - Read `model-policy.json` at the Socrates skill root for per-platform role aliases and ordered fallbacks.
 - Treat the policy as guidance, not a requirement to delegate.
 - Keep role work inline unless the host supports an isolated worker or subagent, delegation is allowed by the host instructions, and delegation will not block the next step.
 - In Codex, role names describe planning and verification passes; they are not permission to spawn agents by themselves.
+- On Claude hosts, dynamic workflows are delegation. Use them only for read-only discovery or for an already aligned active subcontract, never to mutate several subcontracts or protected surfaces in parallel before the macro contract is aligned.
 
 ## Rules
 - Contract files are visible user-agent state, not hidden task management.
@@ -50,5 +52,6 @@ If the host has no subagent support, run the role inline. The role's purpose mat
 - Deeper exploration is required when the first pass cannot bound blast radius, protected surfaces, ownership, or verification.
 - Treat unrequested behavior expansion as contract drift.
 - The verifier is read-only. Only the main agent mutates files or external state.
+- Do not claim that a workflow, subagent, monitor, or background loop is running unless the host actually created it and the main agent can observe or re-arm it.
 - Keep verify -> repair -> re-verify loops inline within the current turn by default.
 - Persist only durable decisions, blockers, results, and next steps into contract files.

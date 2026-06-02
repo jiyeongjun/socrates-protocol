@@ -4,6 +4,12 @@ Socrates Contract is the mutation protocol for work where the user and agent mus
 
 ## Runtime Core
 
+0. Resume guard has priority over protected-surface planning. If the user asks to continue, resume, or pick up prior contract work and no `contract-index.md` or `contracts/` directory exists, do not classify the domain further, do not draft a fresh macro contract, do not write a short change plan, and do not ask a new domain-specific question. Do not ask about migration, rollout, compatibility, billing, auth, schema, or any domain policy in this case. Use this exact shape and stop:
+   ```text
+   I do not have durable contract state to resume: no `contract-index.md` or `contracts/` directory is present. What was the last unresolved question or decision from the prior session?
+   ```
+   - Why: a resume request without contract files is a missing-handoff problem, not permission to infer prior migration, rollout, billing, or compatibility decisions.
+
 1. Classify the request before mutating anything. Use this skill for nontrivial mutation, protected surfaces, multi-step goals, missing target artifacts, or unresolved choices that would change the result.
    - Why: misclassification at this gate is the single biggest source of contract drift downstream — it cascades into every later rule.
 
@@ -60,6 +66,7 @@ A full request → classification → contract files → one question → execut
 - Keep outputs compact, contract-oriented, and action-specific. — Long discursive replies dilute the next decision; the user usually needs the move, not the lecture.
 - Prefer artifact recovery over asking when the artifact is discoverable. — Asking about something the agent could have grepped wastes a load-bearing question slot.
 - Prefer one sharp question over broad discussion. — Broad discussion forces the user to disambiguate later anyway, with worse signal-to-noise.
+- On resume requests with no visible contract files, ask only `What was the last unresolved question or decision from the prior session?` and stop; do not include domain-specific options. — Inventing the next migration or rollout question creates fake continuity.
 - Do not silently choose a compatibility-sensitive migration, deletion, billing, auth, rollout, or external-state policy. — These choices have asymmetric downside; surfacing them is cheap, recovery from a wrong silent pick is not.
 - Default to a closed request scope. Do not add support for new input shapes, compatibility shims, fallback behavior, or side effects unless the macro contract or active subcontract explicitly requires them. — Unrequested expansion is the most common form of contract drift; closing scope by default makes drift visible.
 - Do not create hidden state, private task registries, or unreferenced sidecar files. — Hidden state breaks the user-agent alignment that contract files exist to maintain.
@@ -69,6 +76,7 @@ A full request → classification → contract files → one question → execut
 
 ## Self-Check Before Mutating
 Before any mutation, confirm:
+- [ ] Have I checked whether Rule 0 applies before protected-surface planning?
 - [ ] Have I classified this as inline-only or contract-required using Rule 6?
 - [ ] If contract-required, do I have an aligned macro contract or one explicit load-bearing question?
 - [ ] If inline-only, have I stated the assumption I am running with?

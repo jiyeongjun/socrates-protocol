@@ -1,6 +1,6 @@
 ---
 name: socrates-contract
-description: "Use whenever a user request will mutate files, data, configuration, external systems, or any user-visible state. Default to triggering for any change that crosses more than one verification path, alters persisted or shared state, or hides a load-bearing decision — even when the user did not explicitly ask for \"a contract.\" Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, deployment, environment config, vague preference words like \"elegant\" or \"robust\", and any phrase that names a protected surface (production, rollout, safe). Skip only for read-only explanations, formatting-only edits, single-file low-risk single-step changes the user explicitly scoped, and pure conversational replies."
+description: "Use whenever a user request will mutate files, data, configuration, external systems, or any user-visible state. Before all other handling, if a resume/continue request has no contract files, output only that durable state is missing plus the exact question: What was the last unresolved question or decision from the prior session? Default to triggering for any change that crosses more than one verification path, alters persisted or shared state, or hides a load-bearing decision — even when the user did not explicitly ask for \"a contract.\" Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, deployment, environment config, vague preference words like \"elegant\" or \"robust\", and any phrase that names a protected surface (production, rollout, safe). Skip only for read-only explanations, formatting-only edits, single-file low-risk single-step changes the user explicitly scoped, and pure conversational replies."
 ---
 
 # Socrates Contract Protocol
@@ -8,6 +8,12 @@ description: "Use whenever a user request will mutate files, data, configuration
 Socrates Contract is the mutation protocol for work where the user and agent must agree on the goal before changing files, data, settings, external systems, or other user-visible state. It exists because the most common failure mode of an autonomous agent is silent scope drift — quietly expanding what the user asked for, picking a compatibility strategy without saying, or shipping an irreversible side effect without alignment.
 
 ## Runtime Core
+
+0. Resume guard has priority over protected-surface planning. If the user asks to continue, resume, or pick up prior contract work and no `contract-index.md` or `contracts/` directory exists, do not classify the domain further, do not draft a fresh macro contract, do not write a short change plan, and do not ask a new domain-specific question. Do not ask about migration, rollout, compatibility, billing, auth, schema, or any domain policy in this case. Use this exact shape and stop:
+   ```text
+   I do not have durable contract state to resume: no `contract-index.md` or `contracts/` directory is present. What was the last unresolved question or decision from the prior session?
+   ```
+   - Why: a resume request without contract files is a missing-handoff problem, not permission to infer prior migration, rollout, billing, or compatibility decisions.
 
 1. Classify the request before mutating anything. Use this skill for nontrivial mutation, protected surfaces, multi-step goals, missing target artifacts, or unresolved choices that would change the result.
    - Why: misclassification at this gate is the single biggest source of contract drift downstream — it cascades into every later rule.
@@ -65,6 +71,7 @@ A full request → classification → contract files → one question → execut
 - Keep outputs compact, contract-oriented, and action-specific. — Long discursive replies dilute the next decision; the user usually needs the move, not the lecture.
 - Prefer artifact recovery over asking when the artifact is discoverable. — Asking about something the agent could have grepped wastes a load-bearing question slot.
 - Prefer one sharp question over broad discussion. — Broad discussion forces the user to disambiguate later anyway, with worse signal-to-noise.
+- On resume requests with no visible contract files, ask only `What was the last unresolved question or decision from the prior session?` and stop; do not include domain-specific options. — Inventing the next migration or rollout question creates fake continuity.
 - Do not silently choose a compatibility-sensitive migration, deletion, billing, auth, rollout, or external-state policy. — These choices have asymmetric downside; surfacing them is cheap, recovery from a wrong silent pick is not.
 - Default to a closed request scope. Do not add support for new input shapes, compatibility shims, fallback behavior, or side effects unless the macro contract or active subcontract explicitly requires them. — Unrequested expansion is the most common form of contract drift; closing scope by default makes drift visible.
 - Do not create hidden state, private task registries, or unreferenced sidecar files. — Hidden state breaks the user-agent alignment that contract files exist to maintain.
@@ -74,6 +81,7 @@ A full request → classification → contract files → one question → execut
 
 ## Self-Check Before Mutating
 Before any mutation, confirm:
+- [ ] Have I checked whether Rule 0 applies before protected-surface planning?
 - [ ] Have I classified this as inline-only or contract-required using Rule 6?
 - [ ] If contract-required, do I have an aligned macro contract or one explicit load-bearing question?
 - [ ] If inline-only, have I stated the assumption I am running with?

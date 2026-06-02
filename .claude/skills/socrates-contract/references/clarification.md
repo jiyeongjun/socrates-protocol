@@ -10,3 +10,4 @@ Use this only when one unresolved point would materially change the implementati
 - Stop after the question.
 - Do not append fallback offers, restart options, or "I can also..." language after the question unless the user explicitly asked for alternatives.
 - For low-risk local work, if a behavior-preserving or clearly reversible default is obvious, state the assumption in one sentence and proceed.
+- On resume requests with no `contract-index.md` or `contracts/` directory, the only allowed question is `What was the last unresolved question or decision from the prior session?`. Do not ask a fresh domain-specific protected-surface question, list migration options, or frame the next question around the user's domain.
