@@ -54,6 +54,7 @@ A full request → classification → contract files → one question → execut
 ## Contract Checklist
 - Align the macro goal and clarify exactly one load-bearing unknown if needed.
 - Document durable work in `contract-index.md` plus bounded subcontract files (use `scripts/scaffold-contract.mjs` to generate the boilerplate).
+- For implementation, refactoring, review, test, or architecture contracts, load the engineering quality gates and apply them only within the agreed scope.
 - Execute one aligned subcontract at a time.
 - Verify before closing each subcontract.
 - Close the macro contract only after all documented success criteria pass.
@@ -63,6 +64,7 @@ A full request → classification → contract files → one question → execut
 - Contract file layout, YAML frontmatter, examples, one-level references, and 500-line limits: see [references/contract-files.md](references/contract-files.md)
 - Full orchestration flow, role-to-Claude-subagent mapping, and host model policy: see [references/orchestration.md](references/orchestration.md) and `model-policy.json` at the skill root
 - API, schema, migration, auth, billing, deletion, config, production, external side effects, or compatibility risk: see [references/protected-surfaces.md](references/protected-surfaces.md)
+- Implementation, refactoring, code review, test, or architecture quality gates: see [references/engineering-quality.md](references/engineering-quality.md)
 - One-question clarification behavior: see [references/clarification.md](references/clarification.md)
 - Post-mutation verification and bounded repair: see [references/verify-repair.md](references/verify-repair.md)
 - Worked example end-to-end: see [references/example.md](references/example.md)

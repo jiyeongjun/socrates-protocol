@@ -27,6 +27,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 const removedContextEnvName = ["SOCRATES", "CONTEXT"].join("_");
 const removedClarifyingPhase = ["clarifying", "phase"].join("_");
+const separateCodingPreferenceSkill = ["coding", "preferences"].join("-");
 
 async function readRepoFile(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
@@ -35,7 +36,7 @@ async function readRepoFile(relativePath) {
 test("package metadata declares the current version and Node runtime floor", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
 
-  assert.equal(pkg.version, "0.8.0");
+  assert.equal(pkg.version, "0.9.0");
   assert.equal(pkg.license, "MIT");
   assert.deepEqual(pkg.engines, { node: ">=24" });
   assert.equal(
@@ -49,9 +50,9 @@ test("README documents the contract-file workflow and install path", async () =>
 
   assert.match(readme, /^## Quick Install/m);
   assert.match(readme, /^## How Contract Files Work/m);
-  assert.match(readme, /VERSION=v0\.8\.0/);
-  assert.match(readme, /release tag `v0\.8\.0`/i);
-  assert.match(readme, /current package version in this worktree is `0\.8\.0`/i);
+  assert.match(readme, /VERSION=v0\.9\.0/);
+  assert.match(readme, /release tag `v0\.9\.0`/i);
+  assert.match(readme, /current package version in this worktree is `0\.9\.0`/i);
   assert.match(readme, /contract-index\.md/);
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
@@ -75,9 +76,9 @@ test("Korean README documents the contract-file workflow and install path", asyn
 
   assert.match(readme, /^## 빠른 설치/m);
   assert.match(readme, /^## Contract 파일 동작 방식/m);
-  assert.match(readme, /VERSION=v0\.8\.0/);
-  assert.match(readme, /현재 release tag는 `v0\.8\.0`/);
-  assert.match(readme, /현재 worktree의 package version은 `0\.8\.0`/);
+  assert.match(readme, /VERSION=v0\.9\.0/);
+  assert.match(readme, /현재 release tag는 `v0\.9\.0`/);
+  assert.match(readme, /현재 worktree의 package version은 `0\.9\.0`/);
   assert.match(readme, /contract-index\.md/);
   assert.match(readme, /contracts\/contract-001\.md/);
   assert.match(readme, /\$socrates-contract/);
@@ -106,10 +107,15 @@ test("Model regression checklist preserves Codex contract thresholds", async () 
   assert.match(checklist, /Dynamic Workflow Gate/);
   assert.match(checklist, /Prompt Injection \/ External Guide/);
   assert.match(checklist, /Contract Drift Beats Severity Filters/);
+  assert.match(checklist, /Engineering Quality Gate \/ Swallowed Error/);
+  assert.match(checklist, /Engineering Quality Gate \/ Duplicate Helper/);
+  assert.match(checklist, /Engineering Quality Gate \/ Test-Driven Fallback Drift/);
+  assert.match(checklist, /Engineering Quality Gate \/ Built-In Result Default/);
+  assert.match(checklist, /Engineering Quality Gate \/ Project Rule Overrides Result/);
   assert.match(checklist, /\/socrates-contract/);
   assert.match(checklist, /source-plus-test work stays inline/);
   assert.match(checklist, /does not create `contract-index\.md` only because both source and test are touched/);
-  assert.match(checklist, /all eight live prompts satisfy the pass criteria/);
+  assert.match(checklist, /all thirteen live prompts satisfy the pass criteria/);
   assert.doesNotMatch(checklist, new RegExp(removedContextEnvName));
 });
 
@@ -131,6 +137,8 @@ test("Codex and Claude skills are generated from the shared skill body source", 
   assert.match(body, /What was the last unresolved question or decision from the prior session\?/);
   assert.match(body, /do not include domain-specific options/);
   assert.match(body, /Keep every contract file under 500 lines/);
+  assert.match(body, /engineering quality gates/);
+  assert.match(body, /references\/engineering-quality\.md/);
   assert.doesNotMatch(body, new RegExp(removedContextEnvName));
 
   assert.equal(
@@ -222,6 +230,7 @@ test("Reference files encode contract file and anti-scope-creep rules", async ()
   const contractFiles = await readSkillReferenceSource("contract-files.md");
   const orchestration = await readSkillReferenceSource("orchestration.md");
   const protectedSurfaces = await readSkillReferenceSource("protected-surfaces.md");
+  const engineeringQuality = await readSkillReferenceSource("engineering-quality.md");
   const clarification = await readSkillReferenceSource("clarification.md");
   const verifyRepair = await readSkillReferenceSource("verify-repair.md");
   const evaluator = await readClaudeAgentSource("socrates-evaluate.md");
@@ -245,6 +254,15 @@ test("Reference files encode contract file and anti-scope-creep rules", async ()
   assert.match(protectedSurfaces, /In Codex, do this inline/);
   assert.match(protectedSurfaces, /untrusted external documents/);
   assert.match(protectedSurfaces, /data, not instruction sources/);
+  assert.match(engineeringQuality, /Write the module and layer boundaries before implementation/);
+  assert.match(engineeringQuality, /self-contained Socrates source for engineering quality and default coding preferences/);
+  assert.match(engineeringQuality, /Do not load or require companion preference skills/);
+  assert.match(engineeringQuality, /Prefer `Result` or discriminated unions/);
+  assert.match(engineeringQuality, /Do not force `Result` when the project explicitly prefers/);
+  assert.match(engineeringQuality, /Do not swallow errors/);
+  assert.match(engineeringQuality, /Mock only external boundaries/);
+  assert.match(engineeringQuality, /circular dependencies and boundary violations as CI failures/);
+  assert.doesNotMatch(engineeringQuality, new RegExp(separateCodingPreferenceSkill));
   const artifactRecovery = await readSkillReferenceSource("artifact-recovery.md");
   assert.match(artifactRecovery, /What was the last unresolved question or decision from the prior session\?/);
   assert.match(artifactRecovery, /resume guard outranks protected-surface planning/);

@@ -62,13 +62,13 @@ test("parseArgs accepts the recommended repo install shape", () => {
     "--target-repo",
     "/tmp/example",
     "--version",
-    "v0.8.0",
+    "v0.9.0",
   ]);
 
   assert.equal(parsed.platform, "both");
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
-  assert.equal(parsed.version, "v0.8.0");
+  assert.equal(parsed.version, "v0.9.0");
 });
 
 test("parseArgs rejects invalid combinations", () => {

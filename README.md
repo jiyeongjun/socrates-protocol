@@ -74,7 +74,7 @@ It is most effective when:
 
 ## Quick Install
 
-These examples target release tag `v0.8.0`. If you are reading this worktree before that tag is pushed, run the checked-out repo's `scripts/install.mjs` directly. The current package version in this worktree is `0.8.0`.
+These examples target release tag `v0.9.0`. If you are reading this worktree before that tag is pushed, run the checked-out repo's `scripts/install.mjs` directly. The current package version in this worktree is `0.9.0`.
 
 The installer requires Node `24+`.
 
@@ -83,19 +83,19 @@ The installer requires Node `24+`.
 Recommended global install:
 
 ```bash
-VERSION=v0.8.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION"
+VERSION=v0.9.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION"
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.8.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.9.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.8.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.9.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
 ```
 
 Codex install notes:
@@ -111,19 +111,19 @@ Codex install notes:
 Recommended global install:
 
 ```bash
-VERSION=v0.8.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
+VERSION=v0.9.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
 ```
 
 Install into a repository:
 
 ```bash
-VERSION=v0.8.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.9.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.8.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.9.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
 ```
 
 Claude install notes:
@@ -138,13 +138,13 @@ Claude install notes:
 
 ## Versioning
 
-Socrates Contract Protocol uses SemVer-style tags. The current release tag is `v0.8.0`; the current package version in this worktree is `0.8.0`.
+Socrates Contract Protocol uses SemVer-style tags. The current release tag is `v0.9.0`; the current package version in this worktree is `0.9.0`.
 
 - quick-install examples pin to the current release tag for reproducible installs
 - `npm run verify:release-assets` checks the current worktree by default
-- run `npm run verify:release-assets -- --ref v0.8.0` to confirm every installer asset exists in that release ref
+- run `npm run verify:release-assets -- --ref v0.9.0` to confirm every installer asset exists in that release ref
 - treat `0.x` releases as unstable contracts that may still change between minor versions
-- `v0.8.0` keeps only contract-file state
+- `v0.9.0` keeps only contract-file state
 
 ## How Contract Files Work
 

@@ -74,7 +74,7 @@ Socrates Contract는 ambiguity가 load-bearing인지 판단할 때 여전히 모
 
 ## 빠른 설치
 
-아래 예시는 release tag `v0.8.0` 기준입니다. 이 tag가 아직 push되기 전 worktree를 보고 있다면 checkout된 repo의 `scripts/install.mjs`를 직접 실행하세요. 현재 worktree의 package version은 `0.8.0`입니다.
+아래 예시는 release tag `v0.9.0` 기준입니다. 이 tag가 아직 push되기 전 worktree를 보고 있다면 checkout된 repo의 `scripts/install.mjs`를 직접 실행하세요. 현재 worktree의 package version은 `0.9.0`입니다.
 
 설치기는 Node `24+`가 필요합니다.
 
@@ -83,19 +83,19 @@ Socrates Contract는 ambiguity가 load-bearing인지 판단할 때 여전히 모
 권장 global install:
 
 ```bash
-VERSION=v0.8.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION"
+VERSION=v0.9.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope global --version "$VERSION"
 ```
 
 repo에 설치:
 
 ```bash
-VERSION=v0.8.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.9.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform codex --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 삭제:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.8.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.9.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform codex --scope global
 ```
 
 Codex 설치 메모:
@@ -111,19 +111,19 @@ Codex 설치 메모:
 권장 global install:
 
 ```bash
-VERSION=v0.8.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
+VERSION=v0.9.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope global --version "$VERSION"
 ```
 
 repo에 설치:
 
 ```bash
-VERSION=v0.8.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.9.0 && TARGET_REPO=/absolute/path/to/your/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform claude --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 삭제:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.8.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.9.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform claude --scope global
 ```
 
 Claude 설치 메모:
@@ -138,13 +138,13 @@ Claude 설치 메모:
 
 ## 버전 정책
 
-Socrates Contract Protocol은 SemVer 스타일 tag를 사용합니다. 현재 release tag는 `v0.8.0`이고, 현재 worktree의 package version은 `0.8.0`입니다.
+Socrates Contract Protocol은 SemVer 스타일 tag를 사용합니다. 현재 release tag는 `v0.9.0`이고, 현재 worktree의 package version은 `0.9.0`입니다.
 
 - 빠른 설치 예시는 재현 가능한 설치를 위해 현재 release tag에 고정합니다
 - `npm run verify:release-assets`는 기본적으로 현재 worktree를 검사합니다
-- `npm run verify:release-assets -- --ref v0.8.0`로 installer asset이 해당 release ref에 모두 들어 있는지 확인할 수 있습니다
+- `npm run verify:release-assets -- --ref v0.9.0`로 installer asset이 해당 release ref에 모두 들어 있는지 확인할 수 있습니다
 - `0.x` release는 minor version 사이에서도 contract가 바뀔 수 있는 불안정 contract로 봅니다
-- `v0.8.0`은 contract-file state만 유지합니다
+- `v0.9.0`은 contract-file state만 유지합니다
 
 ## Contract 파일 동작 방식
 
