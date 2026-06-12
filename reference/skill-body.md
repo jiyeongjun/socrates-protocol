@@ -13,34 +13,37 @@ Socrates Contract is the mutation protocol for work where the user and agent mus
 1. Classify the request before mutating anything. Use this skill for nontrivial mutation, protected surfaces, multi-step goals, missing target artifacts, or unresolved choices that would change the result.
    - Why: misclassification at this gate is the single biggest source of contract drift downstream — it cascades into every later rule.
 
-2. Skip the contract ceremony for read-only explanations, formatting-only work, and explicit low-risk single-step edits. For those, state any narrow assumption, execute, and verify.
+2. For implementation, refactoring, review, test, or architecture work, load [references/engineering-quality.md](references/engineering-quality.md) before choosing the mutation path. If the request asks for silent fallbacks, duplicate helpers, broad compatibility shims, or production-code changes only to satisfy a test, treat that as a possible hidden contract and clarify before mutating.
+   - Why: quality failures usually happen before code is written — when the agent accepts a bad premise, creates a second source of truth, or lets a test redefine production behavior silently.
+
+3. Skip the contract ceremony for read-only explanations, formatting-only work, and explicit low-risk single-step edits. For those, state any narrow assumption, execute, and verify.
    - Why: ceremony on trivial work burns user trust and slows delivery. Reserve the protocol for cases where misalignment would actually hurt.
 
-3. Tie-breaker for ambiguous cases. When you are unsure whether to trigger, prefer to skip and state your assumption in one sentence. If the first verification reveals risk (touches a protected surface, exposes a hidden decision, or affects more than one verification path), escalate to a contract before continuing.
+4. Tie-breaker for ambiguous cases. When you are unsure whether to trigger, prefer to skip and state your assumption in one sentence. If the first verification reveals risk (touches a protected surface, exposes a hidden decision, or affects more than one verification path), escalate to a contract before continuing.
    - Why: forcing every borderline case into ceremony makes the agent timid; verification is a cheap second filter that catches missed cases without paying alignment cost on safe ones.
 
-4. For Socrates-triggered work, align the macro contract first: goal, current state, success criteria, scope, non-goals, protected surfaces, risks, verification path, and unresolved questions.
+5. For Socrates-triggered work, align the macro contract first: goal, current state, success criteria, scope, non-goals, protected surfaces, risks, verification path, and unresolved questions.
    - Why: the macro contract is the artifact the user and agent hold each other to. Without it, "done" has no shared definition.
 
-5. If one unresolved point would materially change the macro contract or any mutation path, ask exactly one load-bearing question and stop.
+6. If one unresolved point would materially change the macro contract or any mutation path, ask exactly one load-bearing question and stop.
    - Why: stacking three questions at once forces the user to context-switch on all of them and usually returns shallow answers; one sharp question gets a real answer.
 
-6. Do not perform the real mutation until the macro contract is explicit enough that the user and agent would choose the same next action. If the goal requires multiple independent problems, multiple turns, protected-surface planning, durable handoff, or unresolved decisions that must survive context loss, create visible contract files instead of one large context file. Keep narrow, reversible work inline when it has one coherent verification path, even when it touches both implementation and verification artifacts. Use `contract-index.md` at the workspace root and `contracts/contract-001.md`, `contracts/contract-002.md`, etc. To scaffold these files quickly, run `node scripts/scaffold-contract.mjs "<one-line macro goal>"` from the workspace root. See [references/contract-files.md](references/contract-files.md).
+7. Do not perform the real mutation until the macro contract is explicit enough that the user and agent would choose the same next action. If the goal requires multiple independent problems, multiple turns, protected-surface planning, durable handoff, or unresolved decisions that must survive context loss, create visible contract files instead of one large context file. Keep narrow, reversible work inline when it has one coherent verification path, even when it touches both implementation and verification artifacts. Use `contract-index.md` at the workspace root and `contracts/contract-001.md`, `contracts/contract-002.md`, etc. To scaffold these files quickly, run `node scripts/scaffold-contract.mjs "<one-line macro goal>"` from the workspace root. See [references/contract-files.md](references/contract-files.md).
    - Why: agents tend to treat "small change" subjectively; an objective rule (one coherent verification path = inline; broader = contract files) prevents both over-ceremonialization and silent multi-file drift.
 
-7. Decompose the macro contract into the fewest useful subcontracts. Each subcontract must have a clear task, inputs, completion criteria, unknowns, next step, and verification method.
+8. Decompose the macro contract into the fewest useful subcontracts. Each subcontract must have a clear task, inputs, completion criteria, unknowns, next step, and verification method.
    - Why: subcontracts are the unit of verification. Too many = ceremony tax; too few = unverifiable lump.
 
-8. Execute one active subcontract at a time. Mutate only `contract-index.md`, the active subcontract file, and the direct implementation or verification artifacts needed for that subcontract. Read-only exploration of related code or documents is allowed and encouraged.
+9. Execute one active subcontract at a time. Mutate only `contract-index.md`, the active subcontract file, and the direct implementation or verification artifacts needed for that subcontract. Read-only exploration of related code or documents is allowed and encouraged.
    - Why: parallel mutation across subcontracts hides failure causes and turns rollback into a multi-axis problem.
 
-9. After each subcontract mutation, run the narrowest relevant verification first, repair if needed, re-verify, then mark that subcontract complete only when its completion criteria are satisfied.
+10. After each subcontract mutation, run the narrowest relevant verification first, repair if needed, re-verify, then mark that subcontract complete only when its completion criteria are satisfied.
    - Why: deferring verification means you accumulate untrusted state; tight verification keeps the recovery point close to the failure.
 
-10. After every completed subcontract, update `contract-index.md` with status, decisions, remaining unknowns, and the next active subcontract.
+11. After every completed subcontract, update `contract-index.md` with status, decisions, remaining unknowns, and the next active subcontract.
     - Why: the index is the durable handoff. If it lags, anyone (including you in a later turn) reads stale state and acts on it.
 
-11. When all subcontracts are complete, verify the macro contract itself. Close the macro contract only when the documented success criteria are met or explicitly renegotiated with the user.
+12. When all subcontracts are complete, verify the macro contract itself. Close the macro contract only when the documented success criteria are met or explicitly renegotiated with the user.
     - Why: subcontract success does not imply macro success — emergent failures show up only when the pieces meet.
 
 ## Worked Example
@@ -79,7 +82,8 @@ A full request → classification → contract files → one question → execut
 ## Self-Check Before Mutating
 Before any mutation, confirm:
 - [ ] Have I checked whether Rule 0 applies before protected-surface planning?
-- [ ] Have I classified this as inline-only or contract-required using Rule 6?
+- [ ] Have I loaded engineering quality gates before implementation, refactoring, review, test, or architecture mutation?
+- [ ] Have I classified this as inline-only or contract-required using Rule 7?
 - [ ] If contract-required, do I have an aligned macro contract or one explicit load-bearing question?
 - [ ] If inline-only, have I stated the assumption I am running with?
 - [ ] Have I named the verification command or inspection that will prove the change?

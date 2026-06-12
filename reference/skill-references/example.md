@@ -7,7 +7,7 @@ The user opens a project and writes:
 
 > "We need to rename `plan_tier` to `billing_tier` across the codebase. It's persisted, used in the API, in two services, and in the dashboard."
 
-This is a persisted-field rename across multiple surfaces. Rule 6's threshold fails on every leg: more than one coherent verification path, more than one decision, and the change crosses a protected surface. Contract files are required.
+This is a persisted-field rename across multiple surfaces. Rule 7's threshold fails on every leg: more than one coherent verification path, more than one decision, and the change crosses a protected surface. Contract files are required.
 
 ## Classification
 Triggered by:
@@ -54,7 +54,7 @@ A separate later contract (out of scope here) handles `plan_tier` removal after 
 ## Execution and Verification
 Subcontract 001 moves to `executing`, the migration is written, the migration test runs, and on green the subcontract moves to `done`. `contract-index.md` is updated. Subcontract 002 moves to `executing`. The loop continues until 004 closes.
 
-If a check fails, the agent repairs and re-runs the narrowest check (Rule 9). After two failed repairs, the agent stops, marks the subcontract `blocked`, surfaces the blocker as one question, and waits.
+If a check fails, the agent repairs and re-runs the narrowest check (Rule 10). After two failed repairs, the agent stops, marks the subcontract `blocked`, surfaces the blocker as one question, and waits.
 
 ## Closure
 With all four subcontracts `done`, the agent re-reads the macro success criteria and confirms each one against the diff and test output. The macro contract closes. The agent reports:
@@ -68,6 +68,6 @@ With all four subcontracts `done`, the agent re-reads the macro success criteria
 - Macro success is verified explicitly. The agent did not assume that four green subcontracts mean the macro is done. It re-checked each macro success criterion against the actual diff and test output.
 
 ## Counter-Example: When Not To Do This
-If the user instead said "fix the typo in `plan_tier` — should be `plan_tire`" in a single migration file, that is a single-file, single-test, reversible change with one coherent verification path. Rule 2 sends it inline: state the assumption ("editing migration file X.sql, line 12, replacing `plan_tier` → `plan_tire`"), apply the edit, run the migration test, report. No contract files. Forcing ceremony there would waste the user's time.
+If the user instead said "fix the typo in `plan_tier` — should be `plan_tire`" in a single migration file, that is a single-file, single-test, reversible change with one coherent verification path. Rule 3 sends it inline: state the assumption ("editing migration file X.sql, line 12, replacing `plan_tier` → `plan_tire`"), apply the edit, run the migration test, report. No contract files. Forcing ceremony there would waste the user's time.
 
-A near miss: if the user said "rename `plan_tier` to `plan_tire` — it's persisted but only in tests, not yet in any release," Rule 3 (tie-breaker) applies. State the assumption ("treating this as test-only because it has not shipped, single coherent verification path = the touched test files compile and pass"), proceed. If the verification reveals a leaked production reference, Rule 3's escalation kicks in and the work moves to a contract.
+A near miss: if the user said "rename `plan_tier` to `plan_tire` — it's persisted but only in tests, not yet in any release," Rule 4 (tie-breaker) applies. State the assumption ("treating this as test-only because it has not shipped, single coherent verification path = the touched test files compile and pass"), proceed. If the verification reveals a leaked production reference, Rule 4's escalation kicks in and the work moves to a contract.
