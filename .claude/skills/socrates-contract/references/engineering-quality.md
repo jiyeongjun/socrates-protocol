@@ -15,6 +15,9 @@ Use these gates when the macro contract or active subcontract includes implement
 - Prefer mechanical enforcement for dependency boundaries and cycles when the repository already has lint, dependency-cruiser, project references, or equivalent CI checks. If enforcement is absent, record the gap instead of silently adding new tooling.
 - Identify the single source of truth for shared utilities, types, shapes, schemas, and DTOs before creating another one.
 - Keep directory hierarchy aligned with domain and layer boundaries so dependency direction is visible from the tree.
+- Split interfaces from implementations at IO, vendor, storage, queue, crypto, payment, auth, or framework boundaries where replacement, mocking, or failure isolation is a real concern.
+- Do not introduce an interface, base class, strategy layer, or OCP extension point only because a change might happen later. Prefer a closed union, exhaustive handler map, or plain function until the changing axis is visible.
+- Treat sync-to-async flow changes, new queues, new service boundaries, and cross-system state moves as contract-level behavior changes, not implementation details.
 
 ## Implementation Gates
 
@@ -28,17 +31,43 @@ Use these gates when the macro contract or active subcontract includes implement
 - Respect existing function and file size caps. If the repo has no caps, keep new code small and call out large touched functions or files as risk instead of expanding them casually.
 - Before writing code, name the edge and failure cases that should anchor verification: empty input, nullish input, boundary values, concurrency, failed dependencies, and side effects.
 - Search for an existing function, helper, type, shape, or schema before creating a new one.
+- When touching adjacent flawed code, fix only the issue that blocks the active verification path. Record broader cleanup as out of scope unless the contract explicitly expands.
 
 ## Type And Error Defaults
 
 - Prefer strict but pragmatic compile-time types: literal unions, enums where local convention supports them, branded types, staged `Input -> Normalized -> Domain` types, and exhaustive `Record` or `switch` plus `never` checks.
 - Avoid type puzzles. Use generics, conditional types, and wide discriminated unions only when they reduce real duplication or catch meaningful bugs.
 - Treat casts as a last resort. Prefer type guards, parsers, constructor functions, or normalizers that convert runtime input into validated types.
+- Use `unknown` rather than `any` at untrusted IO boundaries, then narrow with a parser, type guard, schema, or normalizer before the value enters domain logic.
+- Treat `any`, `as any`, `as unknown as`, and `Record<string, any>` as signs that a contract is hidden. Replace them with explicit shapes, `unknown` plus narrowing, or a narrowly scoped generic when the local change needs that contract.
+- Use advanced TypeScript features only when they make invalid states unrepresentable or preserve a real relationship between inputs and outputs. Prefer readable unions and helper types over clever conditional-type machinery.
+- Prefer `satisfies`, literal inference, exhaustive `Record<Union, Handler>`, and `never` checks when they catch missing cases without widening public types.
 - Prefer `Result` or discriminated unions for explicit success/failure contracts, especially pure library and domain functions where success and failure are both normal domain values.
 - Do not force `Result` when the project explicitly prefers framework exceptions, thrown errors, or another established failure pattern. Follow the project rule and call out the conflict briefly.
 - In request-facing flows, map `Result` values to the framework's established boundary behavior. If the project convention is NestJS exceptions through filters, interceptors, or transaction boundaries, keep that convention instead of leaking `Result` through controllers or services.
 - In request-facing services and controllers, flag `null`, `undefined`, or sentinel returns for unsupported input or missing entities when a `Result`, closed union, or framework exception would express the contract better.
 - Treat a migration between exceptions, sentinels, `Result`, and discriminated unions as a failure-contract change. Align the active contract before changing callers or public behavior.
+
+## Automation And External Interaction Gates
+
+- Analyze web automation targets read-only first: page flow, HTTP requests and responses, script interactions, authentication state, rate limits, and stable selectors or APIs.
+- Treat login, checkout, ordering, form submission, account changes, deletion, payment, messaging, and production writes as protected external side effects that need explicit contract alignment.
+- Prefer documented APIs, stable semantic selectors, and idempotent operations over brittle DOM coordinates, timing guesses, or text that is likely to be localized or personalized.
+- Define retry, timeout, rate-limit, dry-run, and failure-recovery behavior before making automation persistent or recurring.
+
+## Security And Crypto Gates
+
+- Do not hand-roll cryptographic primitives, certificate parsing, padding, signing, hashing, or random generation when a vetted library or platform API exists.
+- Treat algorithm, mode, padding, encoding, key format, certificate chain, rotation, backward compatibility, and vendor sample compatibility as contract decisions.
+- Verify crypto behavior with known test vectors, vendor sample payloads, or round-trip compatibility checks when available.
+- Never log plaintext secrets, private keys, decrypted payloads, tokens, passwords, session cookies, or full certificate material. Redact before adding diagnostic context.
+
+## Distributed Systems Gates
+
+- Name transaction boundaries, ownership of state, consistency expectations, and retry/idempotency keys before changing cross-system flows.
+- For queues and async work, define ordering assumptions, duplicate handling, poison-message behavior, dead-letter policy, and replay safety.
+- Split services only when ownership, scaling, failure isolation, data boundaries, or deployment cadence justify the added network and operational complexity.
+- Treat moving work between client, server, queue, worker, and vendor systems as a behavior change that needs explicit verification across the affected boundary.
 
 ## Cache Key Defaults
 
