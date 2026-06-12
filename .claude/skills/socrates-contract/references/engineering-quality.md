@@ -26,6 +26,9 @@ Use these gates when the macro contract or active subcontract includes implement
 - Keep core functions focused on one decision or calculation. Do not scatter fallback defaults, missing-value defense, or input cleanup through the core.
 - Collapse repeated branch-axis checks such as `isPickup`, `isB2B`, `is*`, or `if (source === ...)` into a named context, resolver, strategy map, or exhaustive handler map when the axis is stable.
 - Use classes mainly for dependency injection, repositories, cache/client wrappers, external IO, or stateful infrastructure boundaries. Prefer plain functions for calculation, selection, validation, normalization, command mapping, and state-transition helpers when local conventions allow.
+- Prefer eager array or collection operations for already materialized small inputs. Consider `Iterable<T>` or `AsyncIterable<T>` for large, streamed, paginated, short-circuited, or infinite data; write generators plainly with `for...of`, `for await...of`, `while`, and `yield` when that is clearer.
+- When reconciling or comparing two collections by identifier, consider a `Map` or keyed index before nested loops if inputs can grow. Keep the simpler loop for small inputs or one-off processing.
+- For serializers, formatters, templates, and response builders, put representation invariants in the object or small module that owns output safety: escaping, normalization, recursive rendering, and safe composition. Use functional transforms for internal data shaping when they clarify the flow, but do not add the abstraction without real repetition rules or safety requirements.
 - Do not swallow errors. Avoid empty `catch`, meaningless fallback values, and defensive checks repeated at every call site. Handle expected failures at boundaries or handlers; otherwise propagate with useful context.
 - Challenge nesting at three or more levels. Keep it only when the nesting expresses real structure; otherwise flatten with guard clauses or early returns.
 - Respect existing function and file size caps. If the repo has no caps, keep new code small and call out large touched functions or files as risk instead of expanding them casually.
@@ -66,6 +69,7 @@ Use these gates when the macro contract or active subcontract includes implement
 
 - Name transaction boundaries, ownership of state, consistency expectations, and retry/idempotency keys before changing cross-system flows.
 - For queues and async work, define ordering assumptions, duplicate handling, poison-message behavior, dead-letter policy, and replay safety.
+- Distinguish `Promise<T>` from a task factory such as `() => Promise<T>`: a promise is usually already started, while a factory keeps execution policy attachable. Prefer retry, timeout, cancellation, batching, concurrency limits, and pools around task factories or iterables of task factories.
 - Split services only when ownership, scaling, failure isolation, data boundaries, or deployment cadence justify the added network and operational complexity.
 - Treat moving work between client, server, queue, worker, and vendor systems as a behavior change that needs explicit verification across the affected boundary.
 
