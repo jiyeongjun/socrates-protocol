@@ -2,6 +2,21 @@
 
 Use these gates when the macro contract or active subcontract includes implementation, refactoring, code review, tests, or architectural design. Keep them scoped to the requested work: do not add repo-wide tooling, broad cleanup, or new semantics unless the contract explicitly includes that scope.
 
+## Contents
+
+- Scope Boundary
+- Design Gates
+- Implementation Gates
+- Naming And Predictability Gates
+- Type And Error Defaults
+- Automation And External Interaction Gates
+- Security And Crypto Gates
+- Distributed Systems Gates
+- Cache Key Defaults
+- Review Gates
+- Enforcement Gates
+- Test Gates
+
 ## Scope Boundary
 
 - Treat this file as the self-contained Socrates source for engineering quality and default coding preferences. Do not load or require companion preference skills to get these defaults.
