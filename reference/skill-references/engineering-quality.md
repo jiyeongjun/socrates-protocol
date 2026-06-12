@@ -36,6 +36,14 @@ Use these gates when the macro contract or active subcontract includes implement
 - Search for an existing function, helper, type, shape, or schema before creating a new one.
 - When touching adjacent flawed code, fix only the issue that blocks the active verification path. Record broader cleanup as out of scope unless the contract explicitly expands.
 
+## Naming And Predictability Gates
+
+- Treat names as part of the public contract. A caller should be able to predict behavior from the name, parameters, and return type without reading the implementation.
+- Use the same naming pattern only for the same behavior and return shape. Do not mix booleans, sentinels, thrown errors, and `Result` objects under similar validation or check names.
+- Reveal added behavior in wrapper names. If a local wrapper adds auth, retry, timeout, caching, logging, persistence, or validation beyond a primitive or library call, make that behavior visible in the name.
+- Name complex predicates or constants when the name reduces reader context or captures domain meaning. Do not extract trivial one-off expressions just to add a name.
+- Prefer positive boolean and predicate names. Avoid double negatives and vague identifiers such as `data`, `item`, `flag`, `manager`, `helper`, or `processor` when a domain term is available.
+
 ## Type And Error Defaults
 
 - Prefer strict but pragmatic compile-time types: literal unions, enums where local convention supports them, branded types, staged `Input -> Normalized -> Domain` types, and exhaustive `Record` or `switch` plus `never` checks.
