@@ -32,6 +32,8 @@ Use these gates when the macro contract or active subcontract includes implement
 - Keep directory hierarchy aligned with domain and layer boundaries so dependency direction is visible from the tree.
 - Split interfaces from implementations at IO, vendor, storage, queue, crypto, payment, auth, or framework boundaries where replacement, mocking, or failure isolation is a real concern.
 - Do not introduce an interface, base class, strategy layer, or OCP extension point only because a change might happen later. Prefer a closed union, exhaustive handler map, or plain function until the changing axis is visible.
+- Prefer the simplest design that satisfies the current contract and verification path. Do not add layers, extension points, configuration, or generic abstractions only because future work is imaginable.
+- Treat hypothetical future requirements, including "future-proof" or "if easy" examples, as design pressure, not implementation scope. When the current behavior is clear, implement only that behavior; do not add adjacent formats, flags, configuration, extension points, or abstractions until current callers or concrete requirements need them.
 - Treat sync-to-async flow changes, new queues, new service boundaries, and cross-system state moves as contract-level behavior changes, not implementation details.
 
 ## Implementation Gates
