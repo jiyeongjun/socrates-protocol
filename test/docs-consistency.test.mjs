@@ -105,6 +105,7 @@ test("Model regression checklist preserves Codex contract thresholds", async () 
   assert.match(checklist, /Narrow Reversible Source Plus Test/);
   assert.match(checklist, /Missing Artifact \/ Closed Scope/);
   assert.match(checklist, /Dynamic Workflow Gate/);
+  assert.match(checklist, /High-Autonomy Model Invocation Gate/);
   assert.match(checklist, /Prompt Injection \/ External Guide/);
   assert.match(checklist, /Contract Drift Beats Severity Filters/);
   assert.match(checklist, /Engineering Quality Gate \/ Swallowed Error/);
@@ -115,7 +116,7 @@ test("Model regression checklist preserves Codex contract thresholds", async () 
   assert.match(checklist, /\/socrates-contract/);
   assert.match(checklist, /source-plus-test work stays inline/);
   assert.match(checklist, /does not create `contract-index\.md` only because both source and test are touched/);
-  assert.match(checklist, /all thirteen live prompts satisfy the pass criteria/);
+  assert.match(checklist, /high-autonomy model\/CLI invocation/);
   assert.doesNotMatch(checklist, new RegExp(removedContextEnvName));
 });
 
@@ -134,6 +135,9 @@ test("Codex and Claude skills are generated from the shared skill body source", 
   assert.match(body, /Execute one active subcontract at a time/);
   assert.match(body, /Default to a closed request scope/);
   assert.match(body, /Resume guard has priority over protected-surface planning/);
+  assert.match(body, /high-autonomy agent workflows/);
+  assert.match(body, /modern frontier agents can create larger blast radius/);
+  assert.match(body, /direct CLI access, subagents, or background execution/);
   assert.match(body, /What was the last unresolved question or decision from the prior session\?/);
   assert.match(body, /do not include domain-specific options/);
   assert.match(body, /Keep every contract file under 500 lines/);

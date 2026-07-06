@@ -1,6 +1,6 @@
 ---
 name: socrates-contract
-description: "Use whenever a user request will mutate files, data, configuration, external systems, or any user-visible state. Before all other handling, if a resume/continue request has no contract files, output only that durable state is missing plus the exact question: What was the last unresolved question or decision from the prior session? Default to triggering for any change that crosses more than one verification path, alters persisted or shared state, or hides a load-bearing decision — even when the user did not explicitly ask for \"a contract.\" Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, deployment, environment config, vague preference words like \"elegant\" or \"robust\", and any phrase that names a protected surface (production, rollout, safe). Skip only for read-only explanations, formatting-only edits, single-file low-risk single-step changes the user explicitly scoped, and pure conversational replies."
+description: "Use whenever a user request will mutate files, data, configuration, external systems, or any user-visible state. Before all other handling, if a resume/continue request has no contract files, output only that durable state is missing plus the exact question: What was the last unresolved question or decision from the prior session? Default to triggering for any high-autonomy agent workflow, change that crosses more than one verification path, alters persisted or shared state, or hides a load-bearing decision — even when the user did not explicitly ask for \"a contract.\" Examples: persisted-field renames, multi-step refactors, schema or auth changes, migrations, billing, deletion, deployment, environment config, vague preference words like \"elegant\" or \"robust\", and any phrase that names a protected surface (production, rollout, safe). Skip only for read-only explanations, formatting-only edits, single-file low-risk single-step changes the user explicitly scoped, and pure conversational replies."
 ---
 
 # Socrates Contract Protocol
@@ -15,7 +15,7 @@ Socrates Contract is the mutation protocol for work where the user and agent mus
    ```
    - Why: a resume request without contract files is a missing-handoff problem, not permission to infer prior migration, rollout, billing, or compatibility decisions.
 
-1. Classify the request before mutating anything. Use this skill for nontrivial mutation, protected surfaces, multi-step goals, missing target artifacts, or unresolved choices that would change the result.
+1. Classify the request before mutating anything. Use this skill for nontrivial mutation, protected surfaces, high-autonomy agent workflows, multi-step goals, missing target artifacts, or unresolved choices that would change the result. Treat tool-using agents, background loops, subagents, dynamic workflows, or direct model/CLI invocations that can mutate state as autonomy multipliers: they do not create permission to skip alignment.
    - Why: misclassification at this gate is the single biggest source of contract drift downstream — it cascades into every later rule.
 
 2. For implementation, refactoring, review, test, or architecture work, load [references/engineering-quality.md](references/engineering-quality.md) before choosing the mutation path. If the request asks for silent fallbacks, duplicate helpers, broad compatibility shims, or production-code changes only to satisfy a test, treat that as a possible hidden contract and clarify before mutating.
@@ -24,8 +24,8 @@ Socrates Contract is the mutation protocol for work where the user and agent mus
 3. Skip the contract ceremony for read-only explanations, formatting-only work, and explicit low-risk single-step edits. For those, state any narrow assumption, execute, and verify.
    - Why: ceremony on trivial work burns user trust and slows delivery. Reserve the protocol for cases where misalignment would actually hurt.
 
-4. Tie-breaker for ambiguous cases. When you are unsure whether to trigger, prefer to skip and state your assumption in one sentence. If the first verification reveals risk (touches a protected surface, exposes a hidden decision, or affects more than one verification path), escalate to a contract before continuing.
-   - Why: forcing every borderline case into ceremony makes the agent timid; verification is a cheap second filter that catches missed cases without paying alignment cost on safe ones.
+4. Tie-breaker for ambiguous cases. When you are unsure whether to trigger, prefer to skip and state your assumption in one sentence only if the work is local, reversible, and has one coherent verification path. If the ambiguity involves high-autonomy execution, external writes, protected surfaces, hidden policy choices, or more than one verification path, trigger the contract before mutating. If the first verification reveals risk, escalate to a contract before continuing.
+   - Why: forcing every borderline case into ceremony makes the agent timid, but modern frontier agents can create larger blast radius when ambiguous autonomous work is treated as a trivial edit.
 
 5. For Socrates-triggered work, align the macro contract first: goal, current state, success criteria, scope, non-goals, protected surfaces, risks, verification path, and unresolved questions.
    - Why: the macro contract is the artifact the user and agent hold each other to. Without it, "done" has no shared definition.
@@ -78,6 +78,7 @@ A full request → classification → contract files → one question → execut
 - Prefer one sharp question over broad discussion. — Broad discussion forces the user to disambiguate later anyway, with worse signal-to-noise.
 - On resume requests with no visible contract files, ask only `What was the last unresolved question or decision from the prior session?` and stop; do not include domain-specific options. — Inventing the next migration or rollout question creates fake continuity.
 - Do not silently choose a compatibility-sensitive migration, deletion, billing, auth, rollout, or external-state policy. — These choices have asymmetric downside; surfacing them is cheap, recovery from a wrong silent pick is not.
+- Do not treat stronger model capability, direct CLI access, subagents, or background execution as alignment. — Better agents can execute larger changes, which makes explicit scope, rollback, and verification more important, not less.
 - Default to a closed request scope. Do not add support for new input shapes, compatibility shims, fallback behavior, or side effects unless the macro contract or active subcontract explicitly requires them. — Unrequested expansion is the most common form of contract drift; closing scope by default makes drift visible.
 - Do not create hidden state, private task registries, or unreferenced sidecar files. — Hidden state breaks the user-agent alignment that contract files exist to maintain.
 - Keep contract file references one level deep. Do not make nested reference chains. — Each extra hop forces another file load, multiplying token cost without adding clarity.
