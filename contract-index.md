@@ -4,12 +4,12 @@
 Update Socrates Contract for GPT-5.6, validate it, push it, and reinstall the local Codex skill
 
 ## Success Criteria
-- [ ] GPT-5.6 `sol`, `terra`, and `luna` are routed by Socrates role while older Codex models remain ordered fallbacks.
-- [ ] The skill preserves required contract content under GPT-5.6's concise-response bias and explicitly gates Programmatic Tool Calling and persisted reasoning.
-- [ ] Generated Codex and Claude skill artifacts are synchronized from the shared sources.
-- [ ] Repository tests, generated-file verification, Skill Creator validation, and independent forward-tests pass.
-- [ ] The completed change is committed and pushed to `origin/main`.
-- [ ] The updated Codex skill is reinstalled under the user's local Codex skill directory and matches the repository artifact.
+- [x] GPT-5.6 `sol`, `terra`, and `luna` are routed by Socrates role while older Codex models remain ordered fallbacks.
+- [x] The skill preserves required contract content under GPT-5.6's concise-response bias and explicitly gates Programmatic Tool Calling and persisted reasoning.
+- [x] Generated Codex and Claude skill artifacts are synchronized from the shared sources.
+- [x] Repository tests, generated-file verification, Skill Creator validation, and independent forward-tests pass.
+- [x] The completed change is committed and pushed to `origin/main`.
+- [x] The updated Codex skill is reinstalled under the user's local Codex skill directory and matches the repository artifact.
 
 ## Scope
 - `reference/model-policy.json` and generated platform copies.
@@ -48,8 +48,8 @@ Update Socrates Contract for GPT-5.6, validate it, push it, and reinstall the lo
 |-----|----------------------------|-------------------|----------|--------------|-----------------------|
 | 001 | contracts/contract-001.md  | Update GPT-5.6 skill sources and generated artifacts | done | Complete | Focused tests, generation checks, full test suite, Skill Creator validation |
 | 002 | contracts/contract-002.md  | Independently forward-test the updated skill | done | Complete | Fresh-agent outputs for protected PTC, persisted resume, and contract completeness |
-| 003 | contracts/contract-003.md  | Commit, push, and reinstall the local Codex skill | executing | Review, commit, push, reinstall, and compare | Remote branch state and byte-for-byte local skill comparison |
+| 003 | contracts/contract-003.md  | Commit, push, and reinstall the local Codex skill | done | Complete | Remote branch state and byte-for-byte local skill comparison |
 
 ## Current Status
-Active subcontract: 003 (executing)
-Last updated: 2026-07-10T04:11:00Z
+Macro contract closed. All three subcontracts are done and every success criterion passed.
+Last updated: 2026-07-10T04:14:00Z

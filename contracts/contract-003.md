@@ -1,13 +1,13 @@
 ---
 task: "Commit, push, and reinstall the local Codex skill"
-status: "executing"
+status: "done"
 knowns:
   - "The user explicitly authorized a push and local skill reinstall."
   - "The repository is on main with origin configured."
 unknowns:
-  - "Whether remote authentication and installer execution will succeed."
-next_step: "Review the final diff, commit, push, reinstall, and compare."
-updated_at: "2026-07-10T04:11:00Z"
+  - "None."
+next_step: "None; all publication and local-install checks passed."
+updated_at: "2026-07-10T04:14:00Z"
 ---
 
 # Subcontract 003
@@ -18,10 +18,10 @@ updated_at: "2026-07-10T04:11:00Z"
 - Existing repository installer and local Codex skill path.
 
 ## Completion Criteria
-- [ ] The scoped changes and contract state are committed on `main`.
-- [ ] The commit is pushed to `origin/main`.
-- [ ] The local Codex skill is reinstalled from the updated repository source.
-- [ ] The installed skill matches `.agents/skills/socrates-contract` byte-for-byte.
+- [x] The scoped changes and contract state are committed on `main`.
+- [x] The commit is pushed to `origin/main`.
+- [x] The local Codex skill is reinstalled from the updated repository source.
+- [x] The installed skill matches `.agents/skills/socrates-contract` byte-for-byte.
 
 ## Mutation Plan
 1. Perform a final diff and macro-contract review.
@@ -37,6 +37,10 @@ updated_at: "2026-07-10T04:11:00Z"
 ## Work Log
 - 2026-07-10T03:56:00Z: subcontract drafted.
 - 2026-07-10T04:11:00Z: execution started after implementation and forward-test closure.
+- 2026-07-10T04:12:00Z: committed scoped implementation and contract state as `31728b2` (`feat: update Socrates for GPT-5.6`).
+- 2026-07-10T04:12:00Z: pushed `31728b2` to `origin/main`.
+- 2026-07-10T04:13:00Z: reinstalled the Codex global skill from the local repository source.
+- 2026-07-10T04:13:00Z: repository and installed skill directories matched with `diff -ru`; the installed skill also passed Skill Creator validation.
 
 ## Result
-Pending.
+Commit, push, reinstall, byte comparison, and installed-skill validation all passed.
