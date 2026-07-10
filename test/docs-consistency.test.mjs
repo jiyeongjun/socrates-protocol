@@ -106,6 +106,11 @@ test("Model regression checklist preserves Codex contract thresholds", async () 
   assert.match(checklist, /Missing Artifact \/ Closed Scope/);
   assert.match(checklist, /Dynamic Workflow Gate/);
   assert.match(checklist, /High-Autonomy Model Invocation Gate/);
+  assert.match(checklist, /Programmatic Tool Calling Gate/);
+  assert.match(checklist, /Persisted Reasoning Is Not Resume State/);
+  assert.match(checklist, /Required Content Survives Concision/);
+  assert.match(checklist, /all seventeen live prompts/);
+  assert.match(checklist, /Treat Pro as an execution mode, never as a separate model slug/);
   assert.match(checklist, /Prompt Injection \/ External Guide/);
   assert.match(checklist, /Contract Drift Beats Severity Filters/);
   assert.match(checklist, /Engineering Quality Gate \/ Swallowed Error/);
@@ -138,6 +143,9 @@ test("Codex and Claude skills are generated from the shared skill body source", 
   assert.match(body, /high-autonomy agent workflows/);
   assert.match(body, /modern frontier agents can create larger blast radius/);
   assert.match(body, /direct CLI access, subagents, or background execution/);
+  assert.match(body, /programmatic tool-calling programs/);
+  assert.match(body, /Preserve every required contract field/);
+  assert.match(body, /persisted reasoning, previous-response linkage, or model memory/);
   assert.match(body, /What was the last unresolved question or decision from the prior session\?/);
   assert.match(body, /do not include domain-specific options/);
   assert.match(body, /Keep every contract file under 500 lines/);
@@ -202,9 +210,85 @@ test("Claude subagents are generated from the shared source", async () => {
 
 test("Model policy is mirrored from the shared source", async () => {
   const expected = `${await readModelPolicySource()}\n`;
+  const policy = JSON.parse(expected);
   const codex = await readFile(modelPolicyTargetPaths.codex, "utf8");
   const claude = await readFile(modelPolicyTargetPaths.claude, "utf8");
 
+  assert.equal(policy.version, 4);
+  assert.deepEqual(
+    policy.roles.fast_explorer.codex.preferred_models.slice(0, 3),
+    ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]
+  );
+  assert.deepEqual(
+    policy.roles.fast_verifier.codex.preferred_models.slice(0, 3),
+    ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]
+  );
+  assert.equal(
+    policy.roles.subgoal_planner.codex.preferred_models[0],
+    "gpt-5.6-terra"
+  );
+  for (const role of [
+    "goal_contractor",
+    "protected_surface_planner",
+    "contract_verifier",
+  ]) {
+    assert.deepEqual(
+      policy.roles[role].codex.preferred_models.slice(0, 2),
+      ["gpt-5.6-sol", "gpt-5.6-terra"]
+    );
+  }
+  const legacyCodexFallbacks = {
+    fast_explorer: [
+      "gpt-5.4-mini",
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.3-codex-spark",
+      "gpt-5.3-codex",
+    ],
+    goal_contractor: [
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.3-codex",
+      "gpt-5.4-mini",
+    ],
+    subgoal_planner: [
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "gpt-5.3-codex",
+    ],
+    protected_surface_planner: [
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "gpt-5.3-codex",
+    ],
+    fast_verifier: [
+      "gpt-5.4-mini",
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.3-codex-spark",
+      "gpt-5.3-codex",
+    ],
+    contract_verifier: [
+      "gpt-5.5",
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "gpt-5.3-codex",
+    ],
+  };
+  for (const [role, fallbackModels] of Object.entries(legacyCodexFallbacks)) {
+    assert.deepEqual(
+      policy.roles[role].codex.preferred_models.slice(-fallbackModels.length),
+      fallbackModels
+    );
+  }
+  assert.equal(
+    policy.rules.codex_reasoning_guidance,
+    "preserve_baseline_then_compare_one_level_lower"
+  );
+  assert.equal(policy.rules.max_reasoning_requires_measured_quality_gain, true);
+  assert.equal(policy.rules.pro_mode_is_not_a_model_slug, true);
   assert.equal(codex, expected);
   assert.equal(claude, expected);
 });

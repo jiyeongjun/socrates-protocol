@@ -43,11 +43,14 @@ If the host has no subagent support, run the role inline. The role's purpose mat
 - Keep role work inline unless the host supports an isolated worker or subagent, delegation is allowed by the host instructions, and delegation will not block the next step.
 - In Codex, role names describe planning and verification passes; they are not permission to spawn agents by themselves.
 - On Claude hosts, dynamic workflows are delegation. Use them only for read-only discovery or for an already aligned active subcontract, never to mutate several subcontracts or protected surfaces in parallel before the macro contract is aligned.
+- Treat Programmatic Tool Calling as bounded execution, not permission to bypass alignment. Use it for read-only reduction or an aligned active subcontract; keep approval-requiring or protected mutations in direct, observable calls.
 - Treat dynamic workflow, command, and agent files as mutation artifacts when they encode protected-surface work. Do not create them before the macro contract has resolved rollback, compatibility, cutover, and authorization policy.
 
 ## Rules
 - Contract files are visible user-agent state, not hidden task management.
+- Persisted reasoning, previous-response linkage, and host memory do not replace contract files or authorize reconstructing prior decisions on resume.
 - Do not create contract files for simple single-step work.
+- For a programmatic tool-calling stage, name the allowed tools, output shape, stopping condition, and side-effect boundary before execution. Keep the stage read-only unless the active subcontract explicitly authorizes its mutation path.
 - Do not create workflow, command, agent, script, or contract-scaffold files to carry a protected-surface migration while rollback, compatibility, cutover, or authorization is still unresolved.
 - Do not patch, delete, deploy, configure, purchase, send, or otherwise mutate before the active contract is aligned.
 - Read-only exploration of related files, callers, docs, and tests is allowed before and during subcontract execution.
