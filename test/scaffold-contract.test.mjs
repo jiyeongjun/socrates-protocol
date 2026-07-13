@@ -16,8 +16,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import {
+  ALLOWED_ACTIVE_SUBCONTRACT_STATUSES,
   assertStatusTransition,
   discoverSocratesState,
+  runCli as runScaffoldCli,
   scaffoldContract,
   validateSocratesIndex,
   validateSocratesSubcontract,
@@ -29,6 +31,41 @@ const repoRoot = path.resolve(__dirname, "..");
 
 async function assertMissing(target) {
   await assert.rejects(() => access(target));
+}
+
+function captureStream() {
+  let contents = "";
+  return {
+    stream: {
+      write(chunk) {
+        contents += String(chunk);
+        return true;
+      },
+    },
+    read: () => contents,
+  };
+}
+
+async function createValidContractDocuments(contractId = "schema-fixture") {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-schema-fixture-"));
+  const result = await scaffoldContract({
+    root,
+    contractId,
+    macroGoal: "Validate the complete durable contract schema",
+    now: "2026-07-13T00:00:00.000Z",
+  });
+  return {
+    root,
+    result,
+    index: await readFile(result.indexPath, "utf8"),
+    subcontract: await readFile(result.subcontractPath, "utf8"),
+  };
+}
+
+function replaceSubcontractStatus(contents, status) {
+  return contents
+    .replace("status: proposed", `status: ${status}`)
+    .replace("# Status\n\nproposed", `# Status\n\n${status}`);
 }
 
 function runNode(scriptPath, args, cwd, env = process.env) {
@@ -184,6 +221,290 @@ test("contract validators and discovery accept CRLF durable state", async () => 
   const discovery = await discoverSocratesState({ root });
   assert.equal(discovery.active.length, 1);
   assert.equal(discovery.invalid.length, 0);
+});
+
+test("frontmatter validation rejects duplicates and malformed scalars but accepts optional keys", async () => {
+  const { index, subcontract } = await createValidContractDocuments();
+  for (const [contents, validator, expected] of [
+    [
+      index.replace(
+        "protocol: socrates-contract",
+        "protocol: socrates-contract\nprotocol: socrates-contract"
+      ),
+      () => validateSocratesIndex(
+        index.replace(
+          "protocol: socrates-contract",
+          "protocol: socrates-contract\nprotocol: socrates-contract"
+        )
+      ),
+      /duplicates key "protocol"/iu,
+    ],
+    [
+      index,
+      () =>
+        validateSocratesIndex(
+          index.replace("status: proposed", "status: proposed\nstatus: aligned")
+        ),
+      /duplicates key "status"/iu,
+    ],
+    [
+      subcontract,
+      () =>
+        validateSocratesSubcontract(
+          subcontract.replace(
+            "contract_id: schema-fixture",
+            "contract_id: schema-fixture\ncontract_id: schema-fixture"
+          )
+        ),
+      /duplicates key "contract_id"/iu,
+    ],
+  ]) {
+    assert.equal(typeof contents, "string");
+    await assert.rejects(validator, expected);
+  }
+
+  await assert.rejects(
+    () =>
+      validateSocratesIndex(
+        index.replace(/^task_identity:.*$/mu, 'task_identity: "unterminated')
+      ),
+    /task_identity.*malformed quoted value/iu
+  );
+  await assert.rejects(
+    () => validateSocratesIndex(index.replace("status: proposed", "not-a-field")),
+    /frontmatter line .*malformed/iu
+  );
+  await assert.doesNotReject(() =>
+    validateSocratesIndex(
+      index.replace("updated_at:", "future_optional_key: enabled\nupdated_at:"),
+      "schema-fixture"
+    )
+  );
+  await assert.doesNotReject(() =>
+    validateSocratesSubcontract(
+      subcontract.replace("updated_at:", 'future_optional_key: "enabled"\nupdated_at:'),
+      { contractId: "schema-fixture", subcontractId: "001" }
+    )
+  );
+  await assert.doesNotReject(() =>
+    validateSocratesIndex(
+      index
+        .replace(/^task_identity:.*$/mu, "task_identity: Review users'")
+        .replace(
+          "updated_at:",
+          `future_optional_key: Preserve users' embedded "notes"\nupdated_at:`
+        )
+    )
+  );
+});
+
+test("index body validation enforces exact ordered non-empty H1 sections", async () => {
+  const { index } = await createValidContractDocuments();
+  const scopeBlock = "\n# Scope\n\n- (in-scope surfaces)\n";
+
+  await assert.rejects(
+    () => validateSocratesIndex(index.replace(scopeBlock, "\n")),
+    /missing required H1 section "Scope"/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesIndex(
+        index.replace("\n# Non-Goals", `${scopeBlock}\n# Non-Goals`)
+      ),
+    /duplicate required H1 section "Scope"/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesIndex(
+        index.replace("# Scope\n\n- (in-scope surfaces)", "# Scope\n\n   ")
+      ),
+    /section "Scope" is empty/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesIndex(
+        index
+          .replace("# Current State", "# TEMPORARY HEADING")
+          .replace("# Success Criteria", "# Current State")
+          .replace("# TEMPORARY HEADING", "# Success Criteria")
+      ),
+    /out of canonical order/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesIndex(
+        index
+          .replace(scopeBlock, "\n")
+          .replace(
+            "\n# Non-Goals",
+            "\n```markdown\n# Scope\n\nnot a real section\n```\n\n# Non-Goals"
+          )
+      ),
+    /missing required H1 section "Scope"/iu
+  );
+  await assert.doesNotReject(() =>
+    validateSocratesIndex(
+      index.replace(
+        "\n# Non-Goals",
+        "\n```markdown\n# Scope\n\nnot a duplicate\n```\n\n# Non-Goals"
+      )
+    )
+  );
+  await assert.doesNotReject(() =>
+    validateSocratesIndex(
+      index.replace(
+        "\n# Success Criteria",
+        "\n# Optional Context\n\nFuture-compatible content.\n\n# Success Criteria"
+      )
+    )
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesIndex(
+        index.replace(
+          "\n# Non-Goals",
+          "\n# scope\n\nNoncanonical duplicate.\n\n# Non-Goals"
+        )
+      ),
+    /duplicates required H1 section "Scope".*noncanonical/iu
+  );
+  await assert.doesNotReject(() =>
+    validateSocratesIndex(
+      index.replace(
+        "\n# Current State",
+        "\n```markdown`not-a-fence\n\n# Current State"
+      )
+    )
+  );
+  await assert.rejects(
+    () => validateSocratesIndex(index.slice(0, index.indexOf("# Scope"))),
+    /missing required H1 section/iu
+  );
+});
+
+test("subcontract body validation enforces schema order and textual status", async () => {
+  const { subcontract } = await createValidContractDocuments();
+  const knownsBlock = "\n# Knowns\n\n- (verified facts)\n";
+
+  await assert.rejects(
+    () => validateSocratesSubcontract(subcontract.replace(knownsBlock, "\n")),
+    /missing required H1 section "Knowns"/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesSubcontract(
+        subcontract.replace("\n# Unknowns", `${knownsBlock}\n# Unknowns`)
+      ),
+    /duplicate required H1 section "Knowns"/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesSubcontract(
+        subcontract.replace(/^# Result\n\n.*$/mu, "# Result\n\n   ")
+      ),
+    /section "Result" is empty/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesSubcontract(
+        subcontract
+          .replace("# Inputs", "# TEMPORARY HEADING")
+          .replace("# Knowns", "# Inputs")
+          .replace("# TEMPORARY HEADING", "# Knowns")
+      ),
+    /out of canonical order/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesSubcontract(
+        subcontract.replace("# Status\n\nproposed", "# Status\n\naligned")
+      ),
+    /does not match frontmatter status/iu
+  );
+  await assert.rejects(
+    () =>
+      validateSocratesSubcontract(
+        subcontract
+          .replace(knownsBlock, "\n")
+          .replace(
+            "\n# Unknowns",
+            "\n~~~markdown\n# Knowns\n\nnot a real section\n~~~\n\n# Unknowns"
+          )
+      ),
+    /missing required H1 section "Knowns"/iu
+  );
+});
+
+test("discovery classifies every durable body-schema failure as non-authorizing invalid state", async () => {
+  const cases = [
+    {
+      name: "missing-index-section",
+      mutateIndex: (contents) =>
+        contents.replace("\n# Scope\n\n- (in-scope surfaces)\n", "\n"),
+      reason: /missing required H1 section "Scope"/iu,
+    },
+    {
+      name: "duplicate-index-section",
+      mutateIndex: (contents) =>
+        contents.replace(
+          "\n# Non-Goals",
+          "\n# Scope\n\nDuplicate content.\n\n# Non-Goals"
+        ),
+      reason: /duplicate required H1 section "Scope"/iu,
+    },
+    {
+      name: "empty-index-section",
+      mutateIndex: (contents) =>
+        contents.replace("# Scope\n\n- (in-scope surfaces)", "# Scope\n\n   "),
+      reason: /section "Scope" is empty/iu,
+    },
+    {
+      name: "fenced-index-heading",
+      mutateIndex: (contents) =>
+        contents
+          .replace("\n# Scope\n\n- (in-scope surfaces)\n", "\n")
+          .replace(
+            "\n# Non-Goals",
+            "\n```md\n# Scope\n\nFake.\n```\n\n# Non-Goals"
+          ),
+      reason: /missing required H1 section "Scope"/iu,
+    },
+    {
+      name: "missing-subcontract-section",
+      mutateSubcontract: (contents) =>
+        contents.replace("\n# Knowns\n\n- (verified facts)\n", "\n"),
+      reason: /missing required H1 section "Knowns"/iu,
+    },
+    {
+      name: "subcontract-status-disagreement",
+      mutateSubcontract: (contents) =>
+        contents.replace("# Status\n\nproposed", "# Status\n\nblocked"),
+      reason: /does not match frontmatter status/iu,
+    },
+  ];
+
+  for (const fixtureCase of cases) {
+    const fixture = await createValidContractDocuments(fixtureCase.name);
+    if (fixtureCase.mutateIndex) {
+      await writeFile(
+        fixture.result.indexPath,
+        fixtureCase.mutateIndex(fixture.index),
+        "utf8"
+      );
+    }
+    if (fixtureCase.mutateSubcontract) {
+      await writeFile(
+        fixture.result.subcontractPath,
+        fixtureCase.mutateSubcontract(fixture.subcontract),
+        "utf8"
+      );
+    }
+    const discovery = await discoverSocratesState({ root: fixture.root });
+    assert.equal(discovery.active.length, 0, fixtureCase.name);
+    assert.equal(discovery.invalid.length, 1, fixtureCase.name);
+    assert.equal(discovery.invalid[0].canAuthorize, false, fixtureCase.name);
+    assert.match(discovery.invalid[0].reason, fixtureCase.reason, fixtureCase.name);
+  }
 });
 
 test("scaffolder validates goals, roots, identifiers, and duplicate contracts", async () => {
@@ -459,6 +780,7 @@ test("scaffolder recovers dead locks and never releases a replacement lock", asy
   await assertMissing(staleLock);
 
   const replacementLock = path.join(contractsRoot, ".replacement-lock.lock");
+  const warnings = [];
   await scaffoldContract(
     {
       root,
@@ -480,9 +802,12 @@ test("scaffolder recovers dead locks and never releases a replacement lock", asy
           );
         }
       },
+      onWarning: (warning) => warnings.push(warning),
     }
   );
   assert.match(await readFile(replacementLock, "utf8"), /replacement-owner/);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /lock was replaced or could not be verified/iu);
   await rm(replacementLock);
 });
 
@@ -510,6 +835,279 @@ test("cleanup failure cannot turn a published scaffold into a false failure", as
   await assert.doesNotReject(() => readFile(result.indexPath, "utf8"));
   assert.equal(warnings.some((warning) => /cleanup failure/i.test(warning)), true);
   await rm(path.join(root, ".socrates", "contracts", ".published.lock"));
+});
+
+test("discovery rejects unreferenced and lifecycle-incoherent active subcontracts", async () => {
+  const unreferenced = await createValidContractDocuments("unreferenced");
+  await writeFile(
+    unreferenced.result.indexPath,
+    unreferenced.index.replace("subcontracts/001.md", "subcontracts/002.md")
+  );
+  const unreferencedDiscovery = await discoverSocratesState({
+    root: unreferenced.root,
+  });
+  assert.equal(unreferencedDiscovery.active.length, 0);
+  assert.equal(unreferencedDiscovery.invalid.length, 1);
+  assert.match(unreferencedDiscovery.invalid[0].reason, /does not reference active path/iu);
+
+  const mismatched = await createValidContractDocuments("lifecycle-mismatch");
+  await writeFile(
+    mismatched.result.subcontractPath,
+    replaceSubcontractStatus(mismatched.subcontract, "executing")
+  );
+  const mismatchDiscovery = await discoverSocratesState({ root: mismatched.root });
+  assert.equal(mismatchDiscovery.active.length, 0);
+  assert.equal(mismatchDiscovery.invalid.length, 1);
+  assert.match(mismatchDiscovery.invalid[0].reason, /incoherent.*lifecycle/iu);
+  assert.equal(mismatchDiscovery.invalid[0].canAuthorize, false);
+});
+
+test("discovery permits final subcontract completion during macro verification", async () => {
+  const fixture = await createValidContractDocuments("verification-finish");
+  await writeFile(
+    fixture.result.indexPath,
+    fixture.index.replace("status: proposed", "status: verifying")
+  );
+  await writeFile(
+    fixture.result.subcontractPath,
+    replaceSubcontractStatus(fixture.subcontract, "done")
+  );
+
+  const discovery = await discoverSocratesState({ root: fixture.root });
+  assert.equal(discovery.invalid.length, 0);
+  assert.equal(discovery.active.length, 1);
+  assert.equal(discovery.active[0].status, "verifying");
+  assert.equal(discovery.active[0].subcontractStatus, "done");
+  assert.equal(discovery.active[0].canAuthorize, false);
+});
+
+test("historical contracts validate optional subcontract identity and lifecycle without requiring an active link", async () => {
+  for (const [contractId, macroStatus, subcontractStatus] of [
+    ["completed-history", "done", "done"],
+    ["cancelled-history", "cancelled", "blocked"],
+  ]) {
+    const fixture = await createValidContractDocuments(contractId);
+    await writeFile(
+      fixture.result.indexPath,
+      fixture.index
+        .replace("status: proposed", `status: ${macroStatus}`)
+        .replace("subcontracts/001.md", "archived/final-subcontract.md"),
+      "utf8"
+    );
+    await writeFile(
+      fixture.result.subcontractPath,
+      replaceSubcontractStatus(fixture.subcontract, subcontractStatus),
+      "utf8"
+    );
+
+    const discovery = await discoverSocratesState({ root: fixture.root });
+    assert.equal(discovery.active.length, 0, contractId);
+    assert.equal(discovery.invalid.length, 0, contractId);
+    assert.equal(discovery.historical.length, 1, contractId);
+    assert.equal(discovery.historical[0].subcontractStatus, subcontractStatus);
+    assert.equal(discovery.historical[0].canAuthorize, false);
+  }
+
+  const missing = await createValidContractDocuments("missing-history");
+  await writeFile(
+    missing.result.indexPath,
+    missing.index.replace("status: proposed", "status: done"),
+    "utf8"
+  );
+  await rm(missing.result.subcontractPath);
+  const discovery = await discoverSocratesState({ root: missing.root });
+  assert.equal(discovery.invalid.length, 0);
+  assert.equal(discovery.historical.length, 1);
+  assert.equal(discovery.historical[0].subcontractStatus, undefined);
+});
+
+test("macro and active subcontract lifecycle matrix is explicit and frozen", () => {
+  assert.deepEqual(ALLOWED_ACTIVE_SUBCONTRACT_STATUSES, {
+    proposed: ["proposed"],
+    aligned: ["aligned"],
+    executing: ["aligned", "executing", "verifying", "blocked"],
+    blocked: ["blocked"],
+    verifying: ["verifying", "done"],
+    done: ["done"],
+    cancelled: ["cancelled", "blocked"],
+  });
+  assert.equal(Object.isFrozen(ALLOWED_ACTIVE_SUBCONTRACT_STATUSES), true);
+  assert.equal(
+    Object.values(ALLOWED_ACTIVE_SUBCONTRACT_STATUSES).every(Object.isFrozen),
+    true
+  );
+});
+
+test("scaffolder CLI surfaces cleanup warnings without reversing publication", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-scaffold-cli-warning-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const lockPath = path.join(
+    root,
+    ".socrates",
+    "contracts",
+    ".cli-warning.lock"
+  );
+  const code = await runScaffoldCli(
+    ["--root", root, "--id", "cli-warning", "Publish with visible warning"],
+    {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      rmImpl: async (target, options) => {
+        if (target === lockPath) {
+          const error = new Error("injected CLI lock cleanup failure");
+          error.code = "EACCES";
+          throw error;
+        }
+        return rm(target, options);
+      },
+    }
+  );
+
+  assert.equal(code, 0);
+  assert.match(stdout.read(), /Created Socrates contract cli-warning/);
+  assert.match(stderr.read(), /^Warning: .*injected CLI lock cleanup failure\n$/u);
+  const discovery = await discoverSocratesState({ root });
+  assert.equal(discovery.active.length, 1);
+  assert.equal(discovery.invalid.length, 0);
+  await rm(lockPath);
+});
+
+test("scaffolder CLI keeps pre-publication failures nonzero and success output absent", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-scaffold-cli-failure-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const code = await runScaffoldCli(
+    ["--root", root, "--id", "cli-failure", "Fail before publication"],
+    {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      writeFileImpl: async (target, contents, options) => {
+        if (target.endsWith("contract-index.md")) {
+          throw new Error("injected CLI staging write failure");
+        }
+        return writeFile(target, contents, options);
+      },
+    }
+  );
+
+  assert.equal(code, 1);
+  assert.equal(stdout.read(), "");
+  assert.match(stderr.read(), /injected CLI staging write failure/);
+  assert.doesNotMatch(stderr.read(), /Created Socrates contract/);
+  await assertMissing(
+    path.join(root, ".socrates", "contracts", "cli-failure")
+  );
+});
+
+test("scaffolder CLI no-warning success leaves stderr empty", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-scaffold-cli-clean-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const code = await runScaffoldCli(
+    ["--root", root, "--id", "cli-clean", "Publish without warnings"],
+    { stdout: stdout.stream, stderr: stderr.stream }
+  );
+  assert.equal(code, 0);
+  assert.match(stdout.read(), /Created Socrates contract cli-clean/);
+  assert.equal(stderr.read(), "");
+});
+
+test("scaffolder CLI warns and preserves a lock replaced after publication", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-scaffold-cli-replaced-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const lockPath = path.join(
+    root,
+    ".socrates",
+    "contracts",
+    ".cli-replaced.lock"
+  );
+  const replacement = `${JSON.stringify({
+    protocol: "socrates-contract",
+    pid: process.pid,
+    token: "replacement-owner",
+    created_at: "2026-07-13T00:00:00.000Z",
+  })}\n`;
+
+  const code = await runScaffoldCli(
+    ["--root", root, "--id", "cli-replaced", "Preserve replacement lock"],
+    {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      renameImpl: async (source, target) => {
+        await rename(source, target);
+        if (target.endsWith(path.join("contracts", "cli-replaced"))) {
+          await writeFile(lockPath, replacement, "utf8");
+        }
+      },
+    }
+  );
+
+  assert.equal(code, 0);
+  assert.match(stdout.read(), /Created Socrates contract cli-replaced/);
+  assert.match(
+    stderr.read(),
+    /^Warning: Socrates scaffold lock was replaced or could not be verified;/u
+  );
+  assert.equal((stderr.read().match(/^Warning:/gmu) ?? []).length, 1);
+  assert.equal(await readFile(lockPath, "utf8"), replacement);
+  await rm(lockPath);
+});
+
+test("scaffolder CLI prints multiple cleanup warnings once and in order before its primary error", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-scaffold-cli-multi-"));
+  const stdout = captureStream();
+  const stderr = captureStream();
+  const lockPath = path.join(
+    root,
+    ".socrates",
+    "contracts",
+    ".cli-multi.lock"
+  );
+  let stagePath = null;
+
+  const code = await runScaffoldCli(
+    ["--root", root, "--id", "cli-multi", "Expose ordered cleanup warnings"],
+    {
+      stdout: stdout.stream,
+      stderr: stderr.stream,
+      writeFileImpl: async (target, contents, options) => {
+        if (target.endsWith("contract-index.md")) {
+          throw new Error("injected primary scaffold failure");
+        }
+        return writeFile(target, contents, options);
+      },
+      rmImpl: async (target, options) => {
+        if (String(target).includes(".cli-multi.tmp-")) {
+          stagePath = target;
+          throw new Error("injected staging cleanup failure");
+        }
+        if (target === lockPath) {
+          throw new Error("injected lock cleanup failure");
+        }
+        return rm(target, options);
+      },
+    }
+  );
+
+  const warningOutput = stderr.read();
+  const stagingWarning = warningOutput.indexOf(
+    "Warning: Could not remove Socrates scaffold staging directory"
+  );
+  const lockWarning = warningOutput.indexOf(
+    "Warning: Could not release Socrates scaffold lock"
+  );
+  assert.equal(code, 1);
+  assert.equal(stdout.read(), "");
+  assert.equal((warningOutput.match(/^Warning:/gmu) ?? []).length, 2);
+  assert.ok(stagingWarning >= 0);
+  assert.ok(lockWarning > stagingWarning);
+  assert.match(warningOutput, /injected primary scaffold failure/);
+  assert.doesNotMatch(warningOutput, /Created Socrates contract/);
+  assert.notEqual(stagePath, null);
+  await rm(stagePath, { recursive: true, force: true });
+  await rm(lockPath, { force: true });
 });
 
 test("discovery ignores application contracts and validates active namespaced state", async () => {
@@ -549,6 +1147,18 @@ test("discovery ignores application contracts and validates active namespaced st
       "status: done"
     )
   );
+  const completedSubcontract = path.join(
+    root,
+    ".socrates",
+    "contracts",
+    "first-task",
+    "subcontracts",
+    "001.md"
+  );
+  await writeFile(
+    completedSubcontract,
+    replaceSubcontractStatus(await readFile(completedSubcontract, "utf8"), "done")
+  );
   const malformedDir = path.join(root, ".socrates", "contracts", "malformed");
   await mkdir(malformedDir, { recursive: true });
   await writeFile(path.join(malformedDir, "contract-index.md"), "# not Socrates\n");
@@ -584,7 +1194,7 @@ test("discovery ignores application contracts and validates active namespaced st
     true
   );
   assert.equal(
-    discovery.invalid.some((candidate) => /ENOENT|no such file/i.test(candidate.reason)),
+    discovery.invalid.some((candidate) => /missing|ENOENT|no such file/i.test(candidate.reason)),
     true
   );
 });
@@ -755,6 +1365,10 @@ test("contract reference documents installed host paths instead of a workspace s
   assert.doesNotMatch(reference, /node "\$\{CLAUDE_SKILL_DIR\}/);
   assert.match(reference, /--root/);
   assert.match(reference, /--id/);
+  assert.match(reference, /`executing` \| `aligned`, `executing`, `verifying`, or `blocked`/);
+  assert.match(reference, /`verifying` \| `verifying` or `done`/);
+  assert.match(reference, /every listed H1 appears exactly once, in the listed order/iu);
+  assert.match(reference, /subcontract `Status` section must exactly agree/iu);
   assert.match(
     reference,
     /node "\$HOME\/\.agents\/skills\/socrates-contract\/scripts\/scaffold-contract\.mjs" --root "\$PWD" --id "<contract-id>" "<macro goal>"/

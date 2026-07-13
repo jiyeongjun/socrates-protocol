@@ -40,6 +40,46 @@ export const ALLOWED_STATUS_TRANSITIONS = Object.freeze({
   cancelled: Object.freeze([]),
 });
 
+export const ALLOWED_ACTIVE_SUBCONTRACT_STATUSES = Object.freeze({
+  proposed: Object.freeze(["proposed"]),
+  aligned: Object.freeze(["aligned"]),
+  executing: Object.freeze(["aligned", "executing", "verifying", "blocked"]),
+  blocked: Object.freeze(["blocked"]),
+  verifying: Object.freeze(["verifying", "done"]),
+  done: Object.freeze(["done"]),
+  cancelled: Object.freeze(["cancelled", "blocked"]),
+});
+
+export const REQUIRED_INDEX_SECTIONS = Object.freeze([
+  "Macro Goal",
+  "Current State",
+  "Success Criteria",
+  "Scope",
+  "Non-Goals",
+  "Protected Surfaces",
+  "Risks / Blast Radius",
+  "Authorization Boundaries",
+  "Decisions",
+  "Open Questions",
+  "Rollback / Recovery",
+  "Verification Strategy",
+  "Subcontracts",
+  "Current Status",
+]);
+
+export const REQUIRED_SUBCONTRACT_SECTIONS = Object.freeze([
+  "Inputs",
+  "Knowns",
+  "Unknowns",
+  "Completion Criteria",
+  "Mutation Plan",
+  "Verification",
+  "Rollback / Recovery",
+  "Status",
+  "Next Step",
+  "Result",
+]);
+
 const ACTIVE_STATUSES = new Set([
   "proposed",
   "aligned",
@@ -244,9 +284,16 @@ function processIsRunning(pid) {
 async function readLock(lockPath) {
   try {
     const raw = await readRegularFileNoFollow(lockPath, "Socrates scaffold lock");
-    return { raw, parsed: JSON.parse(raw) };
-  } catch {
-    return { raw: null, parsed: null };
+    return { raw, parsed: JSON.parse(raw), missing: false, error: null };
+  } catch (error) {
+    return {
+      raw: null,
+      parsed: null,
+      missing: Boolean(
+        error && typeof error === "object" && error.code === "ENOENT"
+      ),
+      error,
+    };
   }
 }
 
@@ -534,14 +581,15 @@ export async function scaffoldContract(rawOptions, dependencies = {}) {
       { encoding: "utf8", flag: "wx" }
     );
 
-    await validateSocratesIndex(
+    const indexDocument = validateIndexDocument(
       await readFileImpl(path.join(temporaryDir, "contract-index.md"), "utf8"),
       options.contractId
     );
-    await validateSocratesSubcontract(
+    const subcontractDocument = validateSubcontractDocument(
       await readFileImpl(path.join(temporarySubcontracts, "001.md"), "utf8"),
       { contractId: options.contractId, subcontractId: "001" }
     );
+    validateIndexSubcontractCoherence(indexDocument, subcontractDocument);
     await assertSafeManagedPath(
       paths.root,
       paths.contractDir,
@@ -624,14 +672,32 @@ export async function scaffoldContract(rawOptions, dependencies = {}) {
         );
       }
     }
-    if (lockToken && (await scaffoldLockIsOwned(lockPath, lockToken))) {
-      try {
-        await rmImpl(lockPath, { force: true });
-      } catch (error) {
+    if (lockToken) {
+      const lockInspection = await readLock(lockPath);
+      const lockIsOwned =
+        lockInspection.parsed?.protocol === SOCRATES_PROTOCOL &&
+        lockInspection.parsed?.pid === process.pid &&
+        lockInspection.parsed?.token === lockToken;
+      if (lockIsOwned) {
+        try {
+          await rmImpl(lockPath, { force: true });
+        } catch (error) {
+          onWarning(
+            `Could not release Socrates scaffold lock ${lockPath}: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      } else if (!lockInspection.missing) {
+        const detail = lockInspection.error
+          ? `: ${
+              lockInspection.error instanceof Error
+                ? lockInspection.error.message
+                : String(lockInspection.error)
+            }`
+          : "";
         onWarning(
-          `Could not release Socrates scaffold lock ${lockPath}: ${
-            error instanceof Error ? error.message : String(error)
-          }`
+          `Socrates scaffold lock was replaced or could not be verified; leaving it untouched at ${lockPath}${detail}`
         );
       }
     }
@@ -640,35 +706,171 @@ export async function scaffoldContract(rawOptions, dependencies = {}) {
   return paths;
 }
 
-function parseFrontmatter(contents) {
+function parseFrontmatter(contents, documentLabel) {
+  if (typeof contents !== "string") {
+    throw new Error(`${documentLabel} must be UTF-8 text`);
+  }
   const normalized = contents.replaceAll("\r\n", "\n");
   const match = normalized.match(/^---\n([\s\S]*?)\n---(?:\n|$)/u);
   if (!match) {
-    throw new Error("missing Socrates YAML frontmatter");
+    throw new Error(`${documentLabel} is missing Socrates YAML frontmatter`);
   }
   const metadata = {};
-  for (const line of match[1].split("\n")) {
+  const seen = new Set();
+  const frontmatterLines = match[1].split("\n");
+  for (let index = 0; index < frontmatterLines.length; index += 1) {
+    const line = frontmatterLines[index];
     if (!line.trim()) continue;
+    const lineNumber = index + 2;
     const separator = line.indexOf(":");
     if (separator < 1) {
-      throw new Error(`malformed frontmatter line: ${line}`);
+      throw new Error(
+        `${documentLabel} frontmatter line ${lineNumber} is malformed: expected key: value`
+      );
     }
     const key = line.slice(0, separator).trim();
-    let value = line.slice(separator + 1).trim();
-    if (value.startsWith('"')) {
+    if (!/^[A-Za-z_][A-Za-z0-9_-]*$/u.test(key)) {
+      throw new Error(
+        `${documentLabel} frontmatter line ${lineNumber} has invalid key ${JSON.stringify(key)}`
+      );
+    }
+    if (seen.has(key)) {
+      throw new Error(
+        `${documentLabel} frontmatter line ${lineNumber} duplicates key ${JSON.stringify(key)}`
+      );
+    }
+    seen.add(key);
+    const rawValue = line.slice(separator + 1).trim();
+    let value = rawValue;
+    if (rawValue.startsWith('"')) {
       try {
-        value = JSON.parse(value);
+        value = JSON.parse(rawValue);
       } catch {
-        throw new Error(`malformed quoted frontmatter value for ${key}`);
+        throw new Error(
+          `${documentLabel} frontmatter field ${JSON.stringify(key)} has a malformed quoted value on line ${lineNumber}`
+        );
+      }
+      if (typeof value !== "string") {
+        throw new Error(
+          `${documentLabel} frontmatter field ${JSON.stringify(key)} must be a simple scalar`
+        );
       }
     }
-    metadata[key] = value;
+    Object.defineProperty(metadata, key, {
+      value,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
-  return metadata;
+  return {
+    metadata,
+    body: normalized.slice(match[0].length),
+  };
 }
 
-export async function validateSocratesIndex(contents, directoryId = null) {
-  const metadata = parseFrontmatter(contents);
+function markdownFenceOpening(line) {
+  const opening = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/u);
+  if (!opening) return null;
+  if (opening[1][0] === "`" && opening[2].includes("`")) return null;
+  return { character: opening[1][0], length: opening[1].length };
+}
+
+function closesMarkdownFence(line, fence) {
+  const closing = line.match(/^ {0,3}(`+|~+)[\t ]*$/u);
+  return Boolean(
+    closing &&
+      closing[1][0] === fence.character &&
+      closing[1].length >= fence.length
+  );
+}
+
+function scanMarkdownH1Sections(body) {
+  const lines = body.split("\n");
+  const headings = [];
+  let fence = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (fence) {
+      if (closesMarkdownFence(line, fence)) fence = null;
+      continue;
+    }
+
+    const opening = markdownFenceOpening(line);
+    if (opening) {
+      fence = opening;
+      continue;
+    }
+
+    const heading = line.match(/^ {0,3}#(?!#)[\t ]+(.+?)[\t ]*$/u);
+    if (!heading) continue;
+    const title = heading[1].replace(/[\t ]+#+[\t ]*$/u, "").trim();
+    headings.push({ title, lineIndex: index, lineNumber: index + 1 });
+  }
+
+  return { headings, lines };
+}
+
+function validateRequiredSections(body, requiredSections, documentLabel) {
+  const { headings, lines } = scanMarkdownH1Sections(body);
+  const byTitle = new Map();
+  for (let index = 0; index < headings.length; index += 1) {
+    const heading = headings[index];
+    const endLine = headings[index + 1]?.lineIndex ?? lines.length;
+    const section = {
+      ...heading,
+      content: lines.slice(heading.lineIndex + 1, endLine).join("\n").trim(),
+    };
+    const occurrences = byTitle.get(heading.title) ?? [];
+    occurrences.push(section);
+    byTitle.set(heading.title, occurrences);
+  }
+
+  const canonicalByFoldedTitle = new Map(
+    requiredSections.map((title) => [title.toLowerCase(), title])
+  );
+  for (const heading of headings) {
+    const canonical = canonicalByFoldedTitle.get(heading.title.toLowerCase());
+    if (canonical && heading.title !== canonical) {
+      const kind = byTitle.has(canonical) ? "duplicates" : "misspells";
+      throw new Error(
+        `${documentLabel} ${kind} required H1 section ${JSON.stringify(canonical)} with noncanonical heading ${JSON.stringify(heading.title)} at line ${heading.lineNumber}`
+      );
+    }
+  }
+
+  for (const required of requiredSections) {
+    const occurrences = byTitle.get(required) ?? [];
+    if (occurrences.length === 0) {
+      throw new Error(`${documentLabel} is missing required H1 section ${JSON.stringify(required)}`);
+    }
+    if (occurrences.length > 1) {
+      throw new Error(
+        `${documentLabel} has duplicate required H1 section ${JSON.stringify(required)} at line ${occurrences[1].lineNumber}`
+      );
+    }
+  }
+
+  let previous = null;
+  for (const required of requiredSections) {
+    const section = byTitle.get(required)[0];
+    if (previous && section.lineIndex < previous.lineIndex) {
+      throw new Error(
+        `${documentLabel} required H1 section ${JSON.stringify(required)} is out of canonical order`
+      );
+    }
+    if (!section.content) {
+      throw new Error(`${documentLabel} required H1 section ${JSON.stringify(required)} is empty`);
+    }
+    previous = section;
+  }
+
+  return new Map(requiredSections.map((title) => [title, byTitle.get(title)[0].content]));
+}
+
+function validateIndexDocument(contents, directoryId = null) {
+  const { metadata, body } = parseFrontmatter(contents, "Socrates contract index");
   if (metadata.protocol !== SOCRATES_PROTOCOL) {
     throw new Error(`invalid Socrates protocol marker: ${metadata.protocol ?? "missing"}`);
   }
@@ -697,14 +899,25 @@ export async function validateSocratesIndex(contents, directoryId = null) {
   if (!SUBCONTRACT_ID.test(metadata.active_subcontract ?? "")) {
     throw new Error("invalid or missing Socrates active_subcontract");
   }
-  return metadata;
+  return {
+    metadata,
+    sections: validateRequiredSections(
+      body,
+      REQUIRED_INDEX_SECTIONS,
+      "Socrates contract index"
+    ),
+  };
 }
 
-export async function validateSocratesSubcontract(
+export async function validateSocratesIndex(contents, directoryId = null) {
+  return validateIndexDocument(contents, directoryId).metadata;
+}
+
+function validateSubcontractDocument(
   contents,
   { contractId = null, subcontractId = null } = {}
 ) {
-  const metadata = parseFrontmatter(contents);
+  const { metadata, body } = parseFrontmatter(contents, "Socrates subcontract");
   if (metadata.protocol !== SOCRATES_PROTOCOL) {
     throw new Error(`invalid Socrates subcontract protocol marker: ${metadata.protocol ?? "missing"}`);
   }
@@ -736,7 +949,87 @@ export async function validateSocratesSubcontract(
       throw new Error(`invalid or missing Socrates subcontract ${field}`);
     }
   }
-  return metadata;
+  const sections = validateRequiredSections(
+    body,
+    REQUIRED_SUBCONTRACT_SECTIONS,
+    "Socrates subcontract"
+  );
+  const textualStatus = sections.get("Status").trim();
+  if (textualStatus !== metadata.status) {
+    throw new Error(
+      `Socrates subcontract Status section ${JSON.stringify(textualStatus)} does not match frontmatter status ${JSON.stringify(metadata.status)}`
+    );
+  }
+  return { metadata, sections };
+}
+
+export async function validateSocratesSubcontract(
+  contents,
+  { contractId = null, subcontractId = null } = {}
+) {
+  return validateSubcontractDocument(contents, { contractId, subcontractId }).metadata;
+}
+
+function withoutFencedCode(markdown) {
+  const lines = markdown.split("\n");
+  const visible = [];
+  let fence = null;
+  for (const line of lines) {
+    if (fence) {
+      if (closesMarkdownFence(line, fence)) fence = null;
+      continue;
+    }
+    const opening = markdownFenceOpening(line);
+    if (opening) {
+      fence = opening;
+      continue;
+    }
+    visible.push(line);
+  }
+  return visible.join("\n");
+}
+
+function validateIndexSubcontractCoherence(
+  indexDocument,
+  subcontractDocument,
+  { requirePathReference = true } = {}
+) {
+  const index = indexDocument.metadata;
+  const subcontract = subcontractDocument.metadata;
+  if (subcontract.contract_id !== index.contract_id) {
+    throw new Error(
+      `Socrates subcontract contract_id ${subcontract.contract_id} does not match index ${index.contract_id}`
+    );
+  }
+  if (subcontract.subcontract_id !== index.active_subcontract) {
+    throw new Error(
+      `Socrates subcontract id ${subcontract.subcontract_id} does not match active_subcontract ${index.active_subcontract}`
+    );
+  }
+
+  if (requirePathReference) {
+    const visibleSubcontracts = withoutFencedCode(
+      indexDocument.sections.get("Subcontracts")
+    );
+    const expectedPath = `subcontracts/${index.active_subcontract}.md`;
+    const escapedPath = expectedPath.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    const pathReference = new RegExp(
+      `(?:^|[\\s('"<])(?:\\./)?${escapedPath}(?=$|[\\s)'">#?])`,
+      "u"
+    );
+    if (!pathReference.test(visibleSubcontracts)) {
+      throw new Error(
+        `Socrates index Subcontracts section does not reference active path ${expectedPath}`
+      );
+    }
+  }
+
+  const allowed = ALLOWED_ACTIVE_SUBCONTRACT_STATUSES[index.status];
+  if (!allowed.includes(subcontract.status)) {
+    throw new Error(
+      `incoherent Socrates lifecycle: macro ${index.status} cannot reference subcontract ${subcontract.status}`
+    );
+  }
 }
 
 function taskTokens(value) {
@@ -835,6 +1128,7 @@ export async function discoverSocratesState({ root, taskHint = null }) {
     result.invalid.push({
       contractId: null,
       indexPath: contractsRoot,
+      canAuthorize: false,
       reason: error instanceof Error ? error.message : String(error),
     });
     return result;
@@ -849,6 +1143,7 @@ export async function discoverSocratesState({ root, taskHint = null }) {
     result.invalid.push({
       contractId: null,
       indexPath: contractsRoot,
+      canAuthorize: false,
       reason: `Cannot read Socrates contracts root: ${
         error instanceof Error ? error.message : String(error)
       }`,
@@ -863,6 +1158,7 @@ export async function discoverSocratesState({ root, taskHint = null }) {
       result.invalid.push({
         contractId: entry.name,
         indexPath,
+        canAuthorize: false,
         reason: `Socrates contract directory contains a symlink: ${entry.name}`,
       });
       continue;
@@ -874,10 +1170,11 @@ export async function discoverSocratesState({ root, taskHint = null }) {
         indexPath,
         "Socrates contract index"
       );
-      const metadata = await validateSocratesIndex(
+      const indexDocument = validateIndexDocument(
         await readRegularFileNoFollow(indexPath, "Socrates contract index"),
         entry.name
       );
+      const metadata = indexDocument.metadata;
       const candidate = {
         kind: "socrates",
         contractId: metadata.contract_id,
@@ -902,32 +1199,69 @@ export async function discoverSocratesState({ root, taskHint = null }) {
           subcontractPath,
           "Socrates active subcontract"
         );
-        const subcontract = await validateSocratesSubcontract(
-          await readRegularFileNoFollow(
+        let subcontractContents;
+        try {
+          subcontractContents = await readRegularFileNoFollow(
             subcontractPath,
             "Socrates active subcontract"
-          ),
+          );
+        } catch (error) {
+          if (error && typeof error === "object" && error.code === "ENOENT") {
+            throw new Error(
+              `active Socrates subcontract is missing: subcontracts/${metadata.active_subcontract}.md`
+            );
+          }
+          throw error;
+        }
+        const subcontractDocument = validateSubcontractDocument(
+          subcontractContents,
           {
             contractId: metadata.contract_id,
             subcontractId: metadata.active_subcontract,
           }
         );
-        if (!ACTIVE_STATUSES.has(subcontract.status)) {
-          throw new Error(
-            `active Socrates subcontract has historical status: ${subcontract.status}`
-          );
-        }
+        validateIndexSubcontractCoherence(indexDocument, subcontractDocument);
         candidate.activeSubcontract = metadata.active_subcontract;
         candidate.subcontractPath = subcontractPath;
-        candidate.subcontractStatus = subcontract.status;
+        candidate.subcontractStatus = subcontractDocument.metadata.status;
         result.active.push(candidate);
       } else if (HISTORICAL_STATUSES.has(metadata.status)) {
+        const subcontractPath = path.join(
+          contractsRoot,
+          entry.name,
+          "subcontracts",
+          `${metadata.active_subcontract}.md`
+        );
+        await assertSafeManagedPath(
+          resolvedRoot,
+          subcontractPath,
+          "Socrates referenced subcontract"
+        );
+        if (await pathExists(subcontractPath)) {
+          const subcontractDocument = validateSubcontractDocument(
+            await readRegularFileNoFollow(
+              subcontractPath,
+              "Socrates referenced subcontract"
+            ),
+            {
+              contractId: metadata.contract_id,
+              subcontractId: metadata.active_subcontract,
+            }
+          );
+          validateIndexSubcontractCoherence(indexDocument, subcontractDocument, {
+            requirePathReference: false,
+          });
+          candidate.activeSubcontract = metadata.active_subcontract;
+          candidate.subcontractPath = subcontractPath;
+          candidate.subcontractStatus = subcontractDocument.metadata.status;
+        }
         result.historical.push(candidate);
       }
     } catch (error) {
       result.invalid.push({
         contractId: entry.name,
         indexPath,
+        canAuthorize: false,
         reason: error instanceof Error ? error.message : String(error),
       });
     }
@@ -952,19 +1286,46 @@ Compatibility:
 `;
 }
 
-export async function main(argv = process.argv.slice(2)) {
+export async function main(argv = process.argv.slice(2), dependencies = {}) {
+  const stdout = dependencies.stdout ?? process.stdout;
   const options = parseScaffoldArgs(argv);
   if (options.help) {
-    process.stdout.write(renderScaffoldHelp());
+    stdout.write(renderScaffoldHelp());
     return;
   }
-  const result = await scaffoldContract(options);
-  process.stdout.write(
+  const result = await scaffoldContract(options, dependencies);
+  stdout.write(
     `Created Socrates contract ${options.contractId}:\n` +
       `- ${result.indexPath}\n` +
       `- ${result.subcontractPath}\n` +
       "Next: fill the placeholders, align the active subcontract, then verify before closing.\n"
   );
+}
+
+export async function runCli(argv = process.argv.slice(2), dependencies = {}) {
+  const stderr = dependencies.stderr ?? process.stderr;
+  const warnings = [];
+  const callerWarning = dependencies.onWarning;
+  const onWarning = (warning) => {
+    warnings.push(String(warning).trimEnd());
+    callerWarning?.(warning);
+  };
+  const flushWarnings = () => {
+    for (const warning of warnings) {
+      stderr.write(`Warning: ${warning}\n`);
+    }
+  };
+
+  try {
+    await main(argv, { ...dependencies, onWarning });
+    flushWarnings();
+    return 0;
+  } catch (error) {
+    flushWarnings();
+    const message = error instanceof Error ? error.message : String(error);
+    stderr.write(`${message}\n`);
+    return 1;
+  }
 }
 
 function isCurrentFileModule() {
@@ -983,11 +1344,5 @@ function isCurrentFileModule() {
 const isFileModule = isCurrentFileModule();
 
 if (isFileModule) {
-  try {
-    await main();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`${message}\n`);
-    process.exitCode = 1;
-  }
+  process.exitCode = await runCli();
 }

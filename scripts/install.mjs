@@ -731,13 +731,23 @@ async function acquireInstallerLock(options, ops) {
   throw new Error(`Could not acquire Socrates installer lock: ${paths.lockPath}`);
 }
 
-async function readLockPayload(paths, ops) {
+async function inspectLockPayload(paths, ops) {
   try {
-    return JSON.parse(await ops.readFile(paths.lockPath, "utf8"));
+    return {
+      state: "readable",
+      payload: JSON.parse(await ops.readFile(paths.lockPath, "utf8")),
+      error: null,
+    };
   } catch (error) {
-    if (error && typeof error === "object" && error.code === "ENOENT") return null;
-    return null;
+    if (error && typeof error === "object" && error.code === "ENOENT") {
+      return { state: "missing", payload: null, error: null };
+    }
+    return { state: "unverifiable", payload: null, error };
   }
+}
+
+async function readLockPayload(paths, ops) {
+  return (await inspectLockPayload(paths, ops)).payload;
 }
 
 async function assertInstallerLockOwned(paths, ops) {
@@ -753,11 +763,21 @@ async function assertInstallerLockOwned(paths, ops) {
 }
 
 async function releaseInstallerLock(paths, ops) {
-  const observed = await readLockPayload(paths, ops);
+  const inspection = await inspectLockPayload(paths, ops);
+  if (inspection.state === "missing") return;
+  if (inspection.state === "unverifiable") {
+    ops.onWarning(
+      `Installer lock could not be verified and was left untouched at ${paths.lockPath}: ${
+        inspection.error instanceof Error
+          ? inspection.error.message
+          : String(inspection.error)
+      }`
+    );
+    return;
+  }
+  const observed = inspection.payload;
   if (observed?.token !== paths.token || observed?.pid !== process.pid) {
-    if (observed !== null) {
-      ops.onWarning(`Installer lock was replaced; leaving it untouched: ${paths.lockPath}`);
-    }
+    ops.onWarning(`Installer lock was replaced; leaving it untouched: ${paths.lockPath}`);
     return;
   }
   const quarantine = `${paths.lockPath}.release-${ops.randomUUID()}`;
@@ -1851,6 +1871,27 @@ async function cleanupPaths(paths, ops) {
   return failures;
 }
 
+async function cleanupStagingWhenJournalIsAbsent(
+  journalPath,
+  cleanupEntries,
+  ops
+) {
+  let journalPresent;
+  try {
+    journalPresent = await pathExists(journalPath, ops);
+  } catch (error) {
+    ops.onWarning(
+      `Could not inspect the Socrates transaction journal; staging cleanup is deferred for ${journalPath}: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return;
+  }
+  if (!journalPresent) {
+    await cleanupPaths([...cleanupEntries].reverse(), ops);
+  }
+}
+
 async function stageDescriptor(descriptor, manifest, removals, expectedState, ops) {
   const ownedExternal = descriptor.external.filter(
     (asset) => asset.installOwned !== false
@@ -2363,7 +2404,15 @@ async function activateTransaction(
         const cleanupFailures = await cleanupVerifiedBackups(records, ops);
         cleanupFailures.push(...(await cleanupPaths(cleanupEntries, ops)));
         if (transaction && cleanupFailures.length === 0) {
-          await ops.rm(transaction.journalPath, { force: true });
+          try {
+            await ops.rm(transaction.journalPath, { force: true });
+          } catch (error) {
+            ops.onWarning(
+              `Committed Socrates transaction cleanup is deferred because its journal remains at ${transaction.journalPath}: ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+          }
         }
       }
     }
@@ -2510,9 +2559,11 @@ export async function installSocrates(rawOptions = {}, dependencies = {}) {
         { journalPath: lock.journalPath, cleanupRoots, lock }
       );
     } finally {
-      if (!(await pathExists(lock.journalPath, ops))) {
-        await cleanupPaths([...cleanupEntries].reverse(), ops);
-      }
+      await cleanupStagingWhenJournalIsAbsent(
+        lock.journalPath,
+        cleanupEntries,
+        ops
+      );
     }
 
     return descriptors.flatMap((descriptor) =>
@@ -2635,6 +2686,7 @@ async function collectUninstallUnits(
 }
 
 async function pruneEmptyDirectories(paths, ops) {
+  const failures = [];
   for (const entry of paths) {
     const target = entry.target;
     try {
@@ -2651,10 +2703,18 @@ async function pruneEmptyDirectories(paths, ops) {
         typeof error !== "object" ||
         !["ENOENT", "ENOTEMPTY", "EEXIST"].includes(error.code)
       ) {
-        throw error;
+        failures.push(
+          `${target}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
   }
+  if (failures.length > 0) {
+    ops.onWarning(
+      `Socrates empty-directory cleanup residue remains:\n- ${failures.join("\n- ")}`
+    );
+  }
+  return failures;
 }
 
 export async function uninstallSocrates(rawOptions = {}, dependencies = {}) {
@@ -2799,9 +2859,11 @@ export async function uninstallSocrates(rawOptions = {}, dependencies = {}) {
         { journalPath: lock.journalPath, cleanupRoots, lock }
       );
     } finally {
-      if (!(await pathExists(lock.journalPath, ops))) {
-        await cleanupPaths([...cleanupEntries].reverse(), ops);
-      }
+      await cleanupStagingWhenJournalIsAbsent(
+        lock.journalPath,
+        cleanupEntries,
+        ops
+      );
     }
     const uniquePrune = new Map(prune.map((entry) => [entry.target, entry]));
     await pruneEmptyDirectories([...uniquePrune.values()], ops);
@@ -2834,18 +2896,56 @@ Notes:
 `;
 }
 
-export async function main(argv = process.argv.slice(2)) {
-  const options = parseArgs(argv);
-  if (options.help) {
-    process.stdout.write(renderHelp());
-    return;
+export async function main(argv = process.argv.slice(2), dependencies = {}) {
+  const {
+    stdout = process.stdout,
+    stderr = process.stderr,
+    ...operationDependencies
+  } = dependencies;
+  const warnings = [];
+  const suppliedOnWarning = operationDependencies.onWarning;
+  operationDependencies.onWarning = (warning) => {
+    warnings.push(String(warning));
+    if (suppliedOnWarning) suppliedOnWarning(warning);
+  };
+
+  try {
+    const options = parseArgs(argv);
+    if (options.help) {
+      stdout.write(renderHelp());
+      return;
+    }
+    const changed =
+      options.mode === "uninstall"
+        ? await uninstallSocrates(options, operationDependencies)
+        : await installSocrates(options, operationDependencies);
+    const verb =
+      options.mode === "uninstall"
+        ? "Removed Socrates from"
+        : "Installed Socrates to";
+    stdout.write(
+      `${verb}:\n${changed.map((entry) => `- ${entry}`).join("\n")}\n`
+    );
+  } finally {
+    for (const warning of warnings) {
+      stderr.write(`Warning: ${warning}\n`);
+    }
   }
-  const changed =
-    options.mode === "uninstall"
-      ? await uninstallSocrates(options)
-      : await installSocrates(options);
-  const verb = options.mode === "uninstall" ? "Removed Socrates from" : "Installed Socrates to";
-  process.stdout.write(`${verb}:\n${changed.map((entry) => `- ${entry}`).join("\n")}\n`);
+}
+
+export async function runCli(
+  argv = process.argv.slice(2),
+  dependencies = {}
+) {
+  const stderr = dependencies.stderr ?? process.stderr;
+  try {
+    await main(argv, dependencies);
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    stderr.write(`${message}\n`);
+    return 1;
+  }
 }
 
 function isCurrentFileModule() {
@@ -2866,11 +2966,5 @@ const isExplicitStdinInstall =
   process.argv[1] === "-" && process.env.SOCRATES_INSTALL_RUN === "1";
 
 if (isExplicitStdinInstall || isFileModule) {
-  try {
-    await main();
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    process.stderr.write(`${message}\n`);
-    process.exitCode = 1;
-  }
+  process.exitCode = await runCli();
 }

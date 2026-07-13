@@ -83,6 +83,14 @@ Use `--platform codex` or `--platform claude` to install one host only.
 
 From this checkout:
 
+User scope:
+
+```bash
+node scripts/install.mjs --mode install --platform both --scope global --source-root "$PWD"
+```
+
+Repository scope:
+
 ```bash
 node scripts/install.mjs --platform both --scope repo --target-repo /absolute/path/to/repo --source-root "$PWD"
 ```
@@ -151,9 +159,13 @@ The one-argument legacy script form remains accepted for one transition period, 
 
 Every new index and subcontract carries `protocol: socrates-contract`, schema version `1.0`, stable IDs, lifecycle status, and timestamps. The index also records task identity and active subcontract. Supported statuses are `proposed`, `aligned`, `executing`, `blocked`, `verifying`, `done`, and `cancelled`; the bundled scaffolder validates allowed transitions.
 
-Resume recovery runs only for an explicit Socrates resume or durable handoff. Discovery accepts only schema-valid active/blocked state with a plausible task match, ignores malformed or completed history and normal application contracts, and never infers protected-action approval. Multiple plausible active contracts require a bounded disambiguation.
+Resumable namespaced contracts validate the complete durable document, not frontmatter alone: required H1 body sections must appear exactly once, in canonical order, with non-whitespace content. Duplicate frontmatter keys, malformed frontmatter, body/frontmatter status disagreement, missing active-subcontract references, and lifecycle-incoherent index/subcontract state are invalid. Unknown optional frontmatter keys remain accepted, and the initially generated placeholders satisfy the complete validation.
+
+Resume recovery runs only for an explicit Socrates resume or durable handoff. Discovery accepts only complete-schema-valid active/blocked state with a plausible task match, ignores malformed or completed history and normal application contracts, and never infers protected-action approval. Multiple plausible active contracts require a bounded disambiguation.
 
 The scaffolder validates IDs, roots, text limits, paths, regular-file state, CRLF/LF frontmatter, and lock-file types. It acquires an exclusive lock, writes and validates a sibling staged tree, then publishes with a POSIX directory reservation or Windows missing-target rename. Injected failures and final-window duplicate IDs leave user-created state intact rather than a partial contract.
+
+Direct installer and scaffolder CLI runs print every recovery or cleanup warning to stderr, in emission order, with the stable `Warning:` prefix. Post-commit cleanup warnings do not turn a committed primary operation into a failure: it remains successful, but each warning means residue remains for a later retry or recovery. Pre-commit and rollback failures remain nonzero and do not print a success message.
 
 ## Installer guarantees
 

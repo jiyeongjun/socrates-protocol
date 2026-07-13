@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOCRATES_DESCRIPTION =
-  "Use for mutation with external, destructive, public, costly, credentialed, production, compatibility, schema, auth, billing, data, permission, rollback, or migration risk; multiple independent mutation or verification paths; durable multi-turn handoff; or explicit resume of a Socrates contract. Skip read-only explanation/review, formatting-only work, narrow local reversible edits, and focused source-plus-test or source-plus-doc changes with one coherent verification path.";
+  "Use for risky mutation, multiple independent mutation or verification paths, durable multi-turn handoff, or explicit Socrates resume. Skip read-only work and narrow reversible local edits, including formatting-only and focused source-plus-test/doc changes with one coherent verification path. Risky work includes external, destructive, public, costly, credentialed, production, compatibility, schema, auth, billing, data, permission, rollback, or migration changes.";
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");

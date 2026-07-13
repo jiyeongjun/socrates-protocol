@@ -82,33 +82,45 @@ test("generator rejects unsafe layout names and stale generated artifacts", asyn
 });
 
 test("frontmatter description has trigger recall and safe-local precision", () => {
-  for (const target of Object.values(skillTargets)) {
+  const descriptions = Object.values(skillTargets).map((target) => {
     const descriptionLine = target.frontmatter.find((line) =>
       line.startsWith("description: ")
     );
-    const description = JSON.parse(descriptionLine.slice("description: ".length));
-    assert.ok(description.length < 700);
+    return JSON.parse(descriptionLine.slice("description: ".length));
+  });
+
+  assert.equal(new Set(descriptions).size, 1);
+  for (const description of descriptions) {
+    assert.ok(description.length < 500);
+    assert.ok(description.indexOf("Skip") >= 0);
+    assert.ok(description.indexOf("Risky work includes") > description.indexOf("Skip"));
     for (const trigger of [
+      "risky mutation",
+      "multiple independent mutation or verification paths",
+      "durable multi-turn handoff",
+      "explicit Socrates resume",
       "external",
       "destructive",
+      "public",
+      "costly",
+      "credentialed",
       "production",
       "compatibility",
       "schema",
       "auth",
       "billing",
+      "data",
+      "permission",
       "rollback",
       "migration",
-      "durable multi-turn handoff",
-      "explicit resume",
     ]) {
       assert.match(description, new RegExp(trigger, "i"));
     }
     for (const exclusion of [
-      "read-only explanation/review",
+      "read-only work",
+      "narrow reversible local edits",
       "formatting-only",
-      "narrow local reversible",
-      "source-plus-test",
-      "source-plus-doc",
+      "focused source-plus-test/doc changes",
       "one coherent verification path",
     ]) {
       assert.match(description, new RegExp(exclusion, "i"));
@@ -138,15 +150,19 @@ test("main runtime is concise and keeps canonical trust, resume, PTC, and output
 test("Codex and Claude skills are generated from the same runtime source", async () => {
   const body = await readSkillBody();
   const claudeAppendix = await readClaudeSkillAppendix();
+  const generatedDescriptions = new Set();
   for (const [platform, target] of Object.entries(skillTargets)) {
+    const generated = await readFile(target.path, "utf8");
     assert.equal(
-      await readFile(target.path, "utf8"),
+      generated,
       buildSkillDocument({
         frontmatter: target.frontmatter,
         body: buildPlatformSkillBody(platform, body, claudeAppendix),
       })
     );
+    generatedDescriptions.add(generated.match(/^description: (.+)$/m)?.[1]);
   }
+  assert.equal(generatedDescriptions.size, 1);
 });
 
 test("rendered Claude skill contains the exact host-substituted scaffold command", async () => {
@@ -338,11 +354,38 @@ test("English and Korean docs describe the same verified host and safety contrac
   }
 
   for (const command of [
+    'node scripts/install.mjs --mode install --platform both --scope global --source-root "$PWD"',
     'node ".agents/skills/socrates-contract/scripts/scaffold-contract.mjs" --root "$PWD" --id "<contract-id>" "<macro goal>"',
     'node "$HOME/.agents/skills/socrates-contract/scripts/scaffold-contract.mjs" --root "$PWD" --id "<contract-id>" "<macro goal>"',
     'node "${CLAUDE_SKILL_DIR}/scripts/scaffold-contract.mjs" --root "${CLAUDE_PROJECT_DIR}" --id "<contract-id>" "<macro goal>"',
   ]) {
     assert.ok(english.includes(command));
     assert.ok(korean.includes(command));
+  }
+
+  for (const expected of [
+    /complete durable document, not frontmatter alone/i,
+    /required H1 body sections.*exactly once.*canonical order.*non-whitespace content/is,
+    /Duplicate frontmatter keys.*lifecycle-incoherent.*invalid/is,
+    /initially generated placeholders.*complete validation/i,
+    /installer and scaffolder CLI.*stderr.*`Warning:`/is,
+    /post-commit cleanup.*remains successful/is,
+    /residue.*later retry or recovery/is,
+    /pre-commit and rollback failures remain nonzero/is,
+  ]) {
+    assert.match(english, expected);
+  }
+
+  for (const expected of [
+    /frontmatter만이 아니라 durable document 전체를 검증/,
+    /필수 H1 body section.*canonical order.*정확히 한 번.*non-whitespace content/s,
+    /중복 frontmatter key.*lifecycle.*invalid/s,
+    /처음 생성되는 placeholder.*전체 validation을 통과/s,
+    /Installer와 scaffolder CLI.*stderr.*`Warning:`/s,
+    /post-commit cleanup warning.*성공으로 유지/s,
+    /residue.*retry\/recovery/s,
+    /Pre-commit failure와 rollback failure.*nonzero/s,
+  ]) {
+    assert.match(korean, expected);
   }
 });

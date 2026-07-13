@@ -5,6 +5,7 @@ import {
   access,
   chmod,
   link,
+  lstat,
   mkdir,
   mkdtemp,
   readFile,
@@ -25,6 +26,7 @@ import {
   installSocrates as installSocratesImpl,
   installerStatePaths,
   parseArgs,
+  runCli as runInstallerCli,
   uninstallSocrates as uninstallSocratesImpl,
 } from "../scripts/install.mjs";
 
@@ -63,6 +65,36 @@ function uninstallSocrates(options, dependencies = {}) {
     stateRoot: testInstallerStateRoot,
     ...dependencies,
   });
+}
+
+function createOutputCapture() {
+  const chunks = [];
+  return {
+    stream: {
+      write(chunk) {
+        chunks.push(String(chunk));
+        return true;
+      },
+    },
+    text() {
+      return chunks.join("");
+    },
+  };
+}
+
+function repoCliArgs(root, mode = "install") {
+  return [
+    "--mode",
+    mode,
+    "--platform",
+    "codex",
+    "--scope",
+    "repo",
+    "--target-repo",
+    root,
+    "--source-root",
+    repoRoot,
+  ];
 }
 
 async function assertMissing(target) {
@@ -333,6 +365,35 @@ test("installer CLI can install from local source", async () => {
   assert.match(result.stdout, /Installed Socrates to:/);
   await assert.doesNotReject(() =>
     readFile(path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"), "utf8")
+  );
+});
+
+test("installer CLI reports pre-publication failure without printing success", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-cli-stage-failure-"));
+  const stdout = createOutputCapture();
+  const stderr = createOutputCapture();
+  let injected = false;
+
+  const code = await runInstallerCli(repoCliArgs(root), {
+    stateRoot: testInstallerStateRoot,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    writeFile: async (target, contents, options) => {
+      if (!injected && String(target).includes(".socrates-contract.stage-")) {
+        injected = true;
+        throw new Error("injected CLI staging failure");
+      }
+      return writeFile(target, contents, options);
+    },
+  });
+
+  assert.equal(code, 1);
+  assert.equal(injected, true);
+  assert.equal(stdout.text(), "");
+  assert.match(stderr.text(), /injected CLI staging failure/i);
+  assert.doesNotMatch(stderr.text(), /Installed Socrates to:/i);
+  await assertMissing(
+    path.join(root, ".agents", "skills", "socrates-contract")
   );
 });
 
@@ -646,7 +707,7 @@ test("ownership-ledger publication failure rolls back the full update", async ()
   await assertMissing(paths.journalPath);
 });
 
-test("interrupted ownership-ledger rollback is recovered from the journal", async () => {
+test("installer CLI reports rollback failure without printing success", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "socrates-ledger-recovery-"));
   await installSocrates({
     platform: "codex",
@@ -667,39 +728,36 @@ test("interrupted ownership-ledger rollback is recovered from the journal", asyn
     readFile(paths.ledgerPath, "utf8"),
   ]);
   let restoreFailed = false;
+  const stdout = createOutputCapture();
+  const stderr = createOutputCapture();
 
-  await assert.rejects(
-    () =>
-      installSocrates(
-        {
-          platform: "codex",
-          scope: "repo",
-          targetRepo: root,
-          sourceRoot: repoRoot,
-        },
-        {
-          loadAsset: loadChangedSkillAsset,
-          link: async (source, target) => {
-            if (target === paths.ledgerPath) {
-              throw new Error("injected ledger publication interruption");
-            }
-            return link(source, target);
-          },
-          rename: async (source, target) => {
-            if (
-              !restoreFailed &&
-              target === paths.ledgerPath &&
-              path.basename(source).startsWith(".ownership.json.backup-")
-            ) {
-              restoreFailed = true;
-              throw new Error("injected ledger rollback interruption");
-            }
-            return rename(source, target);
-          },
-        }
-      ),
-    /rollback failure/i
-  );
+  const code = await runInstallerCli(repoCliArgs(root), {
+    stateRoot: testInstallerStateRoot,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    loadAsset: loadChangedSkillAsset,
+    link: async (source, target) => {
+      if (target === paths.ledgerPath) {
+        throw new Error("injected ledger publication interruption");
+      }
+      return link(source, target);
+    },
+    rename: async (source, target) => {
+      if (
+        !restoreFailed &&
+        target === paths.ledgerPath &&
+        path.basename(source).startsWith(".ownership.json.backup-")
+      ) {
+        restoreFailed = true;
+        throw new Error("injected ledger rollback interruption");
+      }
+      return rename(source, target);
+    },
+  });
+  assert.equal(code, 1);
+  assert.equal(stdout.text(), "");
+  assert.match(stderr.text(), /rollback failure/i);
+  assert.doesNotMatch(stderr.text(), /Installed Socrates to:/i);
   await assert.doesNotReject(() => readFile(paths.journalPath, "utf8"));
 
   await installSocrates({
@@ -1591,6 +1649,200 @@ test("post-commit cleanup residue is recoverable and does not report a false rol
     { loadAsset: loadChangedSkillAsset }
   );
   await assertMissing(journalPath);
+});
+
+test("installer CLI prints post-commit cleanup warnings once and in order", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-cli-cleanup-warning-"));
+  await installSocrates({
+    platform: "codex",
+    scope: "repo",
+    targetRepo: root,
+    sourceRoot: repoRoot,
+  });
+  const stdout = createOutputCapture();
+  const stderr = createOutputCapture();
+
+  const code = await runInstallerCli(repoCliArgs(root), {
+    stateRoot: testInstallerStateRoot,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    loadAsset: loadChangedSkillAsset,
+    rm: async (target, options) => {
+      const value = String(target);
+      if (value.includes(".backup-")) {
+        throw new Error("injected backup cleanup failure");
+      }
+      if (value.includes(".stage-") && options?.recursive === true) {
+        throw new Error(`injected staging cleanup failure: ${value}`);
+      }
+      return rm(target, options);
+    },
+  });
+
+  const warningOutput = stderr.text();
+  const backupWarning = warningOutput.indexOf(
+    "Warning: Socrates backup cleanup residue remains:"
+  );
+  const stagingWarning = warningOutput.indexOf(
+    "Warning: Socrates cleanup residue remains:"
+  );
+  assert.equal(code, 0, stderr.text());
+  assert.match(stdout.text(), /Installed Socrates to:/);
+  assert.equal((warningOutput.match(/^Warning:/gmu) ?? []).length, 2);
+  assert.ok(backupWarning >= 0);
+  assert.ok(stagingWarning > backupWarning);
+  assert.equal(
+    await readFile(
+      path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"),
+      "utf8"
+    ),
+    await loadChangedSkillAsset(ASSET_PATH_FOR_CODEX_SKILL)
+  );
+
+  await installSocrates(
+    {
+      platform: "codex",
+      scope: "repo",
+      targetRepo: root,
+      sourceRoot: repoRoot,
+    },
+    { loadAsset: loadChangedSkillAsset }
+  );
+  await assertMissing(installerPaths(root).journalPath);
+});
+
+test("installer CLI warns instead of failing when committed journal removal is deferred", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-cli-journal-warning-"));
+  await installSocrates({
+    platform: "codex",
+    scope: "repo",
+    targetRepo: root,
+    sourceRoot: repoRoot,
+  });
+  const paths = installerPaths(root);
+  const stdout = createOutputCapture();
+  const stderr = createOutputCapture();
+  let injected = false;
+
+  const code = await runInstallerCli(repoCliArgs(root), {
+    stateRoot: testInstallerStateRoot,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    loadAsset: loadChangedSkillAsset,
+    rm: async (target, options) => {
+      if (!injected && target === paths.journalPath) {
+        injected = true;
+        throw new Error("injected committed journal cleanup failure");
+      }
+      return rm(target, options);
+    },
+  });
+
+  assert.equal(code, 0);
+  assert.equal(injected, true);
+  assert.match(stdout.text(), /Installed Socrates to:/);
+  assert.match(
+    stderr.text(),
+    /Warning: Committed Socrates transaction cleanup is deferred because its journal remains/i
+  );
+  assert.equal((stderr.text().match(/^Warning:/gmu) ?? []).length, 1);
+  await assert.doesNotReject(() => readFile(paths.journalPath, "utf8"));
+  assert.equal(
+    await readFile(
+      path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"),
+      "utf8"
+    ),
+    await loadChangedSkillAsset(ASSET_PATH_FOR_CODEX_SKILL)
+  );
+
+  await installSocrates(
+    {
+      platform: "codex",
+      scope: "repo",
+      targetRepo: root,
+      sourceRoot: repoRoot,
+    },
+    { loadAsset: loadChangedSkillAsset }
+  );
+  await assertMissing(paths.journalPath);
+});
+
+test("installer CLI warns instead of reversing a commit when the final journal probe fails", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-cli-journal-probe-"));
+  const paths = installerPaths(root);
+  const stdout = createOutputCapture();
+  const stderr = createOutputCapture();
+  let journalRemoved = false;
+  let probeFailed = false;
+
+  const code = await runInstallerCli(repoCliArgs(root), {
+    stateRoot: testInstallerStateRoot,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    rm: async (target, options) => {
+      const result = await rm(target, options);
+      if (target === paths.journalPath) journalRemoved = true;
+      return result;
+    },
+    lstat: async (target) => {
+      if (journalRemoved && !probeFailed && target === paths.journalPath) {
+        probeFailed = true;
+        throw new Error("injected post-commit journal probe failure");
+      }
+      return lstat(target);
+    },
+  });
+
+  assert.equal(code, 0);
+  assert.equal(journalRemoved, true);
+  assert.equal(probeFailed, true);
+  assert.match(stdout.text(), /Installed Socrates to:/);
+  assert.match(
+    stderr.text(),
+    /^Warning: Could not inspect the Socrates transaction journal;.*injected post-commit journal probe failure\n$/su
+  );
+  await assert.doesNotReject(() =>
+    readFile(
+      path.join(root, ".agents", "skills", "socrates-contract", "SKILL.md"),
+      "utf8"
+    )
+  );
+});
+
+test("installer CLI warns and preserves a lock replaced after commit", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-cli-lock-replaced-"));
+  const paths = installerPaths(root);
+  const stdout = createOutputCapture();
+  const stderr = createOutputCapture();
+  const replacement = `${JSON.stringify({
+    protocol: "socrates-contract",
+    pid: process.pid,
+    token: "replacement-owner",
+    created_at: "2026-07-13T00:00:00.000Z",
+  })}\n`;
+  let replaced = false;
+
+  const code = await runInstallerCli(repoCliArgs(root), {
+    stateRoot: testInstallerStateRoot,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    rm: async (target, options) => {
+      const result = await rm(target, options);
+      if (!replaced && target === paths.journalPath) {
+        replaced = true;
+        await writeFile(paths.lockPath, replacement, "utf8");
+      }
+      return result;
+    },
+  });
+
+  assert.equal(code, 0);
+  assert.equal(replaced, true);
+  assert.match(stdout.text(), /Installed Socrates to:/);
+  assert.match(stderr.text(), /^Warning: Installer lock was replaced;/u);
+  assert.equal((stderr.text().match(/^Warning:/gmu) ?? []).length, 1);
+  assert.equal(await readFile(paths.lockPath, "utf8"), replacement);
+  await rm(paths.lockPath);
 });
 
 test("local source inference only applies to direct complete-repository execution", async () => {
@@ -2509,4 +2761,44 @@ test("atomic directory pruning preserves a concurrently added file", async () =>
     }
   );
   assert.equal(await readFile(racedNote, "utf8"), "created before atomic rmdir\n");
+});
+
+test("installer CLI reports uninstall directory cleanup residue without false failure", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-cli-prune-warning-"));
+  await installSocrates({
+    platform: "codex",
+    scope: "repo",
+    targetRepo: root,
+    sourceRoot: repoRoot,
+  });
+  const skillDir = path.join(root, ".agents", "skills", "socrates-contract");
+  const stdout = createOutputCapture();
+  const stderr = createOutputCapture();
+  let injected = false;
+
+  const code = await runInstallerCli(repoCliArgs(root, "uninstall"), {
+    stateRoot: testInstallerStateRoot,
+    stdout: stdout.stream,
+    stderr: stderr.stream,
+    rmdir: async (target) => {
+      if (!injected && target === skillDir) {
+        injected = true;
+        const error = new Error("injected empty-directory cleanup failure");
+        error.code = "EACCES";
+        throw error;
+      }
+      return rmdir(target);
+    },
+  });
+
+  assert.equal(code, 0);
+  assert.equal(injected, true);
+  assert.match(stdout.text(), /Removed Socrates from:/);
+  assert.match(
+    stderr.text(),
+    /Warning: Socrates empty-directory cleanup residue remains:/i
+  );
+  assert.equal((stderr.text().match(/^Warning:/gmu) ?? []).length, 1);
+  await assertMissing(path.join(skillDir, "SKILL.md"));
+  await assert.doesNotReject(() => access(skillDir));
 });

@@ -117,10 +117,9 @@ const staticGraders = {
     }
   },
   "negative-trigger": async ({ context }) => {
-    assert.match(
-      context.description,
-      /Skip read-only explanation\/review, formatting-only work, narrow local reversible edits/i
-    );
+    assert.match(context.description, /Skip read-only work and narrow reversible local edits/i);
+    assert.match(context.description, /formatting-only/i);
+    assert.match(context.description, /focused source-plus-test\/doc changes with one coherent verification path/i);
   },
   "coherent-path-inline": async ({ context }) => {
     assert.match(context.body, /focused source-plus-test\/source-plus-doc work with one coherent verification path/i);

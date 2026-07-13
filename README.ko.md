@@ -83,6 +83,14 @@ VERSION=v0.9.0 && TARGET_REPO=/absolute/path/to/repo && curl -fsSL https://raw.g
 
 현재 checkout에서 설치:
 
+사용자 범위:
+
+```bash
+node scripts/install.mjs --mode install --platform both --scope global --source-root "$PWD"
+```
+
+Repository scope:
+
 ```bash
 node scripts/install.mjs --platform both --scope repo --target-repo /absolute/path/to/repo --source-root "$PWD"
 ```
@@ -151,9 +159,13 @@ node "${CLAUDE_SKILL_DIR}/scripts/scaffold-contract.mjs" --root "${CLAUDE_PROJEC
 
 새 index와 subcontract에는 `protocol: socrates-contract`, schema version `1.0`, 안정적인 ID, lifecycle status, timestamp가 들어갑니다. Index에는 task identity와 active subcontract도 기록합니다. 지원 status는 `proposed`, `aligned`, `executing`, `blocked`, `verifying`, `done`, `cancelled`이며 bundled scaffolder가 허용된 transition을 검증합니다.
 
-Resume recovery는 사용자가 Socrates resume 또는 durable handoff를 명시적으로 요청했을 때만 실행합니다. Discovery는 schema가 유효하고 active/blocked이며 현재 task와 그럴듯하게 맞는 상태만 받아들입니다. Malformed·completed history와 일반 application contract는 무시하고, 보호된 행동의 승인을 추론하지 않습니다. 그럴듯한 active contract가 여러 개면 필요한 범위만 질문해 구분합니다.
+재개 가능한 namespaced contract는 frontmatter만이 아니라 durable document 전체를 검증합니다. 필수 H1 body section은 canonical order로 정확히 한 번씩 나타나고 non-whitespace content를 가져야 합니다. 중복 frontmatter key, 잘못된 frontmatter, body/frontmatter status 불일치, active subcontract reference 누락, lifecycle이 일치하지 않는 index/subcontract state는 invalid입니다. 알 수 없는 optional frontmatter key는 계속 허용하며, 처음 생성되는 placeholder는 전체 validation을 통과합니다.
+
+Resume recovery는 사용자가 Socrates resume 또는 durable handoff를 명시적으로 요청했을 때만 실행합니다. Discovery는 complete schema가 유효하고 active/blocked이며 현재 task와 그럴듯하게 맞는 상태만 받아들입니다. Malformed·completed history와 일반 application contract는 무시하고, 보호된 행동의 승인을 추론하지 않습니다. 그럴듯한 active contract가 여러 개면 필요한 범위만 질문해 구분합니다.
 
 Scaffolder는 ID, root, text limit, path, regular-file state, CRLF/LF frontmatter, lock file type을 검증합니다. Exclusive lock을 얻고 sibling stage tree를 쓴 뒤 POSIX에서는 directory reservation, Windows에서는 missing-target rename으로 publish합니다. 실패나 마지막 순간의 duplicate ID를 주입해도 사용자가 만든 state를 덮거나 partial contract를 남기지 않습니다.
+
+Installer와 scaffolder CLI를 직접 실행하면 recovery 또는 cleanup warning을 발생 순서대로 stderr에 stable `Warning:` prefix와 함께 출력합니다. Primary operation이 commit된 뒤 post-commit cleanup warning만 남은 경우 실행은 성공으로 유지되지만, 해당 warning은 residue가 남아 나중에 retry/recovery가 필요하다는 뜻입니다. Pre-commit failure와 rollback failure는 계속 nonzero이며 success message를 출력하지 않습니다.
 
 ## Installer 보장 범위
 
