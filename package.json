@@ -4,11 +4,13 @@
   "version": "0.9.0",
   "license": "MIT",
   "engines": {
-    "node": ">=24"
+    "node": ">=22"
   },
   "type": "module",
   "scripts": {
     "build:skills": "node reference/build-skills.mjs",
+    "test:evals": "node evals/run-static-evals.mjs",
+    "eval:live": "node evals/run-live-evals.mjs",
     "verify:release-assets": "node scripts/check-release-assets.mjs",
     "verify:skills": "node reference/verify-skills.mjs",
     "test": "node --test"

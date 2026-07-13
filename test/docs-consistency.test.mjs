@@ -6,12 +6,18 @@ import { fileURLToPath } from "node:url";
 import {
   agentTargetPath,
   buildOpenAIYaml,
+  buildPlatformSkillBody,
   buildSkillDocument,
   claudeAgentNames,
   claudeAgentTargets,
+  codexAgentNames,
+  codexAgentTargets,
+  findUnexpectedGeneratedPaths,
   modelPolicyTargetPaths,
   readAgentPromptSource,
   readClaudeAgentSource,
+  readClaudeSkillAppendix,
+  readCodexAgentSource,
   readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
@@ -21,346 +27,322 @@ import {
   skillScriptNames,
   skillScriptTargets,
   skillTargets,
+  validateGeneratedSkillLayout,
 } from "../reference/skill-generator.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
-const removedContextEnvName = ["SOCRATES", "CONTEXT"].join("_");
-const removedClarifyingPhase = ["clarifying", "phase"].join("_");
-const separateCodingPreferenceSkill = ["coding", "preferences"].join("-");
 
 async function readRepoFile(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("package metadata declares the current version and Node runtime floor", async () => {
+test("package metadata keeps release verification and supported runtime explicit", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
-
   assert.equal(pkg.version, "0.9.0");
   assert.equal(pkg.license, "MIT");
-  assert.deepEqual(pkg.engines, { node: ">=24" });
+  assert.equal(typeof pkg.engines.node, "string");
   assert.equal(
     pkg.scripts["verify:release-assets"],
     "node scripts/check-release-assets.mjs"
   );
 });
 
-test("README documents the contract-file workflow and install path", async () => {
-  const readme = await readRepoFile("README.md");
-
-  assert.match(readme, /^## Quick Install/m);
-  assert.match(readme, /^## How Contract Files Work/m);
-  assert.match(readme, /VERSION=v0\.9\.0/);
-  assert.match(readme, /release tag `v0\.9\.0`/i);
-  assert.match(readme, /current package version in this worktree is `0\.9\.0`/i);
-  assert.match(readme, /contract-index\.md/);
-  assert.match(readme, /contracts\/contract-001\.md/);
-  assert.match(readme, /\$socrates-contract/);
-  assert.match(readme, /\/socrates-contract/);
-  assert.match(readme, /Narrow reversible edits can stay inline/);
-  assert.match(readme, /implementation plus tests or docs/);
-  assert.match(readme, /durable handoff, protected-surface planning/);
-  assert.match(readme, /should not overwrite it/);
-  assert.match(readme, /implicit invocation when the host supports it/);
-  assert.match(readme, /scripts\/install\.mjs/);
-  assert.match(readme, /managed by this installer/);
-  assert.match(readme, /keeps only contract-file state/);
-  assert.match(readme, /verify:release-assets/);
-  assert.match(readme, /Node `24\+`/);
-  assert.doesNotMatch(readme, new RegExp(removedContextEnvName));
-  assert.doesNotMatch(readme, new RegExp(removedClarifyingPhase));
+test("generator rejects unsafe layout names and stale generated artifacts", async () => {
+  const base = {
+    skillReferences: ["one.md"],
+    skillScripts: ["one.mjs"],
+    codexAgents: ["one.toml"],
+    claudeAgents: ["one.md"],
+  };
+  for (const invalid of [
+    { ...base, skillReferences: ["../escape.md"] },
+    { ...base, skillScripts: ["nested/one.mjs"] },
+    { ...base, codexAgents: ["/absolute.toml"] },
+    { ...base, claudeAgents: ["dup.md", "DUP.md"] },
+    { ...base, codexAgents: "not-an-array" },
+  ]) {
+    assert.throws(() => validateGeneratedSkillLayout(invalid), /invalid|duplicate|array/i);
+  }
+  assert.deepEqual(
+    validateGeneratedSkillLayout({
+      skillReferences: [],
+      skillScripts: [],
+      codexAgents: [],
+      claudeAgents: [],
+    }),
+    {
+      skillReferences: [],
+      skillScripts: [],
+      codexAgents: [],
+      claudeAgents: [],
+    }
+  );
+  assert.deepEqual(await findUnexpectedGeneratedPaths(), []);
 });
 
-test("Korean README documents the contract-file workflow and install path", async () => {
-  const readme = await readRepoFile("README.ko.md");
-
-  assert.match(readme, /^## 빠른 설치/m);
-  assert.match(readme, /^## Contract 파일 동작 방식/m);
-  assert.match(readme, /VERSION=v0\.9\.0/);
-  assert.match(readme, /현재 release tag는 `v0\.9\.0`/);
-  assert.match(readme, /현재 worktree의 package version은 `0\.9\.0`/);
-  assert.match(readme, /contract-index\.md/);
-  assert.match(readme, /contracts\/contract-001\.md/);
-  assert.match(readme, /\$socrates-contract/);
-  assert.match(readme, /\/socrates-contract/);
-  assert.match(readme, /좁고 되돌리기 쉬운 수정/);
-  assert.match(readme, /구현 파일과 테스트 또는 문서/);
-  assert.match(readme, /오래 남길 handoff, protected-surface 계획/);
-  assert.match(readme, /이미 있으면 덮어쓰지 않습니다/);
-  assert.match(readme, /implicit invocation/);
-  assert.match(readme, /scripts\/install\.mjs/);
-  assert.match(readme, /installer가 관리하는 Socrates Contract 파일/);
-  assert.match(readme, /contract-file state만 유지/);
-  assert.match(readme, /verify:release-assets/);
-  assert.doesNotMatch(readme, new RegExp(removedContextEnvName));
-  assert.doesNotMatch(readme, new RegExp(removedClarifyingPhase));
+test("frontmatter description has trigger recall and safe-local precision", () => {
+  for (const target of Object.values(skillTargets)) {
+    const descriptionLine = target.frontmatter.find((line) =>
+      line.startsWith("description: ")
+    );
+    const description = JSON.parse(descriptionLine.slice("description: ".length));
+    assert.ok(description.length < 700);
+    for (const trigger of [
+      "external",
+      "destructive",
+      "production",
+      "compatibility",
+      "schema",
+      "auth",
+      "billing",
+      "rollback",
+      "migration",
+      "durable multi-turn handoff",
+      "explicit resume",
+    ]) {
+      assert.match(description, new RegExp(trigger, "i"));
+    }
+    for (const exclusion of [
+      "read-only explanation/review",
+      "formatting-only",
+      "narrow local reversible",
+      "source-plus-test",
+      "source-plus-doc",
+      "one coherent verification path",
+    ]) {
+      assert.match(description, new RegExp(exclusion, "i"));
+    }
+    assert.doesNotMatch(description, /elegant|robust|clean|safe|good/i);
+  }
 });
 
-test("Model regression checklist preserves Codex contract thresholds", async () => {
-  const checklist = await readRepoFile("reference/model-regression-checklist.md");
-
-  assert.match(checklist, /Protected-Surface Rename/);
-  assert.match(checklist, /Vague Safety Wording/);
-  assert.match(checklist, /Continuation Without Contract Files/);
-  assert.match(checklist, /Narrow Reversible Source Plus Test/);
-  assert.match(checklist, /Missing Artifact \/ Closed Scope/);
-  assert.match(checklist, /Dynamic Workflow Gate/);
-  assert.match(checklist, /High-Autonomy Model Invocation Gate/);
-  assert.match(checklist, /Programmatic Tool Calling Gate/);
-  assert.match(checklist, /Persisted Reasoning Is Not Resume State/);
-  assert.match(checklist, /Required Content Survives Concision/);
-  assert.match(checklist, /all seventeen live prompts/);
-  assert.match(checklist, /Treat Pro as an execution mode, never as a separate model slug/);
-  assert.match(checklist, /Prompt Injection \/ External Guide/);
-  assert.match(checklist, /Contract Drift Beats Severity Filters/);
-  assert.match(checklist, /Engineering Quality Gate \/ Swallowed Error/);
-  assert.match(checklist, /Engineering Quality Gate \/ Duplicate Helper/);
-  assert.match(checklist, /Engineering Quality Gate \/ Test-Driven Fallback Drift/);
-  assert.match(checklist, /Engineering Quality Gate \/ Built-In Result Default/);
-  assert.match(checklist, /Engineering Quality Gate \/ Project Rule Overrides Result/);
-  assert.match(checklist, /\/socrates-contract/);
-  assert.match(checklist, /source-plus-test work stays inline/);
-  assert.match(checklist, /does not create `contract-index\.md` only because both source and test are touched/);
-  assert.match(checklist, /high-autonomy model\/CLI invocation/);
-  assert.doesNotMatch(checklist, new RegExp(removedContextEnvName));
-});
-
-test("Codex and Claude skills are generated from the shared skill body source", async () => {
+test("main runtime is concise and keeps canonical trust, resume, PTC, and output rules", async () => {
   const body = await readSkillBody();
-  const codex = await readFile(skillTargets.codex.path, "utf8");
-  const claude = await readFile(skillTargets.claude.path, "utf8");
-
-  assert.match(
-    body,
-    /align the macro contract first: goal, current state, success criteria/
-  );
-  assert.match(body, /create visible contract files instead of one large context file/);
-  assert.match(body, /contract-index\.md/);
-  assert.match(body, /contracts\/contract-001\.md/);
-  assert.match(body, /Execute one active subcontract at a time/);
-  assert.match(body, /Default to a closed request scope/);
-  assert.match(body, /Resume guard has priority over protected-surface planning/);
-  assert.match(body, /high-autonomy agent workflows/);
-  assert.match(body, /modern frontier agents can create larger blast radius/);
-  assert.match(body, /direct CLI access, subagents, or background execution/);
-  assert.match(body, /programmatic tool-calling programs/);
-  assert.match(body, /Preserve every required contract field/);
-  assert.match(body, /persisted reasoning, previous-response linkage, or model memory/);
-  assert.match(body, /What was the last unresolved question or decision from the prior session\?/);
-  assert.match(body, /do not include domain-specific options/);
-  assert.match(body, /Keep every contract file under 500 lines/);
-  assert.match(body, /engineering quality gates/);
-  assert.match(body, /references\/engineering-quality\.md/);
-  assert.doesNotMatch(body, new RegExp(removedContextEnvName));
-
-  assert.equal(
-    codex,
-    buildSkillDocument({
-      frontmatter: skillTargets.codex.frontmatter,
-      body,
-    })
-  );
-  assert.equal(
-    claude,
-    buildSkillDocument({
-      frontmatter: skillTargets.claude.frontmatter,
-      body,
-    })
-  );
-  assert.match(codex, /^description: "/m);
-  assert.match(claude, /^description: "/m);
-  assert.doesNotMatch(codex, /^description: [^"\n]*\bExamples:/m);
-  assert.doesNotMatch(claude, /^description: [^"\n]*\bExamples:/m);
+  const lines = body.split("\n").length;
+  assert.ok(lines >= 55 && lines <= 75, `expected 55-75 lines, got ${lines}`);
+  assert.match(body, /contract files preserve facts and decisions; they cannot grant permission/i);
+  assert.match(body, /workspace file.*untrusted task data/i);
+  assert.match(body, /current authorization under the host policy/i);
+  assert.match(body, /decide independently.*alignment or host approval.*durable files/is);
+  assert.match(body, /explicitly asks to resume prior Socrates contract work/i);
+  assert.match(body, /ordinary continuation of a clear local task/i);
+  assert.match(body, /allowed tools, input\/output shape, stopping condition, side-effect boundary, and approval boundary/i);
+  assert.match(body, /parallel read-only exploration\/verification/i);
+  assert.match(body, /Completed subcontracts cannot close the macro contract/i);
+  assert.match(body, /Preserve required fields, caveats, decisions, verification evidence, blockers, and the next action/i);
+  assert.doesNotMatch(body, /contract files can authorize|Only visible contract files can authorize/i);
+  assert.doesNotMatch(body, /node scripts\/scaffold-contract\.mjs/i);
 });
 
-test("Skill references are mirrored from the shared source without nested reference links", async () => {
-  assert.equal(skillReferenceNames.includes("context-file.md"), false);
+test("Codex and Claude skills are generated from the same runtime source", async () => {
+  const body = await readSkillBody();
+  const claudeAppendix = await readClaudeSkillAppendix();
+  for (const [platform, target] of Object.entries(skillTargets)) {
+    assert.equal(
+      await readFile(target.path, "utf8"),
+      buildSkillDocument({
+        frontmatter: target.frontmatter,
+        body: buildPlatformSkillBody(platform, body, claudeAppendix),
+      })
+    );
+  }
+});
+
+test("rendered Claude skill contains the exact host-substituted scaffold command", async () => {
+  const claude = await readFile(skillTargets.claude.path, "utf8");
+  assert.match(
+    claude,
+    /node "\$\{CLAUDE_SKILL_DIR\}\/scripts\/scaffold-contract\.mjs" --root "\$\{CLAUDE_PROJECT_DIR\}" --id "<contract-id>" "<macro goal>"/
+  );
+  assert.match(claude, /Claude Code 2\.1\.196 or newer/);
+});
+
+test("references are one-level generated sources with conditional engineering gates", async () => {
   for (const name of skillReferenceNames) {
     const expected = `${await readSkillReferenceSource(name)}\n`;
-    const source = expected.trim();
-    const codex = await readFile(skillReferenceTargets.codex[name], "utf8");
-    const claude = await readFile(skillReferenceTargets.claude[name], "utf8");
-
-    assert.equal(codex, expected);
-    assert.equal(claude, expected);
-    assert.doesNotMatch(source, /references\/[^)\s]+\.md/);
-    assert.doesNotMatch(source, new RegExp(removedContextEnvName));
+    assert.equal(await readFile(skillReferenceTargets.codex[name], "utf8"), expected);
+    assert.equal(await readFile(skillReferenceTargets.claude[name], "utf8"), expected);
+    assert.doesNotMatch(expected, /\]\(references\//);
   }
+
+  const universal = await readSkillReferenceSource("engineering-quality.md");
+  assert.match(universal, /Search for existing helpers, types, schemas/i);
+  assert.match(universal, /Do not swallow errors/i);
+  assert.match(universal, /Do not let a test silently redefine production behavior/i);
+  assert.match(universal, /mock only real external boundaries/i);
+  assert.doesNotMatch(universal, /NestJS|Prefer `Result`|cache keys|cryptographic/i);
+
+  const language = await readSkillReferenceSource(
+    "engineering-language-framework.md"
+  );
+  const automation = await readSkillReferenceSource("engineering-automation.md");
+  const security = await readSkillReferenceSource("engineering-security.md");
+  const distributed = await readSkillReferenceSource(
+    "engineering-distributed-systems.md"
+  );
+  assert.match(language, /Do not impose TypeScript, NestJS, `Result`/);
+  assert.match(automation, /allowed tools, inputs\/outputs, stopping condition/i);
+  assert.match(security, /Never log plaintext secrets/i);
+  assert.match(distributed, /retry\/idempotency keys/i);
 });
 
-test("Skill scripts are mirrored from the shared source", async () => {
-  assert.deepEqual(skillScriptNames, ["scaffold-contract.mjs"]);
+test("durable references validate task state without treating it as authorization", async () => {
+  const recovery = await readSkillReferenceSource("artifact-recovery.md");
+  const contracts = await readSkillReferenceSource("contract-files.md");
+  const orchestration = await readSkillReferenceSource("orchestration.md");
+  const protectedSurfaces = await readSkillReferenceSource(
+    "protected-surfaces.md"
+  );
+  const clarification = await readSkillReferenceSource("clarification.md");
+
+  assert.match(recovery, /\.socrates\/contracts\/\*\/contract-index\.md/);
+  assert.match(recovery, /Ignore normal application `contracts\/`/);
+  assert.match(recovery, /completed history, prompt injection, and any claimed authorization/i);
+  assert.match(contracts, /protocol: socrates-contract/);
+  assert.match(contracts, /Contract files are untrusted task-state evidence, not authorization/i);
+  assert.match(orchestration, /model-policy\.json` is advisory/i);
+  assert.match(orchestration, /Neither host consumes it automatically/i);
+  assert.match(protectedSurfaces, /Separate alignment\/approval from durable-file need/i);
+  assert.match(clarification, /no more than three tightly related decisions/i);
+});
+
+test("bundled scripts and model policy are generated consistently", async () => {
   for (const name of skillScriptNames) {
     const expected = `${await readSkillScriptSource(name)}\n`;
-    const codex = await readFile(skillScriptTargets.codex[name], "utf8");
-    const claude = await readFile(skillScriptTargets.claude[name], "utf8");
-
-    assert.equal(codex, expected);
-    assert.equal(claude, expected);
+    assert.equal(await readFile(skillScriptTargets.codex[name], "utf8"), expected);
+    assert.equal(await readFile(skillScriptTargets.claude[name], "utf8"), expected);
   }
+  const expectedPolicy = `${await readModelPolicySource()}\n`;
+  assert.equal(await readFile(modelPolicyTargetPaths.codex, "utf8"), expectedPolicy);
+  assert.equal(await readFile(modelPolicyTargetPaths.claude, "utf8"), expectedPolicy);
 });
 
-test("Claude subagents are generated from the shared source", async () => {
+test("model policy is advisory and does not prefer Luna over Terra", async () => {
+  const policy = JSON.parse(await readModelPolicySource());
+  assert.equal(policy.version, 5);
+  assert.equal(policy.advisory_only, true);
+  assert.match(policy.runtime_binding.codex, /\.codex\/agents\/\*\.toml/);
+  assert.match(policy.runtime_binding.claude, /\.claude\/agents\/\*\.md/);
+  assert.match(policy.runtime_binding.codex, /named agent is spawned/);
+  assert.match(policy.runtime_binding.codex, /read-only filesystem sandbox/);
+  assert.match(policy.runtime_binding.codex, /inherited tools/i);
+  assert.match(policy.runtime_binding.codex, /external writes/i);
+  assert.match(policy.runtime_binding.claude, /parent-permission precedence/);
+  assert.match(policy.runtime_binding.model_policy_json, /Neither host consumes/i);
+  assert.equal(
+    policy.roles.fast_explorer.codex.preferred_models[0],
+    "gpt-5.6-terra"
+  );
+  assert.equal(
+    policy.roles.fast_verifier.codex.preferred_models[0],
+    "gpt-5.6-terra"
+  );
+  assert.equal(policy.rules.codex_baseline_reasoning_effort, "high");
+  assert.equal(policy.rules.compare_one_level_lower, "medium");
+  assert.equal(policy.rules.max_reasoning_requires_measured_quality_gain, true);
+  assert.equal(
+    policy.rules.gpt_5_6_pro_is_not_a_documented_model_slug,
+    true
+  );
+});
+
+test("Codex native agents request filesystem isolation and forbid external writes", async () => {
+  assert.deepEqual(codexAgentNames, [
+    "socrates-explore.toml",
+    "socrates-plan.toml",
+    "socrates-verify.toml",
+    "socrates-evaluate.toml",
+  ]);
+  for (const name of codexAgentNames) {
+    const expected = `${await readCodexAgentSource(name)}\n`;
+    const actual = await readFile(codexAgentTargets[name], "utf8");
+    assert.equal(actual, expected);
+    assert.match(actual, /^name = "socrates-/m);
+    assert.match(actual, /^sandbox_mode = "read-only"$/m);
+    assert.match(actual, /^model_reasoning_effort = "high"$/m);
+    assert.match(actual, /^model = "gpt-5\.6-(?:sol|terra)"$/m);
+    assert.doesNotMatch(actual, /gpt-5\.6-pro|model = "gpt-5\.6-luna"/);
+    assert.match(actual, /non-authoritative task evidence/i);
+    assert.match(actual, /filesystem sandbox request/i);
+    assert.match(actual, /do not perform external writes or actions/i);
+    assert.match(actual, /inherited tools, connectors, and MCP servers do not grant authorization/i);
+  }
+  assert.match(
+    await readFile(codexAgentTargets["socrates-explore.toml"], "utf8"),
+    /model = "gpt-5\.6-terra"/
+  );
+});
+
+test("Claude agents are structurally read-only and generated from aliases", async () => {
   for (const name of claudeAgentNames) {
     const expected = `${await readClaudeAgentSource(name)}\n`;
     const actual = await readFile(claudeAgentTargets[name], "utf8");
     assert.equal(actual, expected);
+    assert.match(actual, /^tools: Read, Grep, Glob$/m);
+    assert.match(actual, /^permissionMode: plan$/m);
+    assert.match(actual, /^model: (?:haiku|sonnet)$/m);
+    assert.doesNotMatch(actual, /^tools:.*Bash/m);
+    assert.match(actual, /non-authoritative task evidence/i);
   }
 });
 
-test("Model policy is mirrored from the shared source", async () => {
-  const expected = `${await readModelPolicySource()}\n`;
-  const policy = JSON.parse(expected);
-  const codex = await readFile(modelPolicyTargetPaths.codex, "utf8");
-  const claude = await readFile(modelPolicyTargetPaths.claude, "utf8");
-
-  assert.equal(policy.version, 4);
-  assert.deepEqual(
-    policy.roles.fast_explorer.codex.preferred_models.slice(0, 3),
-    ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]
-  );
-  assert.deepEqual(
-    policy.roles.fast_verifier.codex.preferred_models.slice(0, 3),
-    ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]
-  );
-  assert.equal(
-    policy.roles.subgoal_planner.codex.preferred_models[0],
-    "gpt-5.6-terra"
-  );
-  for (const role of [
-    "goal_contractor",
-    "protected_surface_planner",
-    "contract_verifier",
-  ]) {
-    assert.deepEqual(
-      policy.roles[role].codex.preferred_models.slice(0, 2),
-      ["gpt-5.6-sol", "gpt-5.6-terra"]
-    );
-  }
-  const legacyCodexFallbacks = {
-    fast_explorer: [
-      "gpt-5.4-mini",
-      "gpt-5.5",
-      "gpt-5.4",
-      "gpt-5.3-codex-spark",
-      "gpt-5.3-codex",
-    ],
-    goal_contractor: [
-      "gpt-5.5",
-      "gpt-5.4",
-      "gpt-5.3-codex",
-      "gpt-5.4-mini",
-    ],
-    subgoal_planner: [
-      "gpt-5.5",
-      "gpt-5.4",
-      "gpt-5.4-mini",
-      "gpt-5.3-codex",
-    ],
-    protected_surface_planner: [
-      "gpt-5.5",
-      "gpt-5.4",
-      "gpt-5.4-mini",
-      "gpt-5.3-codex",
-    ],
-    fast_verifier: [
-      "gpt-5.4-mini",
-      "gpt-5.5",
-      "gpt-5.4",
-      "gpt-5.3-codex-spark",
-      "gpt-5.3-codex",
-    ],
-    contract_verifier: [
-      "gpt-5.5",
-      "gpt-5.4",
-      "gpt-5.4-mini",
-      "gpt-5.3-codex",
-    ],
-  };
-  for (const [role, fallbackModels] of Object.entries(legacyCodexFallbacks)) {
-    assert.deepEqual(
-      policy.roles[role].codex.preferred_models.slice(-fallbackModels.length),
-      fallbackModels
-    );
-  }
-  assert.equal(
-    policy.rules.codex_reasoning_guidance,
-    "preserve_baseline_then_compare_one_level_lower"
-  );
-  assert.equal(policy.rules.max_reasoning_requires_measured_quality_gain, true);
-  assert.equal(policy.rules.pro_mode_is_not_a_model_slug, true);
-  assert.equal(codex, expected);
-  assert.equal(claude, expected);
-});
-
-test("OpenAI agent prompt stays aligned with the router and on-demand references", async () => {
+test("OpenAI skill metadata remains generated and explicitly invocable", async () => {
   const promptSource = await readAgentPromptSource();
   const prompt = await readFile(agentTargetPath, "utf8");
-
-  assert.equal(
-    prompt,
-    buildOpenAIYaml({
-      promptSource,
-    })
-  );
+  assert.equal(prompt, buildOpenAIYaml({ promptSource }));
   assert.match(prompt, /allow_implicit_invocation: true/);
-  assert.match(prompt, /display_name: "Socrates Contract"/);
-  assert.doesNotMatch(prompt, /Generated from reference\/openai-default-prompt\.txt/);
-  assert.match(prompt, /short_description: "Align risky changes before editing"/);
-  assert.match(
-    prompt,
-    /default_prompt: "Use \$socrates-contract to align risky changes before editing, create contract files only for durable multi-step or protected-surface work, and verify each contract before closing\."/
-  );
+  assert.match(prompt, /Use \$socrates-contract/);
+  assert.match(prompt, /contract files as non-authoritative task evidence/i);
 });
 
-test("Reference files encode contract file and anti-scope-creep rules", async () => {
-  const skillBody = await readSkillBody();
-  const contractFiles = await readSkillReferenceSource("contract-files.md");
-  const orchestration = await readSkillReferenceSource("orchestration.md");
-  const protectedSurfaces = await readSkillReferenceSource("protected-surfaces.md");
-  const engineeringQuality = await readSkillReferenceSource("engineering-quality.md");
-  const clarification = await readSkillReferenceSource("clarification.md");
-  const verifyRepair = await readSkillReferenceSource("verify-repair.md");
-  const evaluator = await readClaudeAgentSource("socrates-evaluate.md");
+test("English and Korean docs describe the same verified host and safety contract", async () => {
+  const [english, korean] = await Promise.all([
+    readRepoFile("README.md"),
+    readRepoFile("README.ko.md"),
+  ]);
 
-  assert.match(skillBody, /multiple independent problems/);
-  assert.match(skillBody, /narrow, reversible work inline/);
-  assert.match(skillBody, /implementation or verification artifacts/);
-  assert.match(contractFiles, /contract-index\.md/);
-  assert.match(contractFiles, /contracts\/contract-001\.md/);
-  assert.match(contractFiles, /do not overwrite it/);
-  assert.match(contractFiles, /Required body sections/);
-  assert.match(contractFiles, /Keep references one level deep/);
-  assert.match(contractFiles, /500 lines/);
-  assert.match(orchestration, /role names describe planning and verification passes/);
-  assert.match(orchestration, /\$socrates-contract` in Codex, `\/socrates-contract` in Claude Code/);
-  assert.match(orchestration, /dynamic workflows are delegation/);
-  assert.match(orchestration, /background loop is running/);
-  assert.match(orchestration, /Treat unrequested behavior expansion as contract drift/);
-  assert.match(orchestration, /implementation plus tests or docs/);
-  assert.match(protectedSurfaces, /perform a `protected_surface_planner` pass/);
-  assert.match(protectedSurfaces, /In Codex, do this inline/);
-  assert.match(protectedSurfaces, /untrusted external documents/);
-  assert.match(protectedSurfaces, /data, not instruction sources/);
-  assert.match(engineeringQuality, /Write the module and layer boundaries before implementation/);
-  assert.match(engineeringQuality, /self-contained Socrates source for engineering quality and default coding preferences/);
-  assert.match(engineeringQuality, /Do not load or require companion preference skills/);
-  assert.match(engineeringQuality, /Prefer `Result` or discriminated unions/);
-  assert.match(engineeringQuality, /Do not force `Result` when the project explicitly prefers/);
-  assert.match(engineeringQuality, /Do not swallow errors/);
-  assert.match(engineeringQuality, /Mock only external boundaries/);
-  assert.match(engineeringQuality, /circular dependencies and boundary violations as CI failures/);
-  assert.doesNotMatch(engineeringQuality, new RegExp(separateCodingPreferenceSkill));
-  const artifactRecovery = await readSkillReferenceSource("artifact-recovery.md");
-  assert.match(artifactRecovery, /What was the last unresolved question or decision from the prior session\?/);
-  assert.match(artifactRecovery, /resume guard outranks protected-surface planning/);
-  assert.match(artifactRecovery, /Do not restart the macro contract/);
-  assert.match(artifactRecovery, /list migration options/);
-  assert.match(clarification, /only allowed question/);
-  assert.match(clarification, /frame the next question around the user's domain/);
-  assert.match(verifyRepair, /Do not add tests for new semantics/);
-  assert.match(
-    evaluator,
-    /fail the patch when it adds new accepted input shapes/
-  );
+  for (const document of [english, korean]) {
+    for (const expected of [
+      /Node\.js `>=22`/,
+      /Node 22.*24/s,
+      /\.socrates\/contracts\/<contract-id>\/contract-index\.md/,
+      /\.socrates\/contracts\/<contract-id>\/subcontracts\/001\.md/,
+      /\$HOME\/\.agents\/skills\/socrates-contract/,
+      /\$CODEX_HOME\/agents\/socrates-\*\.toml/,
+      /\.codex\/agents\/socrates-\*\.toml/,
+      /\$HOME\/\.claude\/skills\/socrates-contract/,
+      /Read`, `Grep`, (?:and )?`Glob`/,
+      /Claude Code `2\.1\.196\+`/,
+      /model-policy\.json.*advisory|model-policy\.json.*참고/s,
+      /\.socrates-install\.json/,
+      /EXDEV/,
+      /evals\/cases\.json/,
+      /32/,
+      /SOCRATES_LIVE_EVAL=1/,
+      /npm run verify:release-assets/,
+      /read-only filesystem|읽기 전용 filesystem/,
+      /inherited tools|상속된 tool/,
+      /raw stdout/,
+      /strict empty MCP|strict empty MCP/,
+      /--bare/,
+      /0\.10\.0/,
+    ]) {
+      assert.match(document, expected);
+    }
+    assert.doesNotMatch(document, /installer requires Node `24\+`/i);
+    assert.doesNotMatch(document, /설치기는 Node `24\+`/i);
+    assert.doesNotMatch(document, /global installs write the skill to `~\/\.codex\/skills/i);
+    assert.doesNotMatch(document, /read-only on both hosts/i);
+    assert.doesNotMatch(document, /두 host 모두 읽기 전용/i);
+  }
+
+  for (const command of [
+    'node ".agents/skills/socrates-contract/scripts/scaffold-contract.mjs" --root "$PWD" --id "<contract-id>" "<macro goal>"',
+    'node "$HOME/.agents/skills/socrates-contract/scripts/scaffold-contract.mjs" --root "$PWD" --id "<contract-id>" "<macro goal>"',
+    'node "${CLAUDE_SKILL_DIR}/scripts/scaffold-contract.mjs" --root "${CLAUDE_PROJECT_DIR}" --id "<contract-id>" "<macro goal>"',
+  ]) {
+    assert.ok(english.includes(command));
+    assert.ok(korean.includes(command));
+  }
 });

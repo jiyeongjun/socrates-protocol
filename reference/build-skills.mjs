@@ -3,16 +3,22 @@ import path from "node:path";
 import {
   agentTargetPath,
   buildOpenAIYaml,
+  buildPlatformSkillBody,
   buildSkillDocument,
+  codexAgentNames,
+  codexAgentTargets,
   claudeAgentNames,
   claudeAgentTargets,
   readAgentPromptSource,
+  readCodexAgentSource,
   readClaudeAgentSource,
+  readClaudeSkillAppendix,
   readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
   readSkillScriptSource,
   modelPolicyTargetPaths,
+  pruneUnexpectedGeneratedPaths,
   skillReferenceNames,
   skillReferenceTargets,
   skillScriptNames,
@@ -26,13 +32,14 @@ async function writeTextFile(target, contents) {
 }
 
 const body = await readSkillBody();
+const claudeAppendix = await readClaudeSkillAppendix();
 const promptSource = await readAgentPromptSource();
 const modelPolicy = await readModelPolicySource();
 
-for (const target of Object.values(skillTargets)) {
+for (const [platform, target] of Object.entries(skillTargets)) {
   const output = buildSkillDocument({
     frontmatter: target.frontmatter,
-    body,
+    body: buildPlatformSkillBody(platform, body, claudeAppendix),
   });
   await writeFile(target.path, output, "utf8");
 }
@@ -65,3 +72,10 @@ for (const name of claudeAgentNames) {
   const contents = await readClaudeAgentSource(name);
   await writeTextFile(claudeAgentTargets[name], contents);
 }
+
+for (const name of codexAgentNames) {
+  const contents = await readCodexAgentSource(name);
+  await writeTextFile(codexAgentTargets[name], contents);
+}
+
+await pruneUnexpectedGeneratedPaths();

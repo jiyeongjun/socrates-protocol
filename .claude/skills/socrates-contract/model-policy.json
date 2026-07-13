@@ -1,31 +1,33 @@
 {
-  "version": 4,
+  "version": 5,
+  "advisory_only": true,
+  "runtime_binding": {
+    "codex": "Generated .codex/agents/*.toml files request model, reasoning, and a read-only filesystem sandbox when that named agent is spawned; project trust and host precedence still apply, inherited tools may still exist, and they do not authorize external writes.",
+    "claude": "Generated .claude/agents/*.md frontmatter requests model aliases, tools, and plan permission mode when that named agent is spawned; host model, organization, invocation, and parent-permission precedence still applies.",
+    "model_policy_json": "Neither host consumes this file automatically. It documents fallbacks and evaluation policy only."
+  },
   "roles": {
     "fast_explorer": {
-      "description": "Read-only discovery pass that recovers current state, target artifacts, protected surfaces, and narrow verification paths before asking the user or mutating.",
+      "codex_native_agent": "socrates-explore",
       "codex": {
         "preferred_models": [
-          "gpt-5.6-luna",
           "gpt-5.6-terra",
           "gpt-5.6-sol",
+          "gpt-5.6-luna",
           "gpt-5.4-mini",
           "gpt-5.5",
           "gpt-5.4",
           "gpt-5.3-codex-spark",
           "gpt-5.3-codex"
-        ],
-        "fallback_behavior": "host_default"
+        ]
       },
+      "claude_native_agent": "socrates-explore",
       "claude": {
-        "preferred_models": [
-          "haiku",
-          "sonnet"
-        ],
-        "fallback_behavior": "host_default_best_effort"
+        "preferred_models": ["haiku", "sonnet"]
       }
     },
     "goal_contractor": {
-      "description": "Read-only macro-contract pass that aligns the goal, scope, success criteria, non-goals, protected surfaces, verification, and one load-bearing unresolved question.",
+      "codex_native_agent": "socrates-plan",
       "codex": {
         "preferred_models": [
           "gpt-5.6-sol",
@@ -34,20 +36,15 @@
           "gpt-5.4",
           "gpt-5.3-codex",
           "gpt-5.4-mini"
-        ],
-        "fallback_behavior": "host_default"
+        ]
       },
+      "claude_native_agent": "socrates-plan",
       "claude": {
-        "preferred_models": [
-          "sonnet",
-          "opus",
-          "haiku"
-        ],
-        "fallback_behavior": "host_default_best_effort"
+        "preferred_models": ["sonnet", "opus", "haiku"]
       }
     },
     "subgoal_planner": {
-      "description": "Read-only decomposition pass that splits a macro contract into bounded, independently verifiable subcontracts.",
+      "codex_native_agent": "socrates-plan",
       "codex": {
         "preferred_models": [
           "gpt-5.6-terra",
@@ -56,20 +53,15 @@
           "gpt-5.4",
           "gpt-5.4-mini",
           "gpt-5.3-codex"
-        ],
-        "fallback_behavior": "host_default"
+        ]
       },
+      "claude_native_agent": "socrates-plan",
       "claude": {
-        "preferred_models": [
-          "sonnet",
-          "opus",
-          "haiku"
-        ],
-        "fallback_behavior": "host_default_best_effort"
+        "preferred_models": ["sonnet", "opus", "haiku"]
       }
     },
     "protected_surface_planner": {
-      "description": "Read-only planning pass for migrations, contracts, rollout, rollback, permissions, cost, and safety policy after exploration is in hand.",
+      "codex_native_agent": "socrates-plan",
       "codex": {
         "preferred_models": [
           "gpt-5.6-sol",
@@ -78,43 +70,34 @@
           "gpt-5.4",
           "gpt-5.4-mini",
           "gpt-5.3-codex"
-        ],
-        "fallback_behavior": "host_default"
+        ]
       },
+      "claude_native_agent": "socrates-plan",
       "claude": {
-        "preferred_models": [
-          "sonnet",
-          "opus",
-          "haiku"
-        ],
-        "fallback_behavior": "host_default_best_effort"
+        "preferred_models": ["sonnet", "opus", "haiku"]
       }
     },
     "fast_verifier": {
-      "description": "Cheap verification pass that runs the narrowest relevant checks first.",
+      "codex_native_agent": "socrates-verify",
       "codex": {
         "preferred_models": [
-          "gpt-5.6-luna",
           "gpt-5.6-terra",
           "gpt-5.6-sol",
+          "gpt-5.6-luna",
           "gpt-5.4-mini",
           "gpt-5.5",
           "gpt-5.4",
           "gpt-5.3-codex-spark",
           "gpt-5.3-codex"
-        ],
-        "fallback_behavior": "host_default"
+        ]
       },
+      "claude_native_agent": "socrates-verify",
       "claude": {
-        "preferred_models": [
-          "haiku",
-          "sonnet"
-        ],
-        "fallback_behavior": "host_default_best_effort"
+        "preferred_models": ["haiku", "sonnet"]
       }
     },
     "contract_verifier": {
-      "description": "Read-only closure gate that checks whether a subcontract or macro contract satisfies the documented completion and success criteria.",
+      "codex_native_agent": "socrates-evaluate",
       "codex": {
         "preferred_models": [
           "gpt-5.6-sol",
@@ -123,26 +106,21 @@
           "gpt-5.4",
           "gpt-5.4-mini",
           "gpt-5.3-codex"
-        ],
-        "fallback_behavior": "host_default"
+        ]
       },
+      "claude_native_agent": "socrates-evaluate",
       "claude": {
-        "preferred_models": [
-          "sonnet",
-          "opus",
-          "haiku"
-        ],
-        "fallback_behavior": "host_default_best_effort"
+        "preferred_models": ["sonnet", "opus", "haiku"]
       }
     }
   },
   "rules": {
-    "main_skill_artifacts_must_not_hardcode_model_names": true,
-    "codex_binding_mode": "host_default_or_available_model_picker",
-    "codex_reasoning_guidance": "preserve_baseline_then_compare_one_level_lower",
+    "codex_baseline_reasoning_effort": "high",
+    "compare_one_level_lower": "medium",
     "max_reasoning_requires_measured_quality_gain": true,
-    "pro_mode_is_not_a_model_slug": true,
-    "claude_binding_mode": "subagent_frontmatter_aliases_when_custom_agents_are_used",
-    "host_default_fallback_is_allowed": true
+    "gpt_5_6_pro_is_not_a_documented_model_slug": true,
+    "do_not_prefer_luna_over_terra_without_eval": true,
+    "preserve_legacy_fallbacks": true,
+    "host_approval_always_wins": true
   }
 }

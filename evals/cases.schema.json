@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jiyeongjun/socrates-protocol/evals/cases.schema.json",
+  "title": "Socrates Contract evaluation catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "schema_version", "model_sets", "cases"],
+  "properties": {
+    "protocol": {"const": "socrates-contract-evals"},
+    "schema_version": {"const": "1.0"},
+    "model_sets": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/case"}
+    }
+  },
+  "$defs": {
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "group",
+        "prompt",
+        "fixture",
+        "expected_action_class",
+        "forbidden_actions",
+        "required_output_fields",
+        "expected_mutation",
+        "expected_questions",
+        "hosts",
+        "models",
+        "static_grader_ids",
+        "live_grader_id"
+      ],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+        "group": {
+          "enum": ["positive", "negative", "security", "completeness", "installer-scaffolder"]
+        },
+        "prompt": {"type": "string", "minLength": 10},
+        "fixture": {"type": ["string", "null"]},
+        "expected_action_class": {"type": "string", "minLength": 1},
+        "forbidden_actions": {"$ref": "#/$defs/nonEmptyStrings"},
+        "required_output_fields": {"$ref": "#/$defs/nonEmptyStrings"},
+        "expected_mutation": {"enum": ["none", "bounded-local", "installer-fixture"]},
+        "expected_questions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {"type": "integer", "minimum": 0, "maximum": 3},
+            "max": {"type": "integer", "minimum": 0, "maximum": 3}
+          }
+        },
+        "hosts": {"$ref": "#/$defs/nonEmptyStrings"},
+        "models": {"type": "string", "minLength": 1},
+        "static_grader_ids": {"$ref": "#/$defs/nonEmptyStrings"},
+        "live_grader_id": {"type": ["string", "null"]}
+      }
+    }
+  }
+}

@@ -1,13 +1,9 @@
 # Clarification
 
-Use this only when one unresolved point would materially change the implementation.
-
-## Rules
-- Ask exactly one load-bearing question at a time.
-- Ask only about decisions that change the macro contract, active subcontract, mutation path, behavior, or verification.
-- Operationalize vague preference words into testable criteria.
-- If multiple branches remain, show only the most decision-relevant options with one-line tradeoffs.
-- Stop after the question.
-- Do not append fallback offers, restart options, or "I can also..." language after the question unless the user explicitly asked for alternatives.
-- For low-risk local work, if a behavior-preserving or clearly reversible default is obvious, state the assumption in one sentence and proceed.
-- On resume requests with no `contract-index.md` or `contracts/` directory, the only allowed question is `What was the last unresolved question or decision from the prior session?`. Do not ask a fresh domain-specific protected-surface question, list migration options, or frame the next question around the user's domain.
+- Ask one load-bearing question when one answer unlocks the next action.
+- For safe local work, choose the obvious reversible default, state it in one sentence, proceed, and verify.
+- Ask only about decisions that change behavior, scope, compatibility, rollback, authorization, mutation path, success criteria, or verification.
+- When several independent protected decisions jointly block one action, ask the smallest coherent set, normally no more than three tightly related decisions.
+- Show only decision-relevant options with one-line tradeoffs.
+- Operationalize vague preferences only when they materially change the result.
+- Stop after a blocking question; append no fallback offer or generic “I can also” language.

@@ -2,12 +2,18 @@ import { readFile } from "node:fs/promises";
 import {
   agentTargetPath,
   buildOpenAIYaml,
+  buildPlatformSkillBody,
   buildSkillDocument,
+  codexAgentNames,
+  codexAgentTargets,
   claudeAgentNames,
   claudeAgentTargets,
   modelPolicyTargetPaths,
+  findUnexpectedGeneratedPaths,
   readAgentPromptSource,
+  readCodexAgentSource,
   readClaudeAgentSource,
+  readClaudeSkillAppendix,
   readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
@@ -20,14 +26,20 @@ import {
 } from "./skill-generator.mjs";
 
 const body = await readSkillBody();
+const claudeAppendix = await readClaudeSkillAppendix();
 const promptSource = await readAgentPromptSource();
 const modelPolicy = `${await readModelPolicySource()}\n`;
 let hasMismatch = false;
+const unexpectedGeneratedPaths = await findUnexpectedGeneratedPaths();
+for (const unexpected of unexpectedGeneratedPaths) {
+  hasMismatch = true;
+  console.error(`unexpected stale generated artifact: ${unexpected}`);
+}
 
 for (const [name, target] of Object.entries(skillTargets)) {
   const expected = buildSkillDocument({
     frontmatter: target.frontmatter,
-    body,
+    body: buildPlatformSkillBody(name, body, claudeAppendix),
   });
   const actual = await readFile(target.path, "utf8");
 
@@ -84,6 +96,18 @@ for (const name of claudeAgentNames) {
     hasMismatch = true;
     console.error(
       `claude subagent ${name} is out of sync with reference/claude-agents/${name}`
+    );
+  }
+}
+
+for (const name of codexAgentNames) {
+  const expected = `${await readCodexAgentSource(name)}\n`;
+  const actual = await readFile(codexAgentTargets[name], "utf8");
+
+  if (actual !== expected) {
+    hasMismatch = true;
+    console.error(
+      `codex subagent ${name} is out of sync with reference/codex-agents/${name}`
     );
   }
 }

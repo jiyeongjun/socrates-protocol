@@ -7,12 +7,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: ${{ matrix.node }}
       - run: npm run build:skills
-      - run: git diff --exit-code -- .agents/skills/socrates/SKILL.md .claude/skills/socrates/SKILL.md .agents/skills/socrates/agents/openai.yaml
+      - name: Reject generated drift and stale untracked artifacts
+        run: |
+          git diff --exit-code
+          test -z "$(git ls-files --others --exclude-standard)"
       - run: npm run verify:skills
+      - run: npm run verify:release-assets
       - run: npm test
