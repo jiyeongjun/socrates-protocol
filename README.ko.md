@@ -63,20 +63,20 @@ External, destructive, public, costly, credentialed, permission-changing, produc
 
 ## 빠른 설치
 
-원격 예시는 공개 tag `v0.9.0`에 고정되어 있습니다. Release되지 않은 checkout에는 더 새로운 worktree 동작이 들어 있을 수 있으므로 로컬 평가에는 `--source-root`로 해당 checkout을 설치하세요.
+원격 예시는 공개 tag `v0.10.0`에 고정되어 있습니다. Release되지 않은 checkout에는 더 새로운 worktree 동작이 들어 있을 수 있으므로 로컬 평가에는 `--source-root`로 해당 checkout을 설치하세요.
 
 ### 두 host 함께 설치
 
 Global:
 
 ```bash
-VERSION=v0.9.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope global --version "$VERSION"
+VERSION=v0.10.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope global --version "$VERSION"
 ```
 
 Repository scope:
 
 ```bash
-VERSION=v0.9.0 && TARGET_REPO=/absolute/path/to/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.10.0 && TARGET_REPO=/absolute/path/to/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 한 host만 설치하려면 `--platform codex` 또는 `--platform claude`를 사용합니다.
@@ -98,7 +98,7 @@ node scripts/install.mjs --platform both --scope repo --target-repo /absolute/pa
 삭제:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.9.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform both --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform both --scope global
 ```
 
 ## 설치 위치와 실제 host routing
@@ -204,4 +204,4 @@ Claude Code에는 host `claude`를 사용합니다. Codex report에는 요청한
 
 Socrates는 coordination과 authorization 실수를 줄이지만, 숨은 dependency를 모두 안다고 증명하거나 외부 system의 rollback을 보장하거나 host permission control을 대신하지 않습니다. Static eval은 repository invariant를 증명할 뿐 model behavior를 증명하지 않습니다. Native-agent 기본값에는 host policy와 availability가 계속 우선합니다. Live runner는 OS가 허용하는 범위에서 host process tree를 종료하고 정해진 시간 안에 반환하지만, 원래 process group을 의도적으로 빠져나간 detached descendant는 남을 수 있어 OS 수준 cleanup이 필요합니다.
 
-이 worktree의 package와 공개 예시는 `0.9.0`을 유지합니다. 이번 backward-compatible 기능 추가와 동작 hardening은 review 뒤 `0.10.0`으로 release하는 것이 적절합니다. 이 repository는 자동으로 publish하지 않습니다.
+이 package와 공개 예시는 `0.10.0`입니다. 이 repository는 자동으로 publish하지 않습니다.

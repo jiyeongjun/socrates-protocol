@@ -168,13 +168,13 @@ test("parseArgs accepts the recommended repo install shape", () => {
     "--target-repo",
     "/tmp/example",
     "--version",
-    "v0.9.0",
+    "v0.10.0",
   ]);
 
   assert.equal(parsed.platform, "both");
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
-  assert.equal(parsed.version, "v0.9.0");
+  assert.equal(parsed.version, "v0.10.0");
 });
 
 test("parseArgs rejects invalid combinations", () => {
@@ -850,7 +850,7 @@ test("repeated install is idempotent and writes a complete manifest", async () =
 
   assert.equal(second, first);
   assert.equal(manifest.protocol, "socrates-contract");
-  assert.equal(manifest.protocol_version, "0.9.0");
+  assert.equal(manifest.protocol_version, "0.10.0");
   assert.match(manifest.source_ref, /^local:/);
   assert.equal(Array.isArray(manifest.assets), true);
   assert.equal(manifest.assets.some((asset) => asset.source.endsWith("SKILL.md")), true);

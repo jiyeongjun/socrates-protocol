@@ -39,7 +39,7 @@ async function readRepoFile(relativePath) {
 
 test("package metadata keeps release verification and supported runtime explicit", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
-  assert.equal(pkg.version, "0.9.0");
+  assert.equal(pkg.version, "0.10.0");
   assert.equal(pkg.license, "MIT");
   assert.equal(typeof pkg.engines.node, "string");
   assert.equal(

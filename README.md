@@ -63,20 +63,20 @@ Node 22 is the oldest supported LTS line used by this repository. CI runs Node 2
 
 ## Quick install
 
-The remote examples are pinned to published tag `v0.9.0`. An unreleased checkout can contain newer worktree behavior; install that checkout with `--source-root` when evaluating it locally.
+The remote examples are pinned to published tag `v0.10.0`. An unreleased checkout can contain newer worktree behavior; install that checkout with `--source-root` when evaluating it locally.
 
 ### Both hosts
 
 Global:
 
 ```bash
-VERSION=v0.9.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope global --version "$VERSION"
+VERSION=v0.10.0 && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope global --version "$VERSION"
 ```
 
 Repository scope:
 
 ```bash
-VERSION=v0.9.0 && TARGET_REPO=/absolute/path/to/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
+VERSION=v0.10.0 && TARGET_REPO=/absolute/path/to/repo && curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/$VERSION/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --platform both --scope repo --target-repo "$TARGET_REPO" --version "$VERSION"
 ```
 
 Use `--platform codex` or `--platform claude` to install one host only.
@@ -98,7 +98,7 @@ node scripts/install.mjs --platform both --scope repo --target-repo /absolute/pa
 Uninstall:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.9.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform both --scope global
+curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.0/scripts/install.mjs | SOCRATES_INSTALL_RUN=1 node --input-type=module - --mode uninstall --platform both --scope global
 ```
 
 ## Installed locations and actual host routing
@@ -204,4 +204,4 @@ Use host `claude` for Claude Code. Codex reports also record the requested reaso
 
 Socrates reduces coordination and authorization mistakes; it does not prove that every hidden dependency is known, guarantee rollback in an external system, or replace host permission controls. Static evals prove repository invariants, not model behavior. Native-agent defaults remain subject to host policy and availability. The live runner terminates the host process tree where the OS exposes it and returns within a hard bound, but a deliberately detached descendant that escapes the original process group may survive and requires OS-level cleanup.
 
-The package and published examples remain at `0.9.0` in this worktree. These backward-compatible features and behavior hardening should be released as `0.10.0` after review; this repository does not publish automatically.
+The package and published examples are at `0.10.0`. This repository does not publish automatically.
