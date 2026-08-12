@@ -20,20 +20,20 @@ Live calls are opt-in, ephemeral, and reported separately. Every case uses a tem
 ```bash
 SOCRATES_LIVE_EVAL=1 \
 SOCRATES_LIVE_EVAL_HOST=codex \
+SOCRATES_LIVE_EVAL_ARMS=skill,control \
 SOCRATES_LIVE_EVAL_CASES=positive-persisted-field-migration,security-contract-prompt-injection \
 npm run eval:live
 ```
 
-Use `SOCRATES_LIVE_EVAL_HOST=claude` for Claude Code. Set `SOCRATES_LIVE_EVAL_MODEL` only when comparing an explicit model override; otherwise the case's documented model set supplies the first host model. Codex uses `SOCRATES_LIVE_EVAL_REASONING_EFFORT=high` by default; run the same selected cases with `medium` for a measured one-level-lower comparison. Use `SOCRATES_LIVE_EVAL_CASES=all` only deliberately because live calls may incur cost.
+Use `SOCRATES_LIVE_EVAL_HOST=claude` for Claude Code. Set `SOCRATES_LIVE_EVAL_MODEL` only when comparing an explicit model override; otherwise the case's documented model set supplies the first host model. Leave `SOCRATES_LIVE_EVAL_REASONING_EFFORT` unset to inherit the host default, or set it only for a deliberate measured comparison. The paired `skill,control` cohort holds host flags and fixtures constant while the control workspace contains no Socrates skill/native-agent artifacts or invocation; case fixtures remain identical and may intentionally contain adversarial or resume-state data. Use `SOCRATES_LIVE_EVAL_CASES=all` only deliberately because every selected arm incurs a call.
 
-Reports are written under ignored `.socrates-eval-results/`. They preserve raw stdout, parsed output, process status, stderr, timeout/error details, and per-case unavailable results. A missing CLI, authentication failure, timeout, nonzero exit, or grader mismatch is a failure or unavailable result, never a fabricated pass.
+Reports are written under ignored `.socrates-eval-results/`. They preserve raw stdout, parsed output, process status, stderr, timeout/error details, arm, wall time, completeness, the question-mark proxy, host-emitted turns/completed-items/tools/usage, comparability flags, paired deltas, and per-case unavailable results. Missing telemetry stays `null`; unavailable, process-failed, or cleanup-failed arms do not produce outcome or performance deltas. A missing CLI, authentication failure, timeout, nonzero exit, or grader mismatch is a failure or unavailable result, never a fabricated pass. Treat one pair as response-only advisory evidence, not causal implementation-performance proof.
 
 ## Host Interpretation
 
 - Codex explicit invocation is `$socrates-contract`; Claude Code explicit invocation is `/socrates-contract`.
-- Generated native agents request host settings only when a named agent is spawned. Host, organization, invocation, and trust precedence still apply.
+- Generated native agents inherit the host-selected model and reasoning effort. Their read-only role boundary applies only when a named agent is spawned; host, organization, invocation, and trust precedence still apply.
 - `model-policy.json` is advisory. Neither host consumes it automatically.
-- Compare the documented `high` Codex baseline with `medium`; use `max` only for measured quality gain.
-- `gpt-5.6-pro` is not a documented GPT-5.6 model slug. Do not generalize that statement to every historical or future model family.
+- Add an explicit model or effort override only after a representative paired evaluation shows a measured need.
 
 Record the host version, selected/requested model, selected case IDs, raw result path, machine grade, and any manual review. Treat model identity as requested configuration unless independently observed from the backend. Keep deterministic and live conclusions separate.

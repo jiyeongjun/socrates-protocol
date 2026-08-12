@@ -57,8 +57,25 @@ const liveGraders = {
 };
 
 export const liveGraderIds = Object.freeze(Object.keys(liveGraders));
+export const liveEvalArms = Object.freeze(["skill", "control"]);
 
-function buildIsolatedEnv(host, workspace) {
+export function parseLiveArms(value = "skill") {
+  const arms = value
+    .split(",")
+    .map((arm) => arm.trim())
+    .filter(Boolean);
+  if (arms.length === 0 || new Set(arms).size !== arms.length) {
+    throw new Error("SOCRATES_LIVE_EVAL_ARMS must list unique skill/control arms");
+  }
+  for (const arm of arms) {
+    if (!liveEvalArms.includes(arm)) {
+      throw new Error("SOCRATES_LIVE_EVAL_ARMS must list only skill and control");
+    }
+  }
+  return arms;
+}
+
+function buildIsolatedEnv(host, workspace, sourceEnv = process.env) {
   const env = {};
   for (const name of [
     "PATH",
@@ -74,7 +91,7 @@ function buildIsolatedEnv(host, workspace) {
     "HTTPS_PROXY",
     "NO_PROXY",
   ]) {
-    if (process.env[name]) env[name] = process.env[name];
+    if (sourceEnv[name]) env[name] = sourceEnv[name];
   }
   env.HOME = path.join(workspace, ".eval-home");
   env.XDG_CONFIG_HOME = path.join(env.HOME, ".config");
@@ -89,7 +106,7 @@ function buildIsolatedEnv(host, workspace) {
   if (host === "codex") {
     env.CODEX_HOME = path.join(env.HOME, "codex-home");
     for (const name of ["OPENAI_API_KEY", "OPENAI_BASE_URL"]) {
-      if (process.env[name]) env[name] = process.env[name];
+      if (sourceEnv[name]) env[name] = sourceEnv[name];
     }
   } else {
     env.CLAUDE_CONFIG_DIR = path.join(env.HOME, "claude-config");
@@ -105,7 +122,7 @@ function buildIsolatedEnv(host, workspace) {
       "GOOGLE_APPLICATION_CREDENTIALS",
       "CLOUD_ML_REGION",
     ]) {
-      if (process.env[name]) env[name] = process.env[name];
+      if (sourceEnv[name]) env[name] = sourceEnv[name];
     }
   }
   return env;
@@ -116,30 +133,39 @@ export function buildLiveCommand({
   model,
   workspace,
   prompt,
-  reasoningEffort = "high",
+  reasoningEffort = null,
+  arm = "skill",
+  sourceEnv = process.env,
 }) {
+  if (!liveEvalArms.includes(arm)) throw new Error(`Unsupported live eval arm: ${arm}`);
+  const evaluationSuffix =
+    "This is a read-only evaluation. Describe the action you would take; do not mutate or perform external actions.";
   if (host === "codex") {
+    const args = [
+      "exec",
+      "--sandbox",
+      "read-only",
+      "--skip-git-repo-check",
+      "--ephemeral",
+      "--ignore-user-config",
+      "--ignore-rules",
+      "--json",
+      "--model",
+      model,
+    ];
+    if (reasoningEffort) {
+      args.push("--config", `model_reasoning_effort=${JSON.stringify(reasoningEffort)}`);
+    }
+    args.push(
+      "--cd",
+      workspace,
+      `${arm === "skill" ? "Use $socrates-contract for this request:\n" : ""}${prompt}\n${evaluationSuffix}`
+    );
     return {
       command: "codex",
-      args: [
-        "exec",
-        "--sandbox",
-        "read-only",
-        "--skip-git-repo-check",
-        "--ephemeral",
-        "--ignore-user-config",
-        "--ignore-rules",
-        "--json",
-        "--model",
-        model,
-        "--config",
-        `model_reasoning_effort=${JSON.stringify(reasoningEffort)}`,
-        "--cd",
-        workspace,
-        `Use $socrates-contract for this request:\n${prompt}\nThis is a read-only evaluation. Describe the action you would take; do not mutate or perform external actions.`,
-      ],
+      args,
       cwd: workspace,
-      env: buildIsolatedEnv(host, workspace),
+      env: buildIsolatedEnv(host, workspace, sourceEnv),
     };
   }
   if (host === "claude") {
@@ -160,10 +186,10 @@ export function buildLiveCommand({
         "--no-session-persistence",
         "--model",
         model,
-        `/socrates-contract ${prompt}\nThis is a read-only evaluation. Describe the action you would take; do not mutate or perform external actions.`,
+        `${arm === "skill" ? "/socrates-contract " : ""}${prompt}\n${evaluationSuffix}`,
       ],
       cwd: workspace,
-      env: buildIsolatedEnv(host, workspace),
+      env: buildIsolatedEnv(host, workspace, sourceEnv),
     };
   }
   throw new Error(`Unsupported live host: ${host}`);
@@ -175,14 +201,18 @@ export async function runProcess(
   killGraceMs = 2000
 ) {
   return new Promise((resolve) => {
+    const startedAt = process.hrtime.bigint();
     const child = spawn(command, args, {
       cwd,
       env,
       stdio: ["ignore", "pipe", "pipe"],
       detached: process.platform !== "win32",
     });
-    let stdout = "";
-    let stderr = "";
+    const stdoutChunks = [];
+    const stderrChunks = [];
+    let stdoutBytes = 0;
+    let stderrBytes = 0;
+    let harnessStderr = "";
     let timedOut = false;
     let spawnError = null;
     let settled = false;
@@ -197,6 +227,8 @@ export async function runProcess(
       clearTimeout(timer);
       if (killTimer) clearTimeout(killTimer);
       if (forceTimer) clearTimeout(forceTimer);
+      const stdout = Buffer.concat(stdoutChunks).toString("utf8");
+      const stderr = `${Buffer.concat(stderrChunks).toString("utf8")}${harnessStderr}`;
       resolve({
         code,
         signal,
@@ -204,6 +236,9 @@ export async function runProcess(
         stderr,
         timedOut,
         error: spawnError instanceof Error ? spawnError.message : null,
+        wallTimeMs: Number(process.hrtime.bigint() - startedAt) / 1_000_000,
+        stdoutBytes,
+        stderrBytes,
       });
     };
     const signalTree = (signal) => {
@@ -215,7 +250,7 @@ export async function runProcess(
             { stdio: "ignore", windowsHide: true }
           );
           killer.on("error", (error) => {
-            stderr += `\nFailed to terminate process tree: ${error.message}`;
+            harnessStderr += `\nFailed to terminate process tree: ${error.message}`;
           });
           killer.unref();
         } else if (child.pid) {
@@ -225,7 +260,7 @@ export async function runProcess(
         }
       } catch (error) {
         if (!error || typeof error !== "object" || error.code !== "ESRCH") {
-          stderr += `\nFailed to send ${signal}: ${error instanceof Error ? error.message : String(error)}`;
+          harnessStderr += `\nFailed to send ${signal}: ${error instanceof Error ? error.message : String(error)}`;
         }
       }
     };
@@ -243,10 +278,14 @@ export async function runProcess(
       }, killGraceMs);
     }, timeoutMs);
     child.stdout.on("data", (chunk) => {
-      stdout += chunk;
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      stdoutChunks.push(buffer);
+      stdoutBytes += buffer.length;
     });
     child.stderr.on("data", (chunk) => {
-      stderr += chunk;
+      const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      stderrChunks.push(buffer);
+      stderrBytes += buffer.length;
     });
     child.on("error", (error) => {
       spawnError = error;
@@ -261,31 +300,122 @@ export async function runProcess(
   });
 }
 
-function extractResponse(host, stdout) {
+function nullableNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function normalizeUsage(usage) {
+  if (!usage || typeof usage !== "object") {
+    return { input_tokens: null, output_tokens: null, cached_input_tokens: null };
+  }
+  return {
+    input_tokens: nullableNumber(usage.input_tokens ?? usage.inputTokens),
+    output_tokens: nullableNumber(usage.output_tokens ?? usage.outputTokens),
+    cached_input_tokens: nullableNumber(
+      usage.cached_input_tokens ??
+        usage.cached_tokens ??
+        usage.cache_read_input_tokens ??
+        usage.input_tokens_details?.cached_tokens
+    ),
+  };
+}
+
+function isRecognizedToolItem(itemType) {
+  return /(?:^|_)(?:tool_call|function_call|mcp_tool_call|command_execution|web_search|file_search|computer_call)$/u.test(
+    itemType
+  );
+}
+
+export function parseHostOutput(host, stdout) {
   if (host === "claude") {
     try {
       const parsed = JSON.parse(stdout);
-      return typeof parsed.result === "string" ? parsed.result : stdout;
+      const response = typeof parsed.result === "string" ? parsed.result : stdout;
+      return {
+        response,
+        telemetry: {
+          turn_count: nullableNumber(parsed.num_turns),
+          item_type_counts: null,
+          tool_call_count: null,
+          tool_calls_by_type: null,
+          usage: normalizeUsage(parsed.usage),
+          host_duration_ms: nullableNumber(parsed.duration_ms),
+          host_api_duration_ms: nullableNumber(parsed.duration_api_ms),
+          host_cost_usd: nullableNumber(parsed.total_cost_usd),
+        },
+      };
     } catch {
-      return stdout;
+      return {
+        response: stdout,
+        telemetry: {
+          turn_count: null,
+          item_type_counts: null,
+          tool_call_count: null,
+          tool_calls_by_type: null,
+          usage: normalizeUsage(null),
+          host_duration_ms: null,
+          host_api_duration_ms: null,
+          host_cost_usd: null,
+        },
+      };
     }
   }
+
   const messages = [];
+  const itemTypeCounts = {};
+  const toolCallsByType = {};
+  const completedItemIds = new Set();
+  let turnCount = 0;
+  let observedCompletedItem = false;
+  let usage = normalizeUsage(null);
   for (const line of stdout.split(/\r?\n/u)) {
     if (!line.trim()) continue;
     try {
       const event = JSON.parse(line);
-      if (event?.type === "item.completed" && event?.item?.type === "agent_message") {
-        messages.push(event.item.text ?? event.item.content ?? "");
+      if (event?.type === "turn.completed") turnCount += 1;
+      const eventUsage = event?.usage ?? event?.response?.usage;
+      if (eventUsage) usage = normalizeUsage(eventUsage);
+      const itemType = typeof event?.item?.type === "string" ? event.item.type : null;
+      if (event?.type === "item.completed" && itemType) {
+        const rawItemId = event.item.id ?? event.item_id;
+        const itemId =
+          typeof rawItemId === "string" || typeof rawItemId === "number"
+            ? String(rawItemId)
+            : null;
+        if (itemId !== null && completedItemIds.has(itemId)) continue;
+        if (itemId !== null) completedItemIds.add(itemId);
+        observedCompletedItem = true;
+        itemTypeCounts[itemType] = (itemTypeCounts[itemType] ?? 0) + 1;
+        if (isRecognizedToolItem(itemType)) {
+          toolCallsByType[itemType] = (toolCallsByType[itemType] ?? 0) + 1;
+        }
+        if (itemType === "agent_message") {
+          const message = event.item.text ?? event.item.content;
+          if (typeof message === "string") messages.push(message);
+        }
       }
     } catch {
-      // Keep parsing later JSONL events. The report stores raw stdout separately.
+      // Raw stdout remains in the report for future parser improvements.
     }
   }
-  return messages.filter(Boolean).at(-1) ?? stdout;
+  return {
+    response: messages.filter(Boolean).at(-1) ?? stdout,
+    telemetry: {
+      turn_count: turnCount || null,
+      item_type_counts: observedCompletedItem ? itemTypeCounts : null,
+      tool_call_count: observedCompletedItem
+        ? Object.values(toolCallsByType).reduce((sum, count) => sum + count, 0)
+        : null,
+      tool_calls_by_type: observedCompletedItem ? toolCallsByType : null,
+      usage,
+      host_duration_ms: null,
+      host_api_duration_ms: null,
+      host_cost_usd: null,
+    },
+  };
 }
 
-function gradeResponse(evalCase, response) {
+export function gradeResponse(evalCase, response) {
   const grader = liveGraders[evalCase.live_grader_id];
   if (!grader) throw new Error(`Unknown live grader: ${evalCase.live_grader_id}`);
   const missing = grader.must
@@ -300,9 +430,14 @@ function gradeResponse(evalCase, response) {
     questionCount <= evalCase.expected_questions.max;
   return {
     passed: missing.length === 0 && forbidden.length === 0 && questionRangePass,
+    completeness: {
+      matched: grader.must.length - missing.length,
+      required: grader.must.length,
+      ratio: grader.must.length === 0 ? 1 : (grader.must.length - missing.length) / grader.must.length,
+    },
     missing_patterns: missing,
     forbidden_patterns: forbidden,
-    question_count: questionCount,
+    question_mark_count: questionCount,
     expected_questions: evalCase.expected_questions,
   };
 }
@@ -357,7 +492,8 @@ export async function assertSafeFixtureTree(
   }
 }
 
-export async function prepareWorkspace(host, evalCase) {
+export async function prepareWorkspace(host, evalCase, arm = "skill") {
+  if (!liveEvalArms.includes(arm)) throw new Error(`Unsupported live eval arm: ${arm}`);
   const workspace = await mkdtemp(path.join(os.tmpdir(), "socrates-live-eval-"));
   try {
     if (evalCase.fixture) {
@@ -380,21 +516,23 @@ export async function prepareWorkspace(host, evalCase) {
     await mkdir(path.join(workspace, ".eval-home", "claude-config"), {
       recursive: true,
     });
-    if (host === "codex") {
+    if (arm === "skill" && host === "codex") {
       await mkdir(path.join(workspace, ".agents"), { recursive: true });
       await cp(path.join(repoRoot, ".agents/skills"), path.join(workspace, ".agents/skills"), { recursive: true });
       await mkdir(path.join(workspace, ".codex"), { recursive: true });
       await cp(path.join(repoRoot, ".codex/agents"), path.join(workspace, ".codex/agents"), { recursive: true });
-    } else {
+    } else if (arm === "skill") {
       await mkdir(path.join(workspace, ".claude"), { recursive: true });
       await cp(path.join(repoRoot, ".claude/skills"), path.join(workspace, ".claude/skills"), { recursive: true });
       await cp(path.join(repoRoot, ".claude/agents"), path.join(workspace, ".claude/agents"), { recursive: true });
     }
     await assertSafeFixtureTree(workspace, "", {
       allowedHostControls:
-        host === "codex"
-          ? new Set([".agents", ".codex", ".eval-home"])
-          : new Set([".claude", ".eval-home"]),
+        arm === "control"
+          ? new Set([".eval-home"])
+          : host === "codex"
+            ? new Set([".agents", ".codex", ".eval-home"])
+            : new Set([".claude", ".eval-home"]),
     });
     return workspace;
   } catch (error) {
@@ -412,15 +550,102 @@ export async function prepareWorkspace(host, evalCase) {
   }
 }
 
-export async function runLiveEvals() {
-  if (process.env.SOCRATES_LIVE_EVAL !== "1") {
+function metricDelta(skillValue, controlValue) {
+  return typeof skillValue === "number" && typeof controlValue === "number"
+    ? skillValue - controlValue
+    : null;
+}
+
+function hasAvailableOutcome(result) {
+  const grade = result?.grade;
+  return Boolean(
+    grade &&
+      typeof grade.passed === "boolean" &&
+      !grade.unavailable &&
+      !grade.process_failed &&
+      !grade.cleanup_failed
+  );
+}
+
+export function buildPairedComparisons(results) {
+  const byCase = new Map();
+  for (const result of results) {
+    const arms = byCase.get(result.case_id) ?? {};
+    arms[result.arm] = result;
+    byCase.set(result.case_id, arms);
+  }
+  const comparisons = [];
+  for (const [caseId, pair] of byCase) {
+    if (!pair.skill || !pair.control) continue;
+    const skillOutcomeAvailable = hasAvailableOutcome(pair.skill);
+    const controlOutcomeAvailable = hasAvailableOutcome(pair.control);
+    const outcomeComparable = skillOutcomeAvailable && controlOutcomeAvailable;
+    const performanceComparable = Boolean(
+      outcomeComparable && pair.skill.metrics && pair.control.metrics
+    );
+    comparisons.push({
+      case_id: caseId,
+      skill_outcome_available: skillOutcomeAvailable,
+      control_outcome_available: controlOutcomeAvailable,
+      outcome_comparable: outcomeComparable,
+      performance_comparable: performanceComparable,
+      skill_passed: skillOutcomeAvailable ? pair.skill.grade.passed : null,
+      control_passed: controlOutcomeAvailable ? pair.control.grade.passed : null,
+      grade_delta: outcomeComparable
+        ? Number(pair.skill.grade.passed) - Number(pair.control.grade.passed)
+        : null,
+      wall_time_ms_delta: performanceComparable
+        ? metricDelta(
+            pair.skill.metrics.wall_time_ms,
+            pair.control.metrics.wall_time_ms
+          )
+        : null,
+      response_utf8_bytes_delta: performanceComparable
+        ? metricDelta(
+            pair.skill.metrics.response_utf8_bytes,
+            pair.control.metrics.response_utf8_bytes
+          )
+        : null,
+      tool_call_count_delta: performanceComparable
+        ? metricDelta(
+            pair.skill.metrics.tool_call_count,
+            pair.control.metrics.tool_call_count
+          )
+        : null,
+      input_tokens_delta: performanceComparable
+        ? metricDelta(
+            pair.skill.metrics.usage?.input_tokens,
+            pair.control.metrics.usage?.input_tokens
+          )
+        : null,
+      output_tokens_delta: performanceComparable
+        ? metricDelta(
+            pair.skill.metrics.usage?.output_tokens,
+            pair.control.metrics.usage?.output_tokens
+          )
+        : null,
+    });
+  }
+  return comparisons;
+}
+
+export async function runLiveEvals({
+  env = process.env,
+  prepareWorkspace: prepareWorkspaceDependency = prepareWorkspace,
+  buildLiveCommand: buildLiveCommandDependency = buildLiveCommand,
+  runProcess: runProcessDependency = runProcess,
+  parseHostOutput: parseHostOutputDependency = parseHostOutput,
+  gradeResponse: gradeResponseDependency = gradeResponse,
+  removeWorkspace = (workspace) => rm(workspace, { recursive: true, force: true }),
+} = {}) {
+  if (env.SOCRATES_LIVE_EVAL !== "1") {
     return { skipped: true, reason: "Set SOCRATES_LIVE_EVAL=1 to permit paid host calls." };
   }
-  const host = process.env.SOCRATES_LIVE_EVAL_HOST;
+  const host = env.SOCRATES_LIVE_EVAL_HOST;
   if (host !== "codex" && host !== "claude") {
     throw new Error("SOCRATES_LIVE_EVAL_HOST must be codex or claude");
   }
-  const selection = process.env.SOCRATES_LIVE_EVAL_CASES;
+  const selection = env.SOCRATES_LIVE_EVAL_CASES;
   if (!selection) {
     throw new Error("SOCRATES_LIVE_EVAL_CASES must list case IDs or be 'all'");
   }
@@ -438,22 +663,26 @@ export async function runLiveEvals() {
     throw new Error(`Unknown or incompatible live case IDs: ${[...selectedIds].filter((id) => !found.has(id)).join(", ")}`);
   }
 
-  const timeoutMs = Number.parseInt(process.env.SOCRATES_LIVE_EVAL_TIMEOUT_MS ?? "180000", 10);
+  const timeoutMs = Number.parseInt(env.SOCRATES_LIVE_EVAL_TIMEOUT_MS ?? "180000", 10);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 900000) {
     throw new Error("SOCRATES_LIVE_EVAL_TIMEOUT_MS must be between 1000 and 900000");
   }
   const results = [];
+  const arms = parseLiveArms(env.SOCRATES_LIVE_EVAL_ARMS ?? "skill");
   const reasoningEffort =
     host === "codex"
-      ? process.env.SOCRATES_LIVE_EVAL_REASONING_EFFORT ?? "high"
+      ? env.SOCRATES_LIVE_EVAL_REASONING_EFFORT ?? null
       : null;
-  if (reasoningEffort && !["medium", "high"].includes(reasoningEffort)) {
+  if (
+    reasoningEffort &&
+    !["none", "low", "medium", "high", "xhigh", "max"].includes(reasoningEffort)
+  ) {
     throw new Error(
-      "SOCRATES_LIVE_EVAL_REASONING_EFFORT must be medium or high"
+      "SOCRATES_LIVE_EVAL_REASONING_EFFORT must be none, low, medium, high, xhigh, or max"
     );
   }
   const outputDir = path.resolve(
-    process.env.SOCRATES_LIVE_EVAL_OUTPUT ??
+    env.SOCRATES_LIVE_EVAL_OUTPUT ??
       path.join(repoRoot, ".socrates-eval-results")
   );
   await ensureSafeOutputDirectory(outputDir);
@@ -470,6 +699,7 @@ export async function runLiveEvals() {
         schema_version: catalog.schema_version,
         run_at: startedAt,
         host,
+        arms,
         status: "running",
         deterministic: false,
         results: [],
@@ -479,83 +709,101 @@ export async function runLiveEvals() {
     await writeCompleteReport(reportHandle, runningReport);
     await reportHandle.sync();
 
-    for (const evalCase of cases) {
-      let workspace = null;
-      let caseResult;
+    for (const [caseIndex, evalCase] of cases.entries()) {
       const model =
-        process.env.SOCRATES_LIVE_EVAL_MODEL ??
+        env.SOCRATES_LIVE_EVAL_MODEL ??
         catalog.model_sets[evalCase.models][host][0];
-      try {
-        workspace = await prepareWorkspace(host, evalCase);
-        const invocation = buildLiveCommand({
-          host,
-          model,
-          workspace,
-          prompt: evalCase.prompt,
-          reasoningEffort: reasoningEffort ?? undefined,
-        });
-        const processResult = await runProcess(invocation, timeoutMs);
-        const response = extractResponse(host, processResult.stdout);
-        caseResult = {
-          case_id: evalCase.id,
-          host,
-          model,
-          reasoning_effort: reasoningEffort,
-          process: {
-            code: processResult.code,
-            signal: processResult.signal,
-            timed_out: processResult.timedOut,
-            error: processResult.error,
-            stderr: processResult.stderr,
-          },
-          raw_stdout: processResult.stdout,
-          response,
-          grade:
-            processResult.code === 0 &&
-            !processResult.timedOut &&
-            !processResult.error
-              ? gradeResponse(evalCase, response)
-              : { passed: false, process_failed: true },
-        };
-      } catch (error) {
-        caseResult = {
-          case_id: evalCase.id,
-          host,
-          model,
-          reasoning_effort: reasoningEffort,
-          process: {
-            code: null,
-            signal: null,
-            timed_out: false,
-            error: error instanceof Error ? error.message : String(error),
-            stderr: "",
-          },
-          raw_stdout: "",
-          response: "",
-          grade: { passed: false, unavailable: true },
-        };
-      } finally {
-        if (workspace) {
-          try {
-            await rm(workspace, { recursive: true, force: true });
-          } catch (error) {
-            const cleanupError =
-              error instanceof Error ? error.message : String(error);
-            caseResult.cleanup_error = cleanupError;
-            caseResult.process.stderr = [
-              caseResult.process.stderr,
-              `Live eval workspace cleanup failed: ${cleanupError}`,
-            ]
-              .filter(Boolean)
-              .join("\n");
-            caseResult.grade = {
-              passed: false,
-              cleanup_failed: true,
-            };
+      const orderedArms = caseIndex % 2 === 0 ? arms : [...arms].reverse();
+      for (const arm of orderedArms) {
+        let workspace = null;
+        let caseResult;
+        try {
+          workspace = await prepareWorkspaceDependency(host, evalCase, arm);
+          const invocation = buildLiveCommandDependency({
+            host,
+            model,
+            workspace,
+            prompt: evalCase.prompt,
+            reasoningEffort,
+            arm,
+            sourceEnv: env,
+          });
+          const processResult = await runProcessDependency(invocation, timeoutMs);
+          const parsedOutput = parseHostOutputDependency(host, processResult.stdout);
+          const response = parsedOutput.response;
+          caseResult = {
+            case_id: evalCase.id,
+            arm,
+            host,
+            model,
+            reasoning_effort: reasoningEffort,
+            process: {
+              code: processResult.code,
+              signal: processResult.signal,
+              timed_out: processResult.timedOut,
+              error: processResult.error,
+              stderr: processResult.stderr,
+            },
+            metrics: {
+              wall_time_ms: processResult.wallTimeMs,
+              raw_stdout_bytes: processResult.stdoutBytes,
+              raw_stderr_bytes: processResult.stderrBytes,
+              response_chars: response.length,
+              response_utf8_bytes: Buffer.byteLength(response, "utf8"),
+              question_mark_count: (response.match(/\?/gu) ?? []).length,
+              ...parsedOutput.telemetry,
+            },
+            raw_stdout: processResult.stdout,
+            response,
+            grade:
+              processResult.code === 0 &&
+              !processResult.timedOut &&
+              !processResult.error
+                ? gradeResponseDependency(evalCase, response)
+                : { passed: false, process_failed: true },
+          };
+        } catch (error) {
+          caseResult = {
+            case_id: evalCase.id,
+            arm,
+            host,
+            model,
+            reasoning_effort: reasoningEffort,
+            process: {
+              code: null,
+              signal: null,
+              timed_out: false,
+              error: error instanceof Error ? error.message : String(error),
+              stderr: "",
+            },
+            metrics: null,
+            raw_stdout: "",
+            response: "",
+            grade: { passed: false, unavailable: true },
+          };
+        } finally {
+          if (workspace) {
+            try {
+              await removeWorkspace(workspace);
+            } catch (error) {
+              const cleanupError =
+                error instanceof Error ? error.message : String(error);
+              caseResult.cleanup_error = cleanupError;
+              caseResult.process.stderr = [
+                caseResult.process.stderr,
+                `Live eval workspace cleanup failed: ${cleanupError}`,
+              ]
+                .filter(Boolean)
+                .join("\n");
+              caseResult.grade = {
+                passed: false,
+                cleanup_failed: true,
+              };
+            }
           }
         }
+        results.push(caseResult);
       }
-      results.push(caseResult);
     }
 
     const report = {
@@ -563,10 +811,12 @@ export async function runLiveEvals() {
       schema_version: catalog.schema_version,
       run_at: startedAt,
       host,
+      arms,
       reasoning_effort: reasoningEffort,
       deterministic: false,
-      note: "Live model output is advisory evidence and is never fabricated or merged with static pass status.",
+      note: "Live model output is advisory response-only evidence. A single paired run is not a causal performance claim; missing host telemetry remains null and is never estimated.",
       passed: results.every((result) => result.grade.passed),
+      comparisons: buildPairedComparisons(results),
       results,
     };
     await ensureSafeOutputDirectory(outputDir);

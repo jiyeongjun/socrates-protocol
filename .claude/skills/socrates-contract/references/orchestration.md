@@ -2,15 +2,14 @@
 
 ## Flow
 
-1. Explore current state read-only and classify safe-local versus Socrates work.
-2. Align protected decisions before their mutation; decide durable-file need separately.
-3. If durable state is justified, create the fewest independently verifiable subcontracts.
-4. Keep one mutating subcontract active per shared workspace; verify and update it before the next.
-5. Close the macro contract only after all success criteria pass.
+1. Use the host's normal workflow unless a Socrates boundary is actually present.
+2. Bound and align only the protected decision; decide durable-file need separately.
+3. If durable state is justified, create the fewest independently recoverable subcontracts.
+4. Keep one mutating subcontract active per shared workspace and close the macro goal only after its criteria pass.
 
 ## Parallel Work
 
-Apply the main runtime’s parallel-work boundary. Claude role agents expose only `Read`, `Grep`, and `Glob`; Codex role agents request read-only filesystem sandboxing and explicitly forbid external writes through inherited tools. Role agents cannot grant approval or authorize the main agent.
+Delegate only when a distinct read-only workstream materially helps. Claude role agents expose `Read`, `Grep`, and `Glob`; Codex role agents request a read-only filesystem sandbox. Role agents cannot grant approval or authorize the main agent.
 
 ## Host-Native Agents
 
@@ -21,10 +20,10 @@ Apply the main runtime’s parallel-work boundary. Claude role agents expose onl
 | narrow verification | `socrates-verify` | `socrates-verify` |
 | closure evaluation | `socrates-evaluate` | `socrates-evaluate` |
 
-When a named agent is spawned, Codex native TOML supplies its requested model/reasoning/read-only-filesystem defaults; project TOML also requires a trusted repository, and inherited connectors or MCP tools remain subject to host policy. Claude agent frontmatter supplies requested alias/tools/permission defaults subject to organization, invocation, environment, and parent-permission precedence. Claude's structural tool allowlist and Codex's requested filesystem sandbox are different boundaries; neither authorizes external actions. The main agent performs aligned mutation and runs any verification command unavailable to a role agent.
+Native agents inherit the host-selected model and reasoning level. Codex TOML requests only read-only filesystem behavior; Claude frontmatter uses `model: inherit` with read-only tools and plan permission mode. Host, organization, invocation, trust, and parent-permission precedence still apply. The main agent performs any aligned mutation and commands unavailable to a role agent.
 
-`model-policy.json` is advisory documentation for fallback/evaluation policy. Neither host consumes it automatically. Explicit skill invocation remains `$socrates-contract` in Codex and `/socrates-contract` in Claude.
+`model-policy.json` is advisory and neither host consumes it automatically. Explicit invocation remains `$socrates-contract` in Codex and `/socrates-contract` in Claude.
 
 ## Programmatic Tool Calling
 
-Apply the canonical PTC boundary in the main runtime. Host delegation changes execution location only; it does not change allowed tools, side effects, stopping, or approval.
+PTC and delegation do not change the action's side-effect, approval, rollback, or verification boundary.

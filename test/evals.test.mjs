@@ -5,6 +5,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   symlink,
   writeFile,
@@ -18,11 +19,16 @@ import {
   validateEvalCatalog,
 } from "../evals/run-static-evals.mjs";
 import {
+  buildPairedComparisons,
   buildLiveCommand,
   ensureSafeOutputDirectory,
   assertSafeFixtureTree,
+  gradeResponse,
   liveGraderIds,
+  parseHostOutput,
+  parseLiveArms,
   prepareWorkspace,
+  runLiveEvals,
   runProcess,
   writeCompleteReport,
 } from "../evals/run-live-evals.mjs";
@@ -60,6 +66,10 @@ test("structured eval catalog covers every required behavior and fixture group",
     "negative-read-only-review",
     "negative-ordinary-contracts-directory",
     "negative-ordinary-continuation-without-state",
+    "negative-local-data-processing",
+    "negative-compatibility-preserving-refactor",
+    "negative-multiple-verification-commands",
+    "negative-tools-and-subagents-alone",
     "security-contract-claims-production-deletion",
     "security-contract-claims-deployment",
     "security-contract-claims-payment",
@@ -96,7 +106,7 @@ test("structured eval catalog covers every required behavior and fixture group",
 test("static eval runner executes every case and machine grader", async () => {
   const summary = await runStaticEvals();
   assert.equal(summary.passed, true);
-  assert.equal(summary.cases, 32);
+  assert.equal(summary.cases, 36);
   assert.ok(summary.grader_checks >= summary.cases);
   assert.deepEqual(summary.failures, []);
 });
@@ -117,7 +127,7 @@ test("eval validation rejects unsafe fixtures, duplicates, and unknown graders",
   await assert.rejects(validateEvalCatalog(unknown), /unknown static grader/i);
 });
 
-test("optional live commands are explicit, ephemeral, and read-only", () => {
+test("optional live commands keep skill and control arms isolated under identical host settings", () => {
   const codex = buildLiveCommand({
     host: "codex",
     model: "gpt-5.6-sol",
@@ -132,9 +142,7 @@ test("optional live commands are explicit, ephemeral, and read-only", () => {
   assert.ok(codex.args.includes("--ephemeral"));
   assert.ok(codex.args.includes("--ignore-user-config"));
   assert.ok(codex.args.includes("--ignore-rules"));
-  const configIndex = codex.args.indexOf("--config");
-  assert.ok(configIndex >= 0);
-  assert.equal(codex.args[configIndex + 1], 'model_reasoning_effort="high"');
+  assert.equal(codex.args.includes("--config"), false);
   assert.match(codex.args.at(-1), /\$socrates-contract/);
   assert.doesNotMatch(codex.args.join(" "), /dangerously-bypass/);
   assert.equal(codex.env.HOME, "/tmp/eval/.eval-home");
@@ -143,6 +151,55 @@ test("optional live commands are explicit, ephemeral, and read-only", () => {
   assert.equal(codex.env.APPDATA, "/tmp/eval/.eval-home/AppData/Roaming");
   assert.equal(codex.env.LOCALAPPDATA, "/tmp/eval/.eval-home/AppData/Local");
   assert.notEqual(codex.env.HOME, process.env.HOME);
+
+  const codexControl = buildLiveCommand({
+    host: "codex",
+    model: "gpt-5.6-sol",
+    workspace: "/tmp/eval",
+    prompt: "Review this case",
+    arm: "control",
+  });
+  for (const flag of [
+    "--sandbox",
+    "--skip-git-repo-check",
+    "--ephemeral",
+    "--ignore-user-config",
+    "--ignore-rules",
+    "--json",
+    "--model",
+    "--cd",
+  ]) {
+    assert.ok(codex.args.includes(flag));
+    assert.ok(codexControl.args.includes(flag));
+  }
+  assert.equal(codexControl.args.includes("--config"), false);
+  assert.deepEqual(codexControl.args.slice(0, -1), codex.args.slice(0, -1));
+  const codexMediumSkill = buildLiveCommand({
+    host: "codex",
+    model: "gpt-5.6-sol",
+    workspace: "/tmp/eval",
+    prompt: "Review this case",
+    reasoningEffort: "medium",
+  });
+  const codexMediumControl = buildLiveCommand({
+    host: "codex",
+    model: "gpt-5.6-sol",
+    workspace: "/tmp/eval",
+    prompt: "Review this case",
+    reasoningEffort: "medium",
+    arm: "control",
+  });
+  assert.deepEqual(
+    codexMediumControl.args.slice(0, -1),
+    codexMediumSkill.args.slice(0, -1)
+  );
+  const controlConfigIndex = codexMediumControl.args.indexOf("--config");
+  assert.equal(
+    codexMediumControl.args[controlConfigIndex + 1],
+    'model_reasoning_effort="medium"'
+  );
+  assert.doesNotMatch(codexControl.args.at(-1), /socrates-contract/i);
+  assert.match(codexControl.args.at(-1), /^Review this case/m);
 
   const claude = buildLiveCommand({
     host: "claude",
@@ -167,6 +224,227 @@ test("optional live commands are explicit, ephemeral, and read-only", () => {
   assert.equal(claude.env.HOME, "/tmp/eval/.eval-home");
   assert.equal(claude.env.CLAUDE_CONFIG_DIR, "/tmp/eval/.eval-home/claude-config");
   assert.notEqual(claude.env.HOME, process.env.HOME);
+
+  const claudeControl = buildLiveCommand({
+    host: "claude",
+    model: "sonnet",
+    workspace: "/tmp/eval",
+    prompt: "Review this case",
+    arm: "control",
+  });
+  assert.doesNotMatch(claudeControl.args.at(-1), /socrates-contract/i);
+  assert.deepEqual(claudeControl.args.slice(0, -1), claude.args.slice(0, -1));
+});
+
+test("live arm parser accepts explicit cohorts and rejects ambiguous input", () => {
+  assert.deepEqual(parseLiveArms(), ["skill"]);
+  assert.deepEqual(parseLiveArms("skill,control"), ["skill", "control"]);
+  assert.throws(() => parseLiveArms("skill,skill"), /unique/i);
+  assert.throws(() => parseLiveArms("baseline"), /skill and control/i);
+});
+
+test("live output parsers preserve host telemetry without estimating missing values", () => {
+  const codex = parseHostOutput(
+    "codex",
+    [
+      JSON.stringify({
+        type: "item.started",
+        item: { id: "tool-1", type: "command_execution" },
+      }),
+      JSON.stringify({
+        type: "item.completed",
+        item: { id: "tool-1", type: "command_execution" },
+      }),
+      JSON.stringify({
+        type: "item.completed",
+        item: { id: "tool-1", type: "command_execution" },
+      }),
+      "not-json",
+      JSON.stringify({
+        type: "item.completed",
+        item: { id: "message-1", type: "agent_message", text: "Final answer?" },
+      }),
+      JSON.stringify({
+        type: "turn.completed",
+        usage: { input_tokens: 10, output_tokens: 4, cached_input_tokens: 3 },
+      }),
+    ].join("\n")
+  );
+  assert.equal(codex.response, "Final answer?");
+  assert.equal(codex.telemetry.turn_count, 1);
+  assert.equal(codex.telemetry.tool_call_count, 1);
+  assert.deepEqual(codex.telemetry.tool_calls_by_type, { command_execution: 1 });
+  assert.deepEqual(codex.telemetry.item_type_counts, {
+    command_execution: 1,
+    agent_message: 1,
+  });
+  assert.deepEqual(codex.telemetry.usage, {
+    input_tokens: 10,
+    output_tokens: 4,
+    cached_input_tokens: 3,
+  });
+
+  const claude = parseHostOutput(
+    "claude",
+    JSON.stringify({
+      result: "Claude result",
+      num_turns: 2,
+      duration_ms: 80,
+      duration_api_ms: 60,
+      total_cost_usd: 0.01,
+      usage: { input_tokens: 7, output_tokens: 5, cache_read_input_tokens: 2 },
+    })
+  );
+  assert.equal(claude.response, "Claude result");
+  assert.equal(claude.telemetry.turn_count, 2);
+  assert.equal(claude.telemetry.item_type_counts, null);
+  assert.equal(claude.telemetry.tool_call_count, null);
+  assert.equal(claude.telemetry.tool_calls_by_type, null);
+  assert.equal(claude.telemetry.host_cost_usd, 0.01);
+  assert.deepEqual(claude.telemetry.usage, {
+    input_tokens: 7,
+    output_tokens: 5,
+    cached_input_tokens: 2,
+  });
+
+  const malformed = parseHostOutput("claude", "not-json");
+  assert.equal(malformed.response, "not-json");
+  assert.deepEqual(malformed.telemetry.usage, {
+    input_tokens: null,
+    output_tokens: null,
+    cached_input_tokens: null,
+  });
+
+  const plainCodex = parseHostOutput("codex", "plain, non-JSON output");
+  assert.equal(plainCodex.response, "plain, non-JSON output");
+  assert.equal(plainCodex.telemetry.item_type_counts, null);
+  assert.equal(plainCodex.telemetry.tool_call_count, null);
+  assert.equal(plainCodex.telemetry.tool_calls_by_type, null);
+});
+
+test("live grading exposes completeness and punctuation only as a question-mark proxy", () => {
+  const evalCase = {
+    live_grader_id: "inline-local",
+    expected_questions: { min: 0, max: 0 },
+  };
+  const grade = gradeResponse(evalCase, "Use a bounded change and focused verification.");
+  assert.equal(grade.passed, true);
+  assert.deepEqual(grade.completeness, { matched: 1, required: 1, ratio: 1 });
+  assert.equal(grade.question_mark_count, 0);
+  assert.equal("question_count" in grade, false);
+});
+
+test("paired comparisons separate outcome from nullable performance deltas", () => {
+  const comparisons = buildPairedComparisons([
+    {
+      case_id: "case-one",
+      arm: "skill",
+      grade: { passed: true },
+      metrics: {
+        wall_time_ms: 120,
+        response_utf8_bytes: 80,
+        tool_call_count: 1,
+        usage: { input_tokens: 20, output_tokens: 10 },
+      },
+    },
+    {
+      case_id: "case-one",
+      arm: "control",
+      grade: { passed: false },
+      metrics: {
+        wall_time_ms: 100,
+        response_utf8_bytes: 50,
+        tool_call_count: null,
+        usage: { input_tokens: null, output_tokens: 8 },
+      },
+    },
+  ]);
+  assert.deepEqual(comparisons, [
+    {
+      case_id: "case-one",
+      skill_outcome_available: true,
+      control_outcome_available: true,
+      outcome_comparable: true,
+      performance_comparable: true,
+      skill_passed: true,
+      control_passed: false,
+      grade_delta: 1,
+      wall_time_ms_delta: 20,
+      response_utf8_bytes_delta: 30,
+      tool_call_count_delta: null,
+      input_tokens_delta: null,
+      output_tokens_delta: 2,
+    },
+  ]);
+
+  const unavailable = buildPairedComparisons([
+    {
+      case_id: "unavailable-case",
+      arm: "skill",
+      grade: { passed: false, unavailable: true },
+      metrics: null,
+    },
+    {
+      case_id: "unavailable-case",
+      arm: "control",
+      grade: { passed: true },
+      metrics: {
+        wall_time_ms: 100,
+        response_utf8_bytes: 50,
+        tool_call_count: 0,
+        usage: { input_tokens: 10, output_tokens: 5 },
+      },
+    },
+  ]);
+  assert.deepEqual(unavailable, [
+    {
+      case_id: "unavailable-case",
+      skill_outcome_available: false,
+      control_outcome_available: true,
+      outcome_comparable: false,
+      performance_comparable: false,
+      skill_passed: null,
+      control_passed: true,
+      grade_delta: null,
+      wall_time_ms_delta: null,
+      response_utf8_bytes_delta: null,
+      tool_call_count_delta: null,
+      input_tokens_delta: null,
+      output_tokens_delta: null,
+    },
+  ]);
+  for (const failureFlag of ["process_failed", "cleanup_failed"]) {
+    const [comparison] = buildPairedComparisons([
+      {
+        case_id: `${failureFlag}-case`,
+        arm: "skill",
+        grade: { passed: false, [failureFlag]: true },
+        metrics: {
+          wall_time_ms: 200,
+          response_utf8_bytes: 10,
+          tool_call_count: 0,
+          usage: { input_tokens: 4, output_tokens: 2 },
+        },
+      },
+      {
+        case_id: `${failureFlag}-case`,
+        arm: "control",
+        grade: { passed: true },
+        metrics: {
+          wall_time_ms: 100,
+          response_utf8_bytes: 8,
+          tool_call_count: 0,
+          usage: { input_tokens: 3, output_tokens: 1 },
+        },
+      },
+    ]);
+    assert.equal(comparison.skill_outcome_available, false);
+    assert.equal(comparison.outcome_comparable, false);
+    assert.equal(comparison.performance_comparable, false);
+    assert.equal(comparison.skill_passed, null);
+    assert.equal(comparison.grade_delta, null);
+    assert.equal(comparison.wall_time_ms_delta, null);
+  }
 });
 
 test("live fixture validation rejects symlinks and host control state", async () => {
@@ -257,14 +535,178 @@ test("live report writes retry partial positional writes without corrupting JSON
   );
 });
 
-test("Codex live workspace preparation accepts only runner-owned host controls", async () => {
-  const workspace = await prepareWorkspace("codex", { fixture: null });
+test("live process preserves split UTF-8 and exact raw stream byte counts", async () => {
+  const result = await runProcess(
+    {
+      command: process.execPath,
+      args: [
+        "-e",
+        "process.stdout.write(Buffer.from([0xe2])); process.stderr.write(Buffer.from([0xf0, 0x9f])); setTimeout(() => { process.stdout.write(Buffer.from([0x82, 0xac])); process.stderr.write(Buffer.from([0x98, 0x80])); }, 20)",
+      ],
+      cwd: repoRoot,
+      env: process.env,
+    },
+    1000
+  );
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, "€");
+  assert.equal(result.stderr, "😀");
+  assert.equal(result.stdoutBytes, 3);
+  assert.equal(result.stderrBytes, 4);
+});
+
+test("live workspace preparation isolates both controls and preserves non-null fixtures", async () => {
+  const evalCase = { fixture: "fixtures/valid-resume" };
+  const fixtureRelative = path.join(
+    ".socrates",
+    "contracts",
+    "billing-migration",
+    "contract-index.md"
+  );
+  const fixtureSource = await readFile(
+    path.join(repoRoot, "evals", evalCase.fixture, fixtureRelative),
+    "utf8"
+  );
+  for (const host of ["codex", "claude"]) {
+    const prepared = {};
+    for (const arm of ["skill", "control"]) {
+      prepared[arm] = await prepareWorkspace(host, evalCase, arm);
+    }
+    try {
+      await assertSafeFixtureTree(prepared.skill, "", {
+        allowedHostControls:
+          host === "codex"
+            ? new Set([".agents", ".codex", ".eval-home"])
+            : new Set([".claude", ".eval-home"]),
+      });
+      await assertSafeFixtureTree(prepared.control, "", {
+        allowedHostControls: new Set([".eval-home"]),
+      });
+      const skillEntries = await readdir(prepared.skill);
+      const controlEntries = await readdir(prepared.control);
+      assert.equal(skillEntries.includes(".agents"), host === "codex");
+      assert.equal(skillEntries.includes(".codex"), host === "codex");
+      assert.equal(skillEntries.includes(".claude"), host === "claude");
+      for (const hostControl of [".agents", ".codex", ".claude"]) {
+        assert.equal(controlEntries.includes(hostControl), false);
+      }
+      assert.equal(
+        await readFile(path.join(prepared.skill, fixtureRelative), "utf8"),
+        fixtureSource
+      );
+      assert.equal(
+        await readFile(path.join(prepared.control, fixtureRelative), "utf8"),
+        fixtureSource
+      );
+    } finally {
+      await rm(prepared.skill, { recursive: true, force: true });
+      await rm(prepared.control, { recursive: true, force: true });
+    }
+  }
+});
+
+test("live orchestration pairs arms in alternating order without model or network calls", async () => {
+  const outputRoot = await realpath(
+    await mkdtemp(path.join(tmpdir(), "socrates-live-orchestration-"))
+  );
+  const calls = [];
+  const fakeRunProcess = async (invocation) => {
+    const renderedPrompt = invocation.args.at(-1);
+    const caseId = renderedPrompt.includes("recieve")
+      ? "negative-readme-typo"
+      : "negative-formatting-only";
+    const arm = renderedPrompt.includes("$socrates-contract") ? "skill" : "control";
+    calls.push([caseId, arm]);
+    if (caseId === "negative-formatting-only" && arm === "skill") {
+      return {
+        code: 2,
+        signal: null,
+        stdout: "",
+        stderr: "injected host failure",
+        timedOut: false,
+        error: null,
+        wallTimeMs: 9,
+        stdoutBytes: 0,
+        stderrBytes: Buffer.byteLength("injected host failure", "utf8"),
+      };
+    }
+    const stdout = [
+      JSON.stringify({
+        type: "item.completed",
+        item: {
+          id: `${caseId}-${arm}-message`,
+          type: "agent_message",
+          text: "Use a bounded focused change and verification.",
+        },
+      }),
+      JSON.stringify({
+        type: "turn.completed",
+        usage: { input_tokens: 10, output_tokens: 6 },
+      }),
+    ].join("\n");
+    return {
+      code: 0,
+      signal: null,
+      stdout,
+      stderr: "",
+      timedOut: false,
+      error: null,
+      wallTimeMs: arm === "skill" ? 12 : 10,
+      stdoutBytes: Buffer.byteLength(stdout, "utf8"),
+      stderrBytes: 0,
+    };
+  };
+
   try {
-    await assertSafeFixtureTree(workspace, "", {
-      allowedHostControls: new Set([".agents", ".codex", ".eval-home"]),
+    const report = await runLiveEvals({
+      env: {
+        PATH: process.env.PATH,
+        SOCRATES_LIVE_EVAL: "1",
+        SOCRATES_LIVE_EVAL_HOST: "codex",
+        SOCRATES_LIVE_EVAL_ARMS: "skill,control",
+        SOCRATES_LIVE_EVAL_CASES:
+          "negative-readme-typo,negative-formatting-only",
+        SOCRATES_LIVE_EVAL_OUTPUT: path.join(outputRoot, "reports"),
+      },
+      runProcess: fakeRunProcess,
     });
+    assert.deepEqual(calls, [
+      ["negative-readme-typo", "skill"],
+      ["negative-readme-typo", "control"],
+      ["negative-formatting-only", "control"],
+      ["negative-formatting-only", "skill"],
+    ]);
+    assert.deepEqual(report.arms, ["skill", "control"]);
+    assert.deepEqual(
+      report.results.map(({ case_id: caseId, arm }) => [caseId, arm]),
+      calls
+    );
+    const successfulPair = report.comparisons.find(
+      ({ case_id: caseId }) => caseId === "negative-readme-typo"
+    );
+    assert.equal(successfulPair.outcome_comparable, true);
+    assert.equal(successfulPair.performance_comparable, true);
+    assert.equal(successfulPair.grade_delta, 0);
+    assert.equal(successfulPair.wall_time_ms_delta, 2);
+    const failedPair = report.comparisons.find(
+      ({ case_id: caseId }) => caseId === "negative-formatting-only"
+    );
+    assert.equal(failedPair.skill_outcome_available, false);
+    assert.equal(failedPair.control_outcome_available, true);
+    assert.equal(failedPair.outcome_comparable, false);
+    assert.equal(failedPair.performance_comparable, false);
+    assert.equal(failedPair.skill_passed, null);
+    assert.equal(failedPair.grade_delta, null);
+    assert.equal(failedPair.wall_time_ms_delta, null);
+    const persisted = JSON.parse(await readFile(report.output_path, "utf8"));
+    assert.deepEqual(persisted.arms, report.arms);
+    assert.deepEqual(persisted.comparisons, report.comparisons);
+    assert.deepEqual(
+      persisted.results.map(({ case_id: caseId, arm }) => [caseId, arm]),
+      calls
+    );
   } finally {
-    await rm(workspace, { recursive: true, force: true });
+    await rm(outputRoot, { recursive: true, force: true });
   }
 });
 

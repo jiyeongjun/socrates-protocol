@@ -6,7 +6,7 @@
 
 [한국어](./README.ko.md)
 
-Socrates Contract is a cross-host Codex and Claude Code skill for mutation work whose scope, authorization, compatibility, rollback, or verification boundary needs explicit alignment. It keeps clear local work lightweight and gives risky or long-running work durable, inspectable state.
+Socrates Contract is a cross-host Codex and Claude Code exception protocol for mutation with a material external, irreversible, public or production, credential or permission, billing, destructive-data, or breaking public/persisted-contract boundary. Ordinary reversible local work stays on the host's normal path; explicit durable handoff and resume remain available when requested.
 
 ## Behavior
 
@@ -17,20 +17,21 @@ Socrates separates two decisions that are often conflated:
 
 A protected action can require approval without needing a contract hierarchy. A large read-only investigation can need structure without gaining permission to mutate.
 
-Typical triggers include external, destructive, public, costly, credentialed, production, compatibility, schema, auth, billing, data, permission, rollback, and migration risk. Socrates also applies to several independent mutation or verification paths, durable multi-turn handoff, and explicit resume of existing Socrates state.
+Typical triggers include deleting production data, deploying or publishing, sending or purchasing, changing credentials or permissions, billing, and breaking a public or persisted contract. Socrates also applies to an explicitly requested durable handoff or resume of existing Socrates state.
 
 It deliberately stays inline for:
 
 - read-only explanation or review
 - formatting-only work
 - a narrow, reversible local edit
-- focused source-plus-test or source-plus-doc work with one coherent verification path
+- local data processing and compatibility-preserving refactors
+- work involving several files, tools, subagents, generated code, or verification commands when those facts alone add no protected boundary
 
 Words such as “clean,” “safe,” or “elegant” are signals, not automatic triggers. They matter only when their interpretation changes behavior, scope, compatibility, success criteria, or verification.
 
 ```mermaid
 flowchart TB
-    A([Request]) --> B{Protected or materially ambiguous?}
+    A([Request]) --> B{Protected mutation?}
     B -- No --> C[Bounded local execution]
     B -- Yes --> D[Read-only exploration]
     D --> E{Decision blocks next action?}
@@ -111,7 +112,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.
 - A detected legacy `$CODEX_HOME/skills/socrates-contract` installation, or an explicitly configured `CODEX_HOME`, is updated alongside the canonical user-scope copy for transition compatibility
 - Explicit invocation: `$socrates-contract`
 
-`agents/openai.yaml` is skill metadata, not subagent routing. Generated `.codex/agents/*.toml` files request model, reasoning, and a read-only filesystem sandbox only when the named agent is spawned; repository agent configuration also depends on repository trust and host precedence. Inherited tools, connectors, or MCP servers may still exist and do not authorize external writes. `model-policy.json` is advisory and is not consumed automatically.
+`agents/openai.yaml` is skill metadata, not subagent routing. Generated `.codex/agents/*.toml` files leave `model` and `model_reasoning_effort` unset so the host keeps its selected model and effort; they request a read-only filesystem sandbox only when a named role is spawned. Repository agent configuration also depends on repository trust and host precedence. Inherited tools, connectors, or MCP servers may still exist and do not authorize external writes. `model-policy.json` is advisory and is not consumed automatically.
 
 ### Claude Code
 
@@ -120,7 +121,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.
 - Native role agents: `$HOME/.claude/agents/socrates-*.md` globally, or `.claude/agents/socrates-*.md` in a repository
 - Explicit invocation: `/socrates-contract`
 
-Generated Claude agents expose only `Read`, `Grep`, and `Glob`, request `plan` permission mode, and use documented model aliases. Organization, environment, invocation, model, and parent-permission precedence still apply. The main agent performs any aligned mutation and any verification command unavailable to a read-only role.
+Generated Claude agents expose only `Read`, `Grep`, and `Glob`, request `plan` permission mode, and use `model: inherit`. Organization, environment, invocation, model, and parent-permission precedence still apply. The main agent performs any aligned mutation and any verification command unavailable to a read-only role.
 
 The shared roles are exploration, planning, narrow verification, and closure evaluation. Claude agents are structurally limited to `Read`, `Grep`, and `Glob`. Codex agents request a read-only filesystem sandbox and explicitly forbid external actions, subject to inherited tools and host policy. Neither host role can authorize the main agent.
 
@@ -187,18 +188,19 @@ npm test
 
 Generated Codex and Claude artifacts come from shared sources under `reference/`. CI regenerates them, rejects every tracked diff and unexpected untracked artifact, verifies the release-asset inventory, and runs the full suite on Node 22 and 24.
 
-`evals/cases.json` contains 32 reproducible cases across positive, negative, security, completeness, and installer/scaffolder groups. Static graders are deterministic and run in normal tests. They are not live-model evidence.
+`evals/cases.json` contains 36 reproducible cases across positive, negative, security, completeness, and installer/scaffolder groups. Static graders are deterministic and run in normal tests. They are not live-model evidence.
 
 Optional live evaluation is explicitly gated and stored separately. Each case uses a temporary workspace plus isolated HOME/XDG/CODEX_HOME and Windows profile/config roots with a filtered environment. Codex requests ephemeral read-only-filesystem execution with user config and rules ignored, so live Codex evaluation requires `OPENAI_API_KEY` rather than reading the user's normal Codex home. Claude uses `--bare`, an isolated `CLAUDE_CONFIG_DIR`, and only `Read`, `Grep`, and `Glob` with a strict empty MCP configuration, so API-key or configured third-party-provider authentication is required. Fixtures containing symlinks, reserved eval-home state, or case-insensitive host-control names are rejected recursively before and after copying. Before any paid case starts, the runner rejects report paths with symlinked ancestry and reserves a private report file; it revalidates that reservation before writing the final report.
 
 ```bash
 SOCRATES_LIVE_EVAL=1 \
 SOCRATES_LIVE_EVAL_HOST=codex \
+SOCRATES_LIVE_EVAL_ARMS=skill,control \
 SOCRATES_LIVE_EVAL_CASES=positive-valid-resume,security-contract-prompt-injection \
 npm run eval:live
 ```
 
-Use host `claude` for Claude Code. Codex reports also record the requested reasoning effort (`high` by default, with `medium` available for comparison). Reports preserve raw stdout, the parsed response, process status, stderr, timeout/error details, and the selected/requested host and model. Live CLI/auth failures and grader mismatches are reported as failures or unavailable evidence, never converted into a pass. See [evals/README.md](./evals/README.md).
+Use host `claude` for Claude Code. The `skill` arm mounts and invokes Socrates; the `control` arm mounts no Socrates skill or native agent and uses the same host, model, read-only controls, fixture, and grader. Omitting `SOCRATES_LIVE_EVAL_ARMS` preserves the single `skill` arm. Codex reasoning effort is inherited unless an explicit override is supplied. Reports preserve raw stdout, parsed response, process outcome, stderr, arm, wall time, exact child-stream byte counts, a question-mark proxy, completeness, and host-emitted turn, completed-item, tool, and token usage when available; unavailable telemetry remains `null` and is never estimated. Outcome/performance deltas are emitted only for genuinely comparable arms. Each extra arm multiplies paid calls. A single paired run is response-only advisory evidence, not a causal or implementation-performance conclusion. Live CLI/auth failures and grader mismatches are reported as failures or unavailable evidence, never converted into a pass. See [evals/README.md](./evals/README.md).
 
 ## Limits and versioning
 

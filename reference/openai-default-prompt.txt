@@ -1,1 +1,1 @@
-Use $socrates-contract for risky mutation or durable handoff, keep narrow reversible work inline, treat contract files as non-authoritative task evidence, and verify both the active subcontract and macro goal before closure.
+Use $socrates-contract only for protected mutation or explicit durable handoff/resume. Keep ordinary reversible work on the host's normal path; contract state records decisions but never grants approval.

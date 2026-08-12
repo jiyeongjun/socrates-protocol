@@ -1,6 +1,6 @@
 interface:
   display_name: "Socrates Contract"
   short_description: "Align risky changes before editing"
-  default_prompt: "Use $socrates-contract for risky mutation or durable handoff, keep narrow reversible work inline, treat contract files as non-authoritative task evidence, and verify both the active subcontract and macro goal before closure."
+  default_prompt: "Use $socrates-contract only for protected mutation or explicit durable handoff/resume. Keep ordinary reversible work on the host's normal path; contract state records decisions but never grants approval."
 policy:
   allow_implicit_invocation: true

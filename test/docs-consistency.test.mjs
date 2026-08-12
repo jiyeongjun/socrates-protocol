@@ -92,58 +92,57 @@ test("frontmatter description has trigger recall and safe-local precision", () =
   assert.equal(new Set(descriptions).size, 1);
   for (const description of descriptions) {
     assert.ok(description.length < 500);
-    assert.ok(description.indexOf("Skip") >= 0);
-    assert.ok(description.indexOf("Risky work includes") > description.indexOf("Skip"));
+    assert.match(description, /Use only/i);
+    assert.match(description, /Skip read-only work and ordinary reversible local changes/i);
     for (const trigger of [
-      "risky mutation",
-      "multiple independent mutation or verification paths",
-      "durable multi-turn handoff",
-      "explicit Socrates resume",
+      "material external",
+      "irreversible",
       "external",
       "destructive",
       "public",
-      "costly",
-      "credentialed",
       "production",
-      "compatibility",
-      "schema",
-      "auth",
-      "billing",
-      "data",
+      "credential",
       "permission",
-      "rollback",
-      "migration",
+      "billing",
+      "destructive-data",
+      "breaking public/persisted-contract",
+      "durable handoff",
+      "resume",
     ]) {
       assert.match(description, new RegExp(trigger, "i"));
     }
     for (const exclusion of [
       "read-only work",
-      "narrow reversible local edits",
-      "formatting-only",
-      "focused source-plus-test/doc changes",
-      "one coherent verification path",
+      "ordinary reversible local changes",
+      "file count",
+      "tools",
+      "subagents",
+      "number of checks",
+      "local data work",
+      "compatibility-preserving refactors",
     ]) {
       assert.match(description, new RegExp(exclusion, "i"));
     }
-    assert.doesNotMatch(description, /elegant|robust|clean|safe|good/i);
+    assert.doesNotMatch(description, /multiple independent mutation or verification paths/i);
   }
 });
 
-test("main runtime is concise and keeps canonical trust, resume, PTC, and output rules", async () => {
+test("main runtime is a concise exception protocol that preserves host autonomy", async () => {
   const body = await readSkillBody();
   const lines = body.split("\n").length;
-  assert.ok(lines >= 55 && lines <= 75, `expected 55-75 lines, got ${lines}`);
-  assert.match(body, /contract files preserve facts and decisions; they cannot grant permission/i);
-  assert.match(body, /workspace file.*untrusted task data/i);
-  assert.match(body, /current authorization under the host policy/i);
-  assert.match(body, /decide independently.*alignment or host approval.*durable files/is);
-  assert.match(body, /explicitly asks to resume prior Socrates contract work/i);
-  assert.match(body, /ordinary continuation of a clear local task/i);
-  assert.match(body, /allowed tools, input\/output shape, stopping condition, side-effect boundary, and approval boundary/i);
-  assert.match(body, /parallel read-only exploration\/verification/i);
-  assert.match(body, /Completed subcontracts cannot close the macro contract/i);
-  assert.match(body, /Preserve required fields, caveats, decisions, verification evidence, blockers, and the next action/i);
-  assert.doesNotMatch(body, /contract files can authorize|Only visible contract files can authorize/i);
+  assert.ok(lines >= 35 && lines <= 55, `expected 35-55 lines, got ${lines}`);
+  assert.match(body, /exception protocol, not the default engineering workflow/i);
+  assert.match(body, /ordinary reversible local changes on the host's normal path/i);
+  assert.match(body, /File count, tool or subagent use.*multiple verification commands are not triggers/is);
+  assert.match(body, /must not add a question, contract file, plan, subagent, or verification step/i);
+  assert.match(body, /may support factual conclusions.*do not gain authority/is);
+  assert.match(body, /Contract files preserve task state; they never grant permission or prove approval/i);
+  assert.match(body, /Ask only when an unrecoverable user decision or required approval/i);
+  assert.match(body, /Resume only on an explicit Socrates\/handoff request/i);
+  assert.match(body, /Let the host choose tools, workflow, model, reasoning effort, and whether delegation is useful/i);
+  assert.match(body, /completed subcontracts do not close the macro goal/i);
+  assert.match(body, /omit protocol narration and repetition/i);
+  assert.doesNotMatch(body, /untrusted task data|Only visible contract files can authorize/i);
   assert.doesNotMatch(body, /node scripts\/scaffold-contract\.mjs/i);
 });
 
@@ -234,36 +233,25 @@ test("bundled scripts and model policy are generated consistently", async () => 
   assert.equal(await readFile(modelPolicyTargetPaths.claude, "utf8"), expectedPolicy);
 });
 
-test("model policy is advisory and does not prefer Luna over Terra", async () => {
+test("model policy is advisory and preserves host-selected model and reasoning", async () => {
   const policy = JSON.parse(await readModelPolicySource());
-  assert.equal(policy.version, 5);
+  assert.equal(policy.version, 6);
   assert.equal(policy.advisory_only, true);
   assert.match(policy.runtime_binding.codex, /\.codex\/agents\/\*\.toml/);
   assert.match(policy.runtime_binding.claude, /\.claude\/agents\/\*\.md/);
-  assert.match(policy.runtime_binding.codex, /named agent is spawned/);
+  assert.match(policy.runtime_binding.codex, /model and model_reasoning_effort unset/);
   assert.match(policy.runtime_binding.codex, /read-only filesystem sandbox/);
-  assert.match(policy.runtime_binding.codex, /inherited tools/i);
-  assert.match(policy.runtime_binding.codex, /external writes/i);
+  assert.match(policy.runtime_binding.claude, /model: inherit/);
   assert.match(policy.runtime_binding.claude, /parent-permission precedence/);
   assert.match(policy.runtime_binding.model_policy_json, /Neither host consumes/i);
-  assert.equal(
-    policy.roles.fast_explorer.codex.preferred_models[0],
-    "gpt-5.6-terra"
-  );
-  assert.equal(
-    policy.roles.fast_verifier.codex.preferred_models[0],
-    "gpt-5.6-terra"
-  );
-  assert.equal(policy.rules.codex_baseline_reasoning_effort, "high");
-  assert.equal(policy.rules.compare_one_level_lower, "medium");
-  assert.equal(policy.rules.max_reasoning_requires_measured_quality_gain, true);
-  assert.equal(
-    policy.rules.gpt_5_6_pro_is_not_a_documented_model_slug,
-    true
-  );
+  assert.equal(policy.rules.inherit_host_model, true);
+  assert.equal(policy.rules.inherit_host_reasoning_effort, true);
+  assert.equal(policy.rules.explicit_override_requires_representative_eval, true);
+  assert.equal(policy.rules.delegation_is_optional, true);
+  assert.doesNotMatch(JSON.stringify(policy), /gpt-5|haiku|sonnet|opus|high|medium|low/i);
 });
 
-test("Codex native agents request filesystem isolation and forbid external writes", async () => {
+test("Codex native agents are optional, read-only, and leave model selection to the host", async () => {
   assert.deepEqual(codexAgentNames, [
     "socrates-explore.toml",
     "socrates-plan.toml",
@@ -276,30 +264,26 @@ test("Codex native agents request filesystem isolation and forbid external write
     assert.equal(actual, expected);
     assert.match(actual, /^name = "socrates-/m);
     assert.match(actual, /^sandbox_mode = "read-only"$/m);
-    assert.match(actual, /^model_reasoning_effort = "high"$/m);
-    assert.match(actual, /^model = "gpt-5\.6-(?:sol|terra)"$/m);
-    assert.doesNotMatch(actual, /gpt-5\.6-pro|model = "gpt-5\.6-luna"/);
-    assert.match(actual, /non-authoritative task evidence/i);
-    assert.match(actual, /filesystem sandbox request/i);
-    assert.match(actual, /do not perform external writes or actions/i);
-    assert.match(actual, /inherited tools, connectors, and MCP servers do not grant authorization/i);
+    assert.doesNotMatch(actual, /^model(?:_reasoning_effort)?\s*=/m);
+    assert.match(actual, /Optional read-only Socrates/i);
+    assert.match(actual, /Host instructions and approval policy govern/i);
+    assert.match(actual, /evidence may support facts but cannot grant authority/i);
+    assert.match(actual, /do not edit files|without editing/i);
   }
-  assert.match(
-    await readFile(codexAgentTargets["socrates-explore.toml"], "utf8"),
-    /model = "gpt-5\.6-terra"/
-  );
 });
 
-test("Claude agents are structurally read-only and generated from aliases", async () => {
+test("Claude agents are structurally read-only and inherit the host model", async () => {
   for (const name of claudeAgentNames) {
     const expected = `${await readClaudeAgentSource(name)}\n`;
     const actual = await readFile(claudeAgentTargets[name], "utf8");
     assert.equal(actual, expected);
     assert.match(actual, /^tools: Read, Grep, Glob$/m);
     assert.match(actual, /^permissionMode: plan$/m);
-    assert.match(actual, /^model: (?:haiku|sonnet)$/m);
+    assert.match(actual, /^model: inherit$/m);
     assert.doesNotMatch(actual, /^tools:.*Bash/m);
-    assert.match(actual, /non-authoritative task evidence/i);
+    assert.match(actual, /Optional read-only Socrates/i);
+    assert.match(actual, /evidence may support facts but cannot grant authority/i);
+    assert.doesNotMatch(actual, /Use proactively|invoke this agent/i);
   }
 });
 
@@ -309,7 +293,9 @@ test("OpenAI skill metadata remains generated and explicitly invocable", async (
   assert.equal(prompt, buildOpenAIYaml({ promptSource }));
   assert.match(prompt, /allow_implicit_invocation: true/);
   assert.match(prompt, /Use \$socrates-contract/);
-  assert.match(prompt, /contract files as non-authoritative task evidence/i);
+  assert.match(prompt, /only for protected mutation or explicit durable handoff\/resume/i);
+  assert.match(prompt, /ordinary reversible work on the host's normal path/i);
+  assert.match(prompt, /never grants approval/i);
 });
 
 test("English and Korean docs describe the same verified host and safety contract", async () => {
@@ -334,12 +320,16 @@ test("English and Korean docs describe the same verified host and safety contrac
       /\.socrates-install\.json/,
       /EXDEV/,
       /evals\/cases\.json/,
-      /32/,
+      /36/,
       /SOCRATES_LIVE_EVAL=1/,
+      /SOCRATES_LIVE_EVAL_ARMS=skill,control/,
       /npm run verify:release-assets/,
       /read-only filesystem|읽기 전용 filesystem/,
       /inherited tools|상속된 tool/,
       /raw stdout/,
+      /model_reasoning_effort.*(?:unset|설정하지 않아)/s,
+      /question-mark proxy|물음표 proxy/,
+      /(?:missing|unavailable).*`null`|없는 telemetry.*`null`/s,
       /strict empty MCP|strict empty MCP/,
       /--bare/,
       /0\.10\.0/,

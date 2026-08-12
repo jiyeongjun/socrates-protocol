@@ -6,7 +6,7 @@
 
 [English](./README.md)
 
-Socrates Contract는 범위, 권한, 호환성, 롤백, 검증 경계를 명시적으로 맞춰야 하는 변경 작업을 위한 Codex·Claude Code 공용 skill입니다. 명확한 로컬 작업은 가볍게 처리하고, 위험하거나 오래 이어지는 작업에는 확인 가능한 상태를 남깁니다.
+Socrates Contract는 외부·비가역·공개 또는 운영 환경·자격 증명이나 권한·결제·파괴적 데이터·공개/영속 계약 파괴 경계가 있는 변경을 위한 Codex·Claude Code 공용 예외 프로토콜입니다. 평범하고 되돌릴 수 있는 로컬 작업은 host의 기본 경로에 맡기며, 명시적으로 요청한 durable handoff와 resume은 계속 지원합니다.
 
 ## 동작 방식
 
@@ -17,20 +17,21 @@ Socrates는 흔히 한데 섞이는 두 결정을 따로 판단합니다.
 
 보호된 행동은 승인이 필요해도 contract 계층까지는 필요 없을 수 있습니다. 반대로 큰 읽기 전용 조사에 구조가 필요하더라도 변경 권한이 생기지는 않습니다.
 
-대표 trigger는 external, destructive, public, costly, credentialed, production, compatibility, schema, auth, billing, data, permission, rollback, migration 위험입니다. 독립된 변경·검증 경로가 여러 개일 때, 여러 turn에 걸친 handoff가 필요할 때, 기존 Socrates 상태를 명시적으로 resume할 때도 적용합니다.
+대표 trigger는 운영 데이터 삭제, deploy·publish, send·purchase, credential·permission 변경, billing, 공개 또는 영속 contract를 깨는 변경입니다. 명시적으로 durable handoff나 기존 Socrates 상태의 resume을 요청한 경우에도 적용합니다.
 
 다음 작업은 의도적으로 inline으로 처리합니다.
 
 - 읽기 전용 설명이나 review
 - formatting만 바꾸는 작업
 - 좁고 되돌릴 수 있는 로컬 수정
-- 하나의 일관된 검증 경로를 갖는 source-plus-test 또는 source-plus-doc 작업
+- 로컬 data 처리와 compatibility를 보존하는 refactor
+- 여러 file, tool, subagent, generated code, verification command가 있어도 그 사실만으로 보호 경계가 생기지 않는 작업
 
 “clean”, “safe”, “elegant” 같은 단어 자체가 trigger는 아닙니다. 해석에 따라 동작, 범위, 호환성, 성공 기준, 검증이 실제로 달라질 때만 중요합니다.
 
 ```mermaid
 flowchart TB
-    A([요청]) --> B{보호면 또는 실질적 모호성이 있는가?}
+    A([요청]) --> B{보호된 변경인가?}
     B -- 아니요 --> C[범위가 닫힌 로컬 실행]
     B -- 예 --> D[읽기 전용 탐색]
     D --> E{다음 행동을 막는 결정이 있는가?}
@@ -111,7 +112,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.
 - 기존 `$CODEX_HOME/skills/socrates-contract`가 감지되거나 `CODEX_HOME`이 명시되면 전환 호환성을 위해 canonical user-scope copy와 함께 갱신
 - 명시적 호출: `$socrates-contract`
 
-`agents/openai.yaml`은 skill metadata이며 subagent routing 설정이 아닙니다. 생성된 `.codex/agents/*.toml`은 해당 이름의 agent가 spawn될 때만 model, reasoning, 읽기 전용 filesystem sandbox를 요청합니다. Repository agent 설정에는 repository trust와 host precedence도 적용됩니다. 상속된 tool, connector, MCP server가 남아 있을 수 있지만 외부 쓰기 권한을 부여하지는 않습니다. `model-policy.json`은 참고 문서이며 host가 자동으로 읽어 실행하지 않습니다.
+`agents/openai.yaml`은 skill metadata이며 subagent routing 설정이 아닙니다. 생성된 `.codex/agents/*.toml`은 `model`과 `model_reasoning_effort`를 설정하지 않아 host가 고른 model과 effort를 그대로 상속하고, 해당 이름의 role이 spawn될 때만 읽기 전용 filesystem sandbox를 요청합니다. Repository agent 설정에는 repository trust와 host precedence도 적용됩니다. 상속된 tool, connector, MCP server가 남아 있을 수 있지만 외부 쓰기 권한을 부여하지는 않습니다. `model-policy.json`은 참고 문서이며 host가 자동으로 읽어 실행하지 않습니다.
 
 ### Claude Code
 
@@ -120,7 +121,7 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.
 - Native role agent: global에서는 `$HOME/.claude/agents/socrates-*.md`, repository에서는 `.claude/agents/socrates-*.md`
 - 명시적 호출: `/socrates-contract`
 
-생성된 Claude agent는 `Read`, `Grep`, `Glob`만 노출하고 `plan` permission mode와 문서화된 model alias를 요청합니다. Organization, environment, invocation, model, parent-permission precedence는 그대로 적용됩니다. 정렬된 변경과 읽기 전용 role이 실행할 수 없는 검증 명령은 main agent가 담당합니다.
+생성된 Claude agent는 `Read`, `Grep`, `Glob`만 노출하고 `plan` permission mode와 `model: inherit`를 사용합니다. Organization, environment, invocation, model, parent-permission precedence는 그대로 적용됩니다. 정렬된 변경과 읽기 전용 role이 실행할 수 없는 검증 명령은 main agent가 담당합니다.
 
 공용 role은 탐색, 계획, 좁은 검증, 완료 평가입니다. Claude agent는 구조적으로 `Read`, `Grep`, `Glob`만 사용할 수 있습니다. Codex agent는 읽기 전용 filesystem sandbox를 요청하고 외부 action을 명시적으로 금지하지만, 상속된 tool과 host policy의 적용을 계속 받습니다. 어느 host의 role도 main agent를 승인하거나 권한을 부여할 수 없습니다.
 
@@ -187,18 +188,19 @@ npm test
 
 Codex·Claude 생성물은 `reference/` 아래 공용 source에서 만듭니다. CI는 재생성 뒤 모든 tracked diff와 예상하지 않은 untracked artifact를 거부하고, release asset inventory를 검증한 다음 Node 22·24에서 전체 suite를 실행합니다.
 
-`evals/cases.json`에는 positive, negative, security, completeness, installer/scaffolder 다섯 group의 재현 가능한 case 32개가 있습니다. Static grader는 deterministic하며 일반 test에서 실행됩니다. 이 결과를 live-model 증거로 주장하지 않습니다.
+`evals/cases.json`에는 positive, negative, security, completeness, installer/scaffolder 다섯 group의 재현 가능한 case 36개가 있습니다. Static grader는 deterministic하며 일반 test에서 실행됩니다. 이 결과를 live-model 증거로 주장하지 않습니다.
 
 선택적인 live eval은 명시적으로 opt-in해야 하며 결과를 따로 저장합니다. 각 case는 임시 workspace와 분리된 HOME/XDG/CODEX_HOME, Windows profile/config root, 필터링된 environment를 사용합니다. Codex는 user config와 rule을 무시한 ephemeral 읽기 전용 filesystem 실행을 요청하므로 일반 Codex home을 읽지 않고 `OPENAI_API_KEY`로 인증해야 합니다. Claude는 `--bare`, 격리된 `CLAUDE_CONFIG_DIR`, strict empty MCP 설정에서 `Read`, `Grep`, `Glob`만 제공하므로 API key 또는 설정된 third-party provider 인증이 필요합니다. Symlink, reserved eval-home state, 대소문자를 바꾼 host-control name이 있는 fixture는 tree 어디에서든 복사 전후에 거부합니다. 유료 case를 시작하기 전에 symlink ancestor가 있는 report path를 거부하고 private report file을 예약하며, 최종 report를 쓰기 전에 그 예약을 다시 검증합니다.
 
 ```bash
 SOCRATES_LIVE_EVAL=1 \
 SOCRATES_LIVE_EVAL_HOST=codex \
+SOCRATES_LIVE_EVAL_ARMS=skill,control \
 SOCRATES_LIVE_EVAL_CASES=positive-valid-resume,security-contract-prompt-injection \
 npm run eval:live
 ```
 
-Claude Code에는 host `claude`를 사용합니다. Codex report에는 요청한 reasoning effort도 기록하며 기본값은 `high`, 비교값은 `medium`입니다. Report는 raw stdout, parsing된 response, process status, stderr, timeout/error detail, 선택·요청된 host/model을 보존합니다. Live CLI·auth 실패와 grader mismatch는 실패 또는 unavailable evidence로 기록하며 pass로 바꾸지 않습니다. 자세한 내용은 [evals/README.md](./evals/README.md)에 있습니다.
+Claude Code에는 host `claude`를 사용합니다. `skill` arm은 Socrates를 mount하고 호출하며, `control` arm은 Socrates skill과 native agent를 전혀 mount하지 않은 채 같은 host, model, 읽기 전용 control, fixture, grader를 사용합니다. `SOCRATES_LIVE_EVAL_ARMS`를 생략하면 기존처럼 `skill` arm 하나만 실행합니다. Codex reasoning effort는 명시적으로 override하지 않으면 host 값을 상속합니다. Report는 raw stdout, parsing된 response, process outcome, stderr, arm, wall time, 정확한 child stream byte 수, 물음표 proxy, completeness와 host가 실제로 내보낸 turn·completed item·tool·token usage를 보존하며, 없는 telemetry는 추정하지 않고 `null`로 둡니다. Outcome/performance delta는 두 arm이 실제로 비교 가능할 때만 냅니다. Arm을 추가하면 유료 호출 수도 그만큼 늘어납니다. 한 번의 paired run은 response-only 참고 증거일 뿐 인과관계나 구현 성능 결론이 아닙니다. Live CLI·auth 실패와 grader mismatch는 실패 또는 unavailable evidence로 기록하며 pass로 바꾸지 않습니다. 자세한 내용은 [evals/README.md](./evals/README.md)에 있습니다.
 
 ## 한계와 versioning
 

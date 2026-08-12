@@ -1,126 +1,34 @@
 {
-  "version": 5,
+  "version": 6,
   "advisory_only": true,
   "runtime_binding": {
-    "codex": "Generated .codex/agents/*.toml files request model, reasoning, and a read-only filesystem sandbox when that named agent is spawned; project trust and host precedence still apply, inherited tools may still exist, and they do not authorize external writes.",
-    "claude": "Generated .claude/agents/*.md frontmatter requests model aliases, tools, and plan permission mode when that named agent is spawned; host model, organization, invocation, and parent-permission precedence still applies.",
-    "model_policy_json": "Neither host consumes this file automatically. It documents fallbacks and evaluation policy only."
+    "codex": "Generated .codex/agents/*.toml files leave model and model_reasoning_effort unset so Codex can resolve each from the spawn, agent defaults, parent, and host policy; they request only a read-only filesystem sandbox.",
+    "claude": "Generated .claude/agents/*.md files use model: inherit with Read, Grep, Glob and plan permission defaults, subject to organization, invocation, environment, and parent-permission precedence.",
+    "model_policy_json": "Neither host consumes this file automatically. It documents the non-interference and evaluation policy only."
   },
   "roles": {
-    "fast_explorer": {
+    "explorer": {
       "codex_native_agent": "socrates-explore",
-      "codex": {
-        "preferred_models": [
-          "gpt-5.6-terra",
-          "gpt-5.6-sol",
-          "gpt-5.6-luna",
-          "gpt-5.4-mini",
-          "gpt-5.5",
-          "gpt-5.4",
-          "gpt-5.3-codex-spark",
-          "gpt-5.3-codex"
-        ]
-      },
-      "claude_native_agent": "socrates-explore",
-      "claude": {
-        "preferred_models": ["haiku", "sonnet"]
-      }
+      "claude_native_agent": "socrates-explore"
     },
-    "goal_contractor": {
+    "planner": {
       "codex_native_agent": "socrates-plan",
-      "codex": {
-        "preferred_models": [
-          "gpt-5.6-sol",
-          "gpt-5.6-terra",
-          "gpt-5.5",
-          "gpt-5.4",
-          "gpt-5.3-codex",
-          "gpt-5.4-mini"
-        ]
-      },
-      "claude_native_agent": "socrates-plan",
-      "claude": {
-        "preferred_models": ["sonnet", "opus", "haiku"]
-      }
+      "claude_native_agent": "socrates-plan"
     },
-    "subgoal_planner": {
-      "codex_native_agent": "socrates-plan",
-      "codex": {
-        "preferred_models": [
-          "gpt-5.6-terra",
-          "gpt-5.6-sol",
-          "gpt-5.5",
-          "gpt-5.4",
-          "gpt-5.4-mini",
-          "gpt-5.3-codex"
-        ]
-      },
-      "claude_native_agent": "socrates-plan",
-      "claude": {
-        "preferred_models": ["sonnet", "opus", "haiku"]
-      }
-    },
-    "protected_surface_planner": {
-      "codex_native_agent": "socrates-plan",
-      "codex": {
-        "preferred_models": [
-          "gpt-5.6-sol",
-          "gpt-5.6-terra",
-          "gpt-5.5",
-          "gpt-5.4",
-          "gpt-5.4-mini",
-          "gpt-5.3-codex"
-        ]
-      },
-      "claude_native_agent": "socrates-plan",
-      "claude": {
-        "preferred_models": ["sonnet", "opus", "haiku"]
-      }
-    },
-    "fast_verifier": {
+    "verifier": {
       "codex_native_agent": "socrates-verify",
-      "codex": {
-        "preferred_models": [
-          "gpt-5.6-terra",
-          "gpt-5.6-sol",
-          "gpt-5.6-luna",
-          "gpt-5.4-mini",
-          "gpt-5.5",
-          "gpt-5.4",
-          "gpt-5.3-codex-spark",
-          "gpt-5.3-codex"
-        ]
-      },
-      "claude_native_agent": "socrates-verify",
-      "claude": {
-        "preferred_models": ["haiku", "sonnet"]
-      }
+      "claude_native_agent": "socrates-verify"
     },
-    "contract_verifier": {
+    "evaluator": {
       "codex_native_agent": "socrates-evaluate",
-      "codex": {
-        "preferred_models": [
-          "gpt-5.6-sol",
-          "gpt-5.6-terra",
-          "gpt-5.5",
-          "gpt-5.4",
-          "gpt-5.4-mini",
-          "gpt-5.3-codex"
-        ]
-      },
-      "claude_native_agent": "socrates-evaluate",
-      "claude": {
-        "preferred_models": ["sonnet", "opus", "haiku"]
-      }
+      "claude_native_agent": "socrates-evaluate"
     }
   },
   "rules": {
-    "codex_baseline_reasoning_effort": "high",
-    "compare_one_level_lower": "medium",
-    "max_reasoning_requires_measured_quality_gain": true,
-    "gpt_5_6_pro_is_not_a_documented_model_slug": true,
-    "do_not_prefer_luna_over_terra_without_eval": true,
-    "preserve_legacy_fallbacks": true,
+    "inherit_host_model": true,
+    "inherit_host_reasoning_effort": true,
+    "explicit_override_requires_representative_eval": true,
+    "delegation_is_optional": true,
     "host_approval_always_wins": true
   }
 }
