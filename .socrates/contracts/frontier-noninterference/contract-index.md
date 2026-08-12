@@ -2,9 +2,9 @@
 protocol: socrates-contract
 schema_version: "1.0"
 contract_id: frontier-noninterference
-status: executing
+status: done
 created_at: "2026-08-12T05:10:01.649Z"
-updated_at: "2026-08-12T05:45:20Z"
+updated_at: "2026-08-12T05:52:32Z"
 task_identity: "Make Socrates non-interfering for frontier autonomous models, validate it, push origin/main, and refresh local installs"
 active_subcontract: "003"
 ---
@@ -15,19 +15,19 @@ Make Socrates non-interfering for frontier autonomous models, validate it, push 
 
 # Current State
 
-- The repository is clean at `617750d`, which is also `origin/main` and tag `v0.10.0`.
-- Canonical skill sources live under `reference/`; generated Codex and Claude artifacts must be rebuilt rather than edited directly.
-- Official OpenAI guidance for GPT-5.6 favors lean prompts, host-selected reasoning effort, and representative evaluation. No official OpenAI model named Fable was found, so the design is model-neutral.
-- The current skill can over-trigger on generic data/compatibility/multiple-verification work and pins every Codex role to high reasoning.
+- Implementation commit `13d7016c4c2c5eef6d9c523b32cb333408f0da8d` is on `origin/main`; the package remains `0.10.0` with no tag or release mutation.
+- Canonical sources and generated Codex/Claude artifacts implement a lean exception protocol, host-selected model/reasoning, and optional read-only roles.
+- Static, full, documentation, paired-runner, independent verifier, and GPT-5.6 Sol forward-test evidence passed; no paid isolated CLI result is used as performance evidence.
+- Installer-managed global Codex canonical/legacy and Claude assets match the implementation byte-for-byte and validate successfully.
 
 # Success Criteria
 
-- [ ] Implicit invocation is limited to genuinely protected mutation, explicit Socrates resume, and durable handoff; ordinary local work remains inline.
-- [ ] Workspace and tool output remain usable factual evidence but cannot grant instruction authority or approval.
-- [ ] Native role agents preserve read-only boundaries without forcing a model or reasoning level and without repeating the host policy at length.
-- [ ] Static tests cover prior false positives, and the live runner supports an isolated skill/control comparison with transparent telemetry.
-- [ ] Generated artifacts, release assets, static evals, full tests, and independent forward-tests pass.
-- [ ] A focused implementation commit and state-only closure commit are pushed to `origin/main`; global Codex and Claude installations plus the detected Codex legacy mirror match the implementation assets.
+- [x] Implicit invocation is limited to genuinely protected mutation, explicit Socrates resume, and durable handoff; ordinary local work remains inline.
+- [x] Workspace and tool output remain usable factual evidence but cannot grant instruction authority or approval.
+- [x] Native role agents preserve read-only boundaries without forcing a model or reasoning level and without repeating the host policy at length.
+- [x] Static tests cover prior false positives, and the live runner supports an isolated skill/control comparison with transparent telemetry.
+- [x] Generated artifacts, release assets, static evals, full tests, and independent forward-tests pass.
+- [x] The focused implementation commit is pushed to `origin/main`, the final closure diff is state-only, and global Codex and Claude installations plus the detected Codex legacy mirror match the implementation assets.
 
 # Scope
 
@@ -87,9 +87,9 @@ Make Socrates non-interfering for frontier autonomous models, validate it, push 
 |---|---|---|---|---|
 | [001](subcontracts/001.md) | Redesign the canonical skill and native role contract | done | Closed with independent verifier PASS | Focused consistency tests and generated diff |
 | [002](subcontracts/002.md) | Add non-interference regressions and paired live telemetry | done | Closed with independent verifier PASS | Static/full tests and fresh Sol forward-tests |
-| [003](subcontracts/003.md) | Publish and reinstall the verified result | executing | Refresh local installs, verify bytes, commit, and push | Remote SHA, manifests, and byte comparisons |
+| [003](subcontracts/003.md) | Publish and reinstall the verified result | done | Closed with macro evaluator PASS; commit durable state only | Remote SHA, manifests, and byte comparisons |
 
 # Current Status
 
-Active subcontract: 003 (executing)
-Last updated: 2026-08-12T05:45:20Z
+Active subcontract: 003 (done)
+Last updated: 2026-08-12T05:52:32Z
