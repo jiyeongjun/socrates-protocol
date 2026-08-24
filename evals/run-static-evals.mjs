@@ -144,6 +144,7 @@ const staticGraders = {
     assert.match(context.body, /do not begin every explanation with a diagnostic questionnaire/i);
     assert.match(context.body, /Preserve the concrete situation, constraints, alternatives/i);
     assert.match(context.body, /phrase the offer as a statement rather than a second question/i);
+    assert.match(context.body, /do not append a check, quiz, or follow-up question unless the user explicitly asks/i);
   },
   "mastery-gate": async ({ context }) => {
     assert.match(context.body, /advance only when the user's answer demonstrates the current learning objective/i);
@@ -168,9 +169,16 @@ const staticGraders = {
     assert.match(context.body, /Simplify without introducing a false rule/i);
     assert.match(context.body, /where the analogy stops matching/i);
   },
+  "visual-explanation": async ({ context }) => {
+    assert.match(context.body, /sequence, comparison, hierarchy, spatial relationship, or changing state/i);
+    assert.match(context.body, /compact table or inline flow, timeline, or tree/i);
+    assert.match(context.body, /available visualization capability/i);
+    assert.match(context.body, /skip decorative visuals/i);
+  },
   "efficient-learning": async ({ context }) => {
     assert.match(context.body, /Lead with value/i);
     assert.match(context.body, /not permission to withhold a clear answer/i);
+    assert.match(context.body, /compact complete explanation over an exhaustive survey/i);
     assert.match(context.body, /respect that choice, explain it directly/i);
     assert.match(context.body, /End when the requested understanding or deliverable is complete/i);
   },

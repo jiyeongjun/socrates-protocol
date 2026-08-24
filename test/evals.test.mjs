@@ -78,6 +78,12 @@ test("structured eval catalog covers every required behavior and fixture group",
     assert.ok(ids.has(required), `missing required eval case ${required}`);
   }
 
+  const visualCase = catalog.cases.find(
+    (evalCase) => evalCase.id === "explain-database-index-eli5"
+  );
+  assert.ok(visualCase.required_output_fields.includes("small visual"));
+  assert.ok(visualCase.static_grader_ids.includes("visual-explanation"));
+
   const knownLiveGraders = new Set(liveGraderIds);
   for (const evalCase of catalog.cases) {
     if (evalCase.live_grader_id) {
@@ -187,6 +193,29 @@ test("optional live commands keep skill and control arms isolated under identica
   assert.doesNotMatch(codexControl.args.at(-1), /\$socrates/i);
   assert.match(codexControl.args.at(-1), /^Review this case/m);
 
+  const pinnedCodex = buildLiveCommand({
+    host: "codex",
+    model: "gpt-5.6-sol",
+    workspace: "/tmp/eval",
+    prompt: "Review this case",
+    sourceEnv: {
+      PATH: process.env.PATH,
+      SOCRATES_LIVE_EVAL_CODEX_BIN: "/opt/tools/codex",
+    },
+  });
+  assert.equal(pinnedCodex.command, "/opt/tools/codex");
+  assert.throws(
+    () =>
+      buildLiveCommand({
+        host: "codex",
+        model: "gpt-5.6-sol",
+        workspace: "/tmp/eval",
+        prompt: "Review this case",
+        sourceEnv: { SOCRATES_LIVE_EVAL_CODEX_BIN: "relative/codex" },
+      }),
+    /absolute executable path/i
+  );
+
   const claude = buildLiveCommand({
     host: "claude",
     model: "sonnet",
@@ -220,6 +249,18 @@ test("optional live commands keep skill and control arms isolated under identica
   });
   assert.doesNotMatch(claudeControl.args.at(-1), /^\/socrates/i);
   assert.deepEqual(claudeControl.args.slice(0, -1), claude.args.slice(0, -1));
+
+  const pinnedClaude = buildLiveCommand({
+    host: "claude",
+    model: "sonnet",
+    workspace: "/tmp/eval",
+    prompt: "Review this case",
+    sourceEnv: {
+      PATH: process.env.PATH,
+      SOCRATES_LIVE_EVAL_CLAUDE_BIN: "/opt/tools/claude",
+    },
+  });
+  assert.equal(pinnedClaude.command, "/opt/tools/claude");
 });
 
 test("live arm parser accepts explicit cohorts and rejects ambiguous input", () => {
@@ -375,6 +416,25 @@ test("live grading ignores question marks inside quoted examples", () => {
     ),
     1
   );
+});
+
+test("direct explanation grader requires a compact explanatory visual", () => {
+  const evalCase = {
+    live_grader_id: "direct-eli5",
+    expected_questions: { min: 0, max: 0 },
+  };
+  const withVisual = gradeResponse(
+    evalCase,
+    "A database index is like a book index: it helps the database find a row without searching every page. Index entry -> row location -> matching row. That makes lookups faster, at the cost of extra storage and update work."
+  );
+  assert.equal(withVisual.passed, true);
+
+  const proseOnly = gradeResponse(
+    evalCase,
+    "A database index is like a book index: it helps the database find a row without searching every page, so lookups are faster."
+  );
+  assert.equal(proseOnly.passed, false);
+  assert.equal(proseOnly.missing_patterns.length, 1);
 });
 
 test("paired comparisons separate outcome from nullable performance deltas", () => {

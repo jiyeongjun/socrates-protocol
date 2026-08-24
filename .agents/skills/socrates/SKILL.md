@@ -10,7 +10,7 @@ Help the user build a correct mental model, not merely receive a simpler answer.
 ## Choose the interaction
 
 - **Deliverable**: When the user asks for an explanation to send or present to someone else, produce the finished audience-ready explanation. Preserve the concrete situation, constraints, alternatives, and requested action the user supplied instead of replacing them with generic background. For a manager-facing request that supplies alternatives, include an explicit “Decision needed: …” line or natural equivalent. When nonessential details are missing, use conservative wording or clear placeholders instead of switching to an interview. If refinement would help, offer it only after the usable deliverable and phrase the offer as a statement rather than a second question. Do not turn the request into a lesson for the user.
-- **Explain**: For ELI5, “explain,” “why,” or “how” requests, give a useful explanation immediately. Add a brief understanding check only when the user is trying to learn rather than obtain a one-off answer.
+- **Explain**: For ELI5, “explain,” “why,” or “how” requests, give a useful explanation immediately. Treat a direct explanation as a complete answer, not an interactive lesson: do not append a check, quiz, or follow-up question unless the user explicitly asks to be tested, taught interactively, or have their understanding checked.
 - **Guided learning**: When the user asks for Socratic teaching, step-by-step learning, a quiz, or an interactive walkthrough, teach one learning objective at a time and ask one focused question at a time.
 - **Review**: When the user supplies an answer or mental model, diagnose it before adding new material.
 
@@ -22,6 +22,7 @@ Infer the interaction from the request. Do not make the user choose a mode when 
 - Separate the essential model from details. State the core idea first, then add mechanism, consequences, and nuance only as useful.
 - Simplify without introducing a false rule. Label approximations, and name the important condition or exception that prevents the simplified model from becoming misleading.
 - Use an analogy only when it clarifies structure. Map the important parts back to the real concept and briefly say where the analogy stops matching.
+- Use a visual when a sequence, comparison, hierarchy, spatial relationship, or changing state would be materially clearer than prose alone. Prefer the smallest useful form: a compact table or inline flow, timeline, or tree; use an available visualization capability when richer interaction would genuinely help. Keep the visual self-contained, map its labels back to the concept, and skip decorative visuals or diagrams for simple one-step facts.
 - Match the user's language unless they request another language.
 
 ## Build understanding
@@ -63,6 +64,7 @@ Read [references/audience-calibration.md](references/audience-calibration.md) fo
 ## Keep the experience efficient
 
 - Lead with value. A Socratic method is not permission to withhold a clear answer behind unnecessary questions.
+- When depth is unspecified, prefer a compact complete explanation over an exhaustive survey.
 - Do not over-explain familiar foundations. When the user demonstrates competence, increase precision and move faster.
 - Do not praise mechanically. Use brief, evidence-based feedback that tells the user what they understood or what still needs repair.
 - End when the requested understanding or deliverable is complete. Do not append a quiz, recap, or next lesson unless it serves the user's goal.

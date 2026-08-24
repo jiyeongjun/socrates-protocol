@@ -35,6 +35,8 @@ The runner isolates each case in a temporary workspace, rejects symlinked or emb
 Useful options:
 
 - `SOCRATES_LIVE_EVAL_MODEL`: explicit host model or alias;
+- `SOCRATES_LIVE_EVAL_CODEX_BIN`: absolute Codex executable path, useful when `codex` resolves through Volta or another HOME-dependent shim;
+- `SOCRATES_LIVE_EVAL_CLAUDE_BIN`: absolute Claude executable path for the same situation;
 - `SOCRATES_LIVE_EVAL_REASONING_EFFORT`: optional Codex reasoning override;
 - `SOCRATES_LIVE_EVAL_ARMS`: `skill`, `control`, or `skill,control`;
 - `SOCRATES_LIVE_EVAL_TIMEOUT_MS`: per-case timeout from 1,000 to 900,000 ms;

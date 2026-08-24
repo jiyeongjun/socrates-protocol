@@ -95,6 +95,7 @@ test("canonical runtime leads with value and enforces the mastery gate", async (
   assert.ok(body.split("\n").length < 100, "runtime should stay compact");
   assert.match(body, /Deliverable.*Explain.*Guided learning.*Review/is);
   assert.match(body, /give a useful explanation immediately/i);
+  assert.match(body, /do not append a check, quiz, or follow-up question unless the user explicitly asks/i);
   assert.match(body, /Preserve the concrete situation, constraints, alternatives/i);
   assert.match(body, /Decision needed:/i);
   assert.match(body, /the deliverable is incomplete until it names that decision/i);
@@ -109,8 +110,12 @@ test("canonical runtime leads with value and enforces the mastery gate", async (
   assert.match(body, /Ask it once, then stop the turn/i);
   assert.match(body, /respect that choice, explain it directly/i);
   assert.match(body, /Simplify without introducing a false rule/i);
+  assert.match(body, /available visualization capability/i);
+  assert.match(body, /compact table or inline flow, timeline, or tree/i);
+  assert.match(body, /skip decorative visuals/i);
   assert.match(body, /never assume interests, intelligence, family status/is);
   assert.match(body, /Do not append a quiz, recap, or next lesson/i);
+  assert.match(body, /compact complete explanation over an exhaustive survey/i);
   assert.doesNotMatch(body, /contract-index|scaffold-contract|protected surface/i);
 });
 
@@ -204,18 +209,32 @@ test("English and Korean READMEs document behavior, installation, upgrade, and e
   const korean = await readRepoFile("README.ko.md");
   for (const readme of [english, korean]) {
     assert.match(readme, /version-1\.0\.0/);
-    assert.match(readme, /DreambigOu\/ELI5/);
     assert.match(readme, /\$socrates/);
     assert.match(readme, /\/socrates/);
     assert.match(readme, /\.agents\/skills\/socrates/);
     assert.match(readme, /\.claude\/skills\/socrates/);
     assert.match(readme, /v0\.10\.0/);
     assert.match(readme, /21/);
+    assert.match(readme, /38/);
     assert.match(readme, /npm run verify:skills/);
     assert.match(readme, /SOCRATES_LIVE_EVAL_HOST=claude/);
+    assert.doesNotMatch(readme, /DreambigOu\/ELI5/);
+    assert.doesNotMatch(readme, /No quiz|퀴즈는 하지 마/i);
   }
+  assert.match(english, /When to use Socrates/i);
+  assert.match(english, /Understand something quickly.*Learn through dialogue.*Check your understanding.*Explain it to someone else/is);
+  assert.match(english, /A normal explanation gets a complete answer, not a surprise quiz/i);
+  assert.match(english, /Visual explanations/i);
+  assert.match(english, /Actual response tests/i);
+  assert.match(english, /Codex.*PASS.*Claude.*PASS/is);
   assert.match(english, /checks the same idea again before moving forward/i);
   assert.match(english, /never repeats the same question unchanged/i);
+  assert.match(korean, /언제 쓰는가/);
+  assert.match(korean, /개념을 빠르게 이해.*대화하며 학습.*내 이해를 점검.*다른 사람에게 설명/is);
+  assert.match(korean, /일반적인 설명 요청에는 완결된 답을 주며 갑자기 퀴즈를 시작하지 않습니다/);
+  assert.match(korean, /시각화는 언제 쓰는가/);
+  assert.match(korean, /실제 답변 테스트/);
+  assert.match(korean, /Codex.*통과.*Claude.*통과/is);
   assert.match(korean, /다음 단계로 넘어가지 않고/);
   assert.match(korean, /같은 질문을 그대로 반복하지 않습니다/);
 });

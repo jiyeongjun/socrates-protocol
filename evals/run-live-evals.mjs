@@ -19,7 +19,12 @@ const repoRoot = path.resolve(evalsRoot, "..");
 
 const liveGraders = {
   "direct-eli5": {
-    must: [/database index/iu, /find|look(?:ing)? up|search/iu, /book|catalog|table of contents|index card/iu],
+    must: [
+      /database index/iu,
+      /find|look(?:ing)? up|search/iu,
+      /book|catalog|table of contents|index card/iu,
+      /→|->|├|└|\|[^\n]+\|/u,
+    ],
     mustNot: [/B-?tree|schema migration|query planner/iu],
   },
   "technical-explanation": {
@@ -171,6 +176,19 @@ function buildIsolatedEnv(host, workspace, sourceEnv = process.env) {
   return env;
 }
 
+function resolveHostCommand(host, sourceEnv) {
+  const variable =
+    host === "codex"
+      ? "SOCRATES_LIVE_EVAL_CODEX_BIN"
+      : "SOCRATES_LIVE_EVAL_CLAUDE_BIN";
+  const configured = sourceEnv[variable];
+  if (!configured) return host;
+  if (configured.includes("\0") || !path.isAbsolute(configured)) {
+    throw new Error(`${variable} must be an absolute executable path`);
+  }
+  return configured;
+}
+
 export function buildLiveCommand({
   host,
   model,
@@ -205,7 +223,7 @@ export function buildLiveCommand({
       `${arm === "skill" ? "Use $socrates for this request:\n" : ""}${prompt}\n${evaluationSuffix}`
     );
     return {
-      command: "codex",
+      command: resolveHostCommand(host, sourceEnv),
       args,
       cwd: workspace,
       env: buildIsolatedEnv(host, workspace, sourceEnv),
@@ -213,7 +231,7 @@ export function buildLiveCommand({
   }
   if (host === "claude") {
     return {
-      command: "claude",
+      command: resolveHostCommand(host, sourceEnv),
       args: [
         "--print",
         "--bare",
