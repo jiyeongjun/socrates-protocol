@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOCRATES_DESCRIPTION =
-  "Teach and explain concepts through audience-calibrated explanations, Socratic questions, analogies, and mastery checks. Use when the user asks to understand or learn something, requests ELI5 or an explanation for a specific audience, wants Socratic tutoring or a quiz, asks to reason through a concept, or wants their understanding evaluated. In guided learning, repair a mistaken or incomplete answer and re-check the same idea before advancing. Do not trigger merely because an ordinary task needs a brief explanation.";
+  "Teach through visual-first explanations and focused Socratic questions. Use when the user asks to understand or learn something, requests ELI5 or a picture explainer, wants a code/module flow, trade-off, or incident explained, asks for Socratic tutoring or a quiz, or wants a mental model evaluated. Show the relationship visually, ask one question, and repair the same idea until the answer demonstrates it before advancing. Respect finished-deliverable and no-question requests. Do not trigger merely because an ordinary task needs a brief explanation.";
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");
@@ -215,7 +215,7 @@ export function normalizeAgentPrompt(source) {
 
 export function buildOpenAIYaml({ promptSource }) {
   const prompt = normalizeAgentPrompt(promptSource);
-  return `interface:\n  display_name: "Socrates"\n  short_description: "Explain clearly and build real understanding"\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
+  return `interface:\n  display_name: "Socrates"\n  short_description: "See the idea, then align your understanding"\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
 }
 
 function generatedDirectorySpecs() {

@@ -20,7 +20,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v1.0.0";
+export const DEFAULT_VERSION = "v1.1.0";
 export const INSTALL_MANIFEST_NAME = ".socrates-install.json";
 
 const DEFAULT_MODE = "install";

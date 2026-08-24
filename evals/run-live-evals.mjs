@@ -27,6 +27,18 @@ const liveGraders = {
     ],
     mustNot: [/B-?tree|schema migration|query planner/iu],
   },
+  "incident-visual": {
+    must: [
+      /timeout/iu,
+      /5\s*(?:s|sec|second)/iu,
+      /1\s*(?:s|sec|second)/iu,
+      /p95|1\.8\s*(?:s|sec|second)/iu,
+      /retr(?:y|ies|ied)[\s\S]*traffic|traffic[\s\S]*retr(?:y|ies|ied)/iu,
+      /rollback|restored|recovered/iu,
+      /→|->|├|└|\|[^\n]+\|/u,
+    ],
+    mustNot: [/database corruption|memory leak|certificate expi/iu],
+  },
   "technical-explanation": {
     must: [/race condition/iu, /shared (?:state|resource|data)|concurrent/iu, /order|interleav|timing/iu, /lock|atomic|transaction|synchron/iu],
     mustNot: [/imagine you have (?:toys|candy|crayons)/iu],

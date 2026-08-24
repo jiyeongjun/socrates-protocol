@@ -90,6 +90,7 @@ async function loadContext() {
     body,
     audience,
     guided,
+    visual,
     prompt,
     appendix,
     layoutText,
@@ -99,6 +100,7 @@ async function loadContext() {
     readSkillBody(),
     readSkillReferenceSource("audience-calibration.md"),
     readSkillReferenceSource("guided-learning.md"),
+    readSkillReferenceSource("visual-explanations.md"),
     readAgentPromptSource(),
     readClaudeSkillAppendix(),
     readFile(path.join(repoRoot, "reference/skill-layout.json"), "utf8"),
@@ -113,6 +115,7 @@ async function loadContext() {
     body,
     audience,
     guided,
+    visual,
     prompt,
     appendix,
     layout,
@@ -125,37 +128,40 @@ async function loadContext() {
 const staticGraders = {
   "trigger-description": async ({ context }) => {
     for (const term of [
-      "understand or learn",
+      "visual-first explanations",
       "ELI5",
-      "specific audience",
+      "picture explainer",
+      "code/module flow",
+      "incident explained",
       "Socratic tutoring",
       "quiz",
-      "understanding evaluated",
+      "mental model evaluated",
     ]) {
       assert.match(context.description, new RegExp(term, "i"));
     }
     assert.match(context.description, /Do not trigger merely because an ordinary task/i);
   },
   "interaction-routing": async ({ context }) => {
-    for (const mode of ["Deliverable", "Explain", "Guided learning", "Review"]) {
+    for (const mode of ["Audience-ready artifact", "Visual learning", "Guided learning", "Review"]) {
       assert.match(context.body, new RegExp(`\\*\\*${mode}\\*\\*`, "i"));
     }
     assert.match(context.body, /Do not make the user choose a mode/i);
-    assert.match(context.body, /do not begin every explanation with a diagnostic questionnaire/i);
+    assert.match(context.body, /do not hide the first useful explanation behind a diagnostic questionnaire/i);
     assert.match(context.body, /Preserve the concrete situation, constraints, alternatives/i);
-    assert.match(context.body, /phrase the offer as a statement rather than a second question/i);
-    assert.match(context.body, /do not append a check, quiz, or follow-up question unless the user explicitly asks/i);
+    assert.match(context.body, /then ask one focused question that tests the central relationship/i);
+    assert.match(context.body, /Do not ask a learner question when.*finished audience-ready artifact.*no questions.*opts out/is);
   },
   "mastery-gate": async ({ context }) => {
-    assert.match(context.body, /advance only when the user's answer demonstrates the current learning objective/i);
+    assert.match(context.body, /Advance only when the user's answer demonstrates the current learning objective's key relationship/i);
+    assert.match(context.body, /observable alignment on the current objective/i);
     assert.match(context.body, /do not introduce the next concept/i);
-    assert.match(context.body, /re-checks? the same idea|checks? the same idea again/i);
+    assert.match(context.body, /checks? the same idea again/i);
     assert.match(context.guided, /For every other class, stay on the same objective/i);
     assert.match(context.body, /one focused question means one response demand/i);
   },
   "adaptive-repair": async ({ context }) => {
     assert.match(context.body, /Do not repeat the same question unchanged/i);
-    assert.match(context.guided, /change the representation or move one rung down/i);
+    assert.match(context.guided, /redraw or isolate the misunderstood relationship.*change the representation.*move one rung down/is);
     assert.match(context.guided, /Missing condition|Reversed cause|Overgeneralization/i);
   },
   "audience-calibration": async ({ context }) => {
@@ -191,17 +197,21 @@ const staticGraders = {
     assert.match(tests, /releases inventory when a downstream step fails/is);
   },
   "visual-explanation": async ({ context }) => {
-    assert.match(context.body, /sequence, comparison, hierarchy, spatial relationship, or changing state/i);
-    assert.match(context.body, /compact table or inline flow, timeline, or tree/i);
-    assert.match(context.body, /available visualization capability/i);
+    assert.match(context.body, /default to a visual rather than a wall of text/i);
+    assert.match(context.body, /self-contained HTML artifact with large diagrams and few words/i);
+    assert.match(context.body, /artifact or visualization surface/i);
+    assert.match(context.body, /Do not write an HTML file into the user's repository/i);
     assert.match(context.body, /skip decorative visuals/i);
+    assert.match(context.visual, /numbered sections.*large, simple diagrams.*arrows labeled/is);
+    assert.match(context.visual, /make it self-contained and responsive/i);
+    assert.match(context.visual, /Repair the visual after a miss/i);
   },
   "efficient-learning": async ({ context }) => {
-    assert.match(context.body, /Lead with value/i);
-    assert.match(context.body, /not permission to withhold a clear answer/i);
+    assert.match(context.body, /Lead with the visual explanation/i);
+    assert.match(context.body, /not permission to withhold a useful model/i);
     assert.match(context.body, /compact complete explanation over an exhaustive survey/i);
-    assert.match(context.body, /respect that choice, explain it directly/i);
-    assert.match(context.body, /End when the requested understanding or deliverable is complete/i);
+    assert.match(context.body, /respect that choice immediately/i);
+    assert.match(context.body, /End when the requested deliverable is complete or the final learning objective is aligned/i);
   },
   "fixture-safety": async ({ evalCase }) => {
     const resolved = fixturePath(evalCase.fixture);
@@ -238,12 +248,13 @@ const staticGraders = {
   },
   "installer-layout": async ({ context }) => {
     const assets = listReleaseAssetPaths(context.layout);
-    assert.equal(DEFAULT_VERSION, "v1.0.0");
-    assert.equal(context.packageJson.version, "1.0.0");
+    assert.equal(DEFAULT_VERSION, "v1.1.0");
+    assert.equal(context.packageJson.version, "1.1.0");
     assert.ok(assets.includes(".agents/skills/socrates/SKILL.md"));
     assert.ok(assets.includes(".claude/skills/socrates/SKILL.md"));
     assert.equal(assets.some((asset) => asset.includes("socrates-contract")), false);
     assert.equal(assets.some((asset) => asset.includes("scaffold-contract")), false);
+    assert.ok(context.layout.skillReferences.includes("visual-explanations.md"));
     assert.deepEqual(context.layout.skillScripts, []);
     assert.deepEqual(context.layout.codexAgents, []);
     assert.deepEqual(context.layout.claudeAgents, []);

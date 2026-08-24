@@ -1,334 +1,235 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 [English](./README.md)
 
-Socrates는 Codex와 Claude Code에서 이해와 학습이 작업의 핵심일 때 쓰는 스킬입니다. 개념 설명, 문답 학습, 이해도 점검, 대상별 설명뿐 아니라 기존 시스템에 기능을 추가하기 전 현재 구조와 변경 영향을 파악할 때도 사용합니다.
+Socrates는 Codex와 Claude Code를 위한 **시각화 우선 학습 스킬**입니다. 개념·코드·트레이드오프·장애 원인을 먼저 그림으로 보여주고, 질문 하나로 사용자의 멘탈 모델을 확인합니다.
 
-요청을 보고 필요한 방식을 스스로 고릅니다. 일반적인 설명 요청에는 완결된 답을 주며 갑자기 퀴즈를 시작하지 않습니다. “소크라테스식으로 가르쳐줘”, “퀴즈로 확인해줘”처럼 대화형 학습을 명시했을 때만 질문을 이어갑니다.
+답이 어긋나면 다음 내용으로 넘어가지 않습니다. 이해하지 못한 부분만 다른 그림·비유·사례로 다시 설명하고, 사용자의 답에서 핵심 관계가 정확히 드러날 때까지 같은 목표를 이어갑니다.
+
+## 어떻게 동작하는가
+
+```text
+요청
+  ↓
+큰 흐름을 시각화
+  ↓
+핵심 질문 하나
+  ↓
+사용자의 답
+  ├─ 핵심 관계가 맞음 → 다음 단계 또는 종료
+  └─ 틀리거나 부족함 → 해당 부분을 다시 그림 → 같은 목표 재확인
+```
+
+여기서 “얼라인됐다”는 모델이 사람의 머릿속을 100% 안다는 뜻이 아닙니다. **현재 학습 목표의 핵심 관계를 사용자가 자기 말로 정확히 설명하거나 새 사례에 적용했다**는 관찰 가능한 기준입니다.
+
+사용자가 질문을 원하지 않거나 답을 바로 달라고 하면 문답을 멈춥니다. 다른 사람에게 보낼 설명 자료를 요청한 경우에도 완성된 자료만 제공합니다.
 
 ## 언제 쓰는가
 
-| 원하는 결과 | 이렇게 요청 | Socrates의 동작 |
+| 원하는 결과 | 요청 예시 | Socrates의 동작 |
 |---|---|---|
-| 개념을 빠르게 이해 | `$socrates 데이터베이스 인덱스를 백엔드 입문자에게 간단히 설명해줘.` | 핵심 원리, 적절한 예시나 시각화, 중요한 주의점까지 설명하고 끝냅니다. 퀴즈를 덧붙이지 않습니다. |
-| 대화하며 학습 | `$socrates 재귀를 소크라테스식으로 가르쳐줘. 함수는 알지만 콜스택은 몰라.` | 한 번에 하나의 학습 목표를 다루고 핵심 질문 하나만 묻습니다. |
-| 내 이해를 점검 | `$socrates 내가 이해한 eventual consistency는 이래. 틀리거나 빠진 연결고리를 찾아줘: ...` | 맞는 부분과 부족하거나 잘못된 부분을 구분한 뒤 필요한 설명을 보충합니다. |
-| 다른 사람에게 설명 | `$socrates 이 API rate limit 문제를 매니저에게 보낼 짧은 글로 만들어줘.` | 글쓰기 수업을 시작하지 않고 상대에게 바로 보낼 완성본을 작성합니다. |
-| 기존 코드에 기능 추가 전 파악 | `$socrates 기존 주문 시스템에 예약 주문을 추가하려고 해. 먼저 현재 흐름, 꼭 지켜야 할 규칙, 기능을 연결할 위치를 코드 근거로 설명해줘.` | 지금 코드가 실제로 어떻게 동작하는지와 새로 만들 부분을 나눠 보여주고, 꼭 지킬 규칙과 추가하거나 고칠 테스트를 정리합니다. |
+| 처음 보는 개념 이해 | `$socrates 데이터베이스 인덱스를 백엔드 입문자에게 설명해줘.` | 전체 구조를 먼저 그리고 핵심 질문 하나로 이해를 확인 |
+| 코드나 모듈 흐름 파악 | `$socrates 이 결제 모듈이 어떻게 동작하는지 코드 근거로 보여줘.` | 실제 코드를 읽고 데이터·제어·실패 경로를 시각화 |
+| 기존 시스템에 기능 추가 | `$socrates 주문 서비스에 예약 주문을 넣기 전에 현재 흐름과 연결 지점을 설명해줘.` | 현재 동작과 제안을 구분하고 지켜야 할 규칙과 테스트까지 연결 |
+| 트레이드오프 이해 | `$socrates polling과 webhook의 선택 기준을 그림으로 설명해줘.` | 장점과 비용을 같은 인과관계 위에 배치 |
+| 장애 원인 이해 | `$socrates 이 타임아웃 장애가 왜 재시도 폭증으로 이어졌는지 보여줘.` | 원인·전파·영향·복구를 타임라인이나 피드백 루프로 표현 |
+| 내 이해 점검 | `$socrates 내가 이해한 캐시 갱신 방식은 이래. 틀린 연결을 찾아줘: ...` | 맞는 부분과 어긋난 부분을 나누고 같은 목표를 다시 확인 |
+| 다른 사람에게 전달 | `$socrates 이 장애를 매니저에게 보여줄 한 장 설명으로 만들어줘.` | 원래 사용자를 퀴즈 내지 않고 바로 공유할 수 있는 결과물 작성 |
 
 ## 일반 응답과 무엇이 다른가
 
-Socrates가 모델을 더 똑똑하게 만드는 것은 아닙니다. 일반 모델도 단순한 설명은 이미 잘하므로, 한 번 설명하고 끝나는 요청에서는 결과가 비슷할 수 있습니다. 차이는 **답변의 지능**보다 **학습을 진행하는 규칙**에 있습니다.
+Socrates가 모델을 더 똑똑하게 만드는 것은 아닙니다. 차이는 설명을 매번 같은 학습 흐름으로 이끈다는 점입니다.
 
-| 상황 | 스킬을 쓰지 않은 일반 응답 | Socrates 사용 |
+| 상황 | 일반 응답 | Socrates |
 |---|---|---|
-| 한 번에 설명 | 모델이 적절하다고 판단한 깊이와 형식으로 설명 | 대상과 목적에 맞춰 완결된 설명을 제공하고, 필요할 때만 작은 시각화를 사용하며 갑작스러운 확인 문제를 붙이지 않음 |
-| 문답으로 학습 | 관련 지식을 한꺼번에 설명하거나 임의의 후속 질문으로 이동할 수 있음 | 학습 목표 하나와 답을 요구하는 질문 하나에 집중 |
-| 틀리거나 애매한 답 | 정답을 알려준 뒤 다른 내용으로 넘어갈 수 있음 | 표현이나 예시를 바꾸되 다음 단계로 넘어가지 않고 같은 목표를 재확인 |
-| 다른 사람에게 전달 | 설명 방법이나 배경 해설이 섞일 수 있음 | 상대가 그대로 읽을 수 있는 완성본을 우선 제공 |
-| 기존 시스템에 기능 추가 | 바로 수정안이나 파일 목록으로 이동할 수 있음 | 현재 동작과 꼭 지킬 규칙을 먼저 설명하고, 지금 있는 코드와 앞으로 만들 부분을 나눠 보여줌 |
+| 설명 시작 | 문단·불릿·표 중 모델이 임의로 선택 | 큰 흐름을 그림으로 먼저 제시 |
+| 이해 확인 | 생략하거나 여러 질문을 붙일 수 있음 | 핵심 관계를 확인하는 질문 하나만 제시 |
+| 틀린 답 | 정답을 알려준 뒤 다른 주제로 갈 수 있음 | 다음 단계로 넘어가지 않고 해당 부분을 다시 시각화 |
+| 코드·장애 설명 | 요약이나 해결책부터 제시할 수 있음 | 현재 흐름과 인과관계를 먼저 보여주고 근거와 제안을 구분 |
+| 반복 사용 | 요청할 때마다 형식이 달라질 수 있음 | 시각화 → 질문 → 교정이라는 흐름을 유지 |
 
-즉, 일반 응답을 대체하는 별도 추론 엔진이 아니라 설명·학습·이해도 점검의 진행 방식을 일관되게 만드는 스킬입니다.
+일반 모델도 명시적으로 “시각화하고 질문 하나를 해 달라”고 요청하면 좋은 답을 만들 수 있습니다. Socrates의 가치는 정확도 우위가 아니라 이 형식을 매번 다시 적지 않아도 된다는 데 있습니다.
 
-코드 수정, 테스트 실행, 리팩터링 같은 일반 작업은 평소처럼 에이전트에게 요청하면 됩니다. 이해·학습·이해도 점검·대상별 설명이 작업의 목적일 때 Socrates를 사용합니다.
+## 어떤 시각화를 만드는가
 
-## 요청을 어떻게 해석하는가
+- Codex나 Claude Code가 아티팩트·시각화 화면을 지원하면 그 기능을 우선 사용합니다.
+- ELI5나 그림 설명을 요청하면 큰 다이어그램과 적은 글자로 구성된 자체 완결형 HTML 아티팩트를 우선합니다.
+- 해당 기능이 없으면 채팅 안에 흐름도·타임라인·상태도·트리·비교표를 만듭니다.
+- 사용자가 파일을 요청하지 않았다면 HTML을 만들기 위해 저장소에 파일을 추가하지 않습니다.
+- 코드와 시스템은 먼저 원문을 읽고, 현재 동작·제안·모르는 부분을 시각적으로 구분합니다.
 
-- **설명** — “설명해줘”, “ELI5”, “왜”, “어떻게” 같은 요청에는 질문 없이 완결된 설명을 제공합니다. 사용자가 대화형 학습이나 이해도 확인을 명시하지 않으면 후속 질문을 붙이지 않습니다.
-- **가이드 학습** — “소크라테스식으로 가르쳐줘”, “퀴즈로 확인해줘”, “단계별로 같이 해보자”는 문답식 학습으로 진행합니다.
-- **이해 검토** — 사용자가 답이나 정신 모형을 제시하면 새 개념을 덧붙이기 전에 현재 이해부터 진단합니다.
-- **전달물** — “매니저·아이·팀에게 설명해줘”라는 요청에는 그 대상이 그대로 읽을 수 있는 완성본을 만듭니다.
+단순한 사실에는 장식용 그림을 붙이지 않습니다. 화살표·색·경계·라벨은 모두 실제 관계를 설명해야 합니다.
 
-어휘와 깊이는 사용자의 목표, 선행지식, 언어, 형식을 우선해 조절합니다. 나이·직군 같은 인구통계만으로 관심사나 지적 수준을 추정하지 않으며, 쉽게 설명하더라도 틀린 규칙을 만들지 않습니다.
+## 실제 응답 테스트
 
-## 시각화는 언제 쓰는가
+2026-08-24에 v1.1.0 생성 스킬만 전달한 독립된 새 Codex 에이전트로 테스트했습니다. 평가 결론이나 모범 답안은 전달하지 않았습니다.
 
-순서, 비교, 계층, 공간 관계, 상태 변화가 글만으로는 잘 보이지 않을 때 시각화를 사용합니다. 가장 작은 유효한 형식부터 고릅니다.
-
-- 비교표
-- 짧은 흐름도·타임라인·트리
-- 사용 중인 호스트가 지원하고 상호작용이 실제로 도움이 될 때 더 풍부한 시각화 기능
-
-단순한 사실에 장식용 그림을 붙이지 않습니다. 시각화의 각 요소는 실제 개념과 연결해 설명하고, 비유를 사용하면 어디부터 현실과 맞지 않는지도 밝힙니다.
-
-## 틀린 답을 하면 어떻게 되는가
-
-가이드 학습에서는 현재 개념을 이해했다는 근거가 답에 나타나야 다음 단계로 진행합니다.
-
-| 사용자의 답 | 다음 동작 |
+| 테스트 | 결과 |
 |---|---|
-| 정확함 | 무엇이 정확한 이해를 보여주는지 짚고 다음 목표로 진행 |
-| 부분적으로 정확함 | 맞는 부분은 살리고 빠진 연결고리를 좁혀 같은 목표를 다시 질문 |
-| 오개념 | 어긋난 지점을 바로잡고 예시나 표현 방식을 바꾼 뒤 다음 단계로 넘어가지 않고 같은 개념을 재확인 |
-| 모름 또는 무응답 | 구체적 사례, 제한된 선택지, 첫 단계 시범으로 난이도를 낮추고 같은 목표를 재확인 |
+| 데이터베이스 인덱스 | 통과 — 전체 스캔과 인덱스 경로를 나란히 그리고 질문 하나로 종료 |
+| 타임아웃 장애 | 통과 — 트리거·재시도 피드백 루프·복구 흐름을 그리고 인과 질문 하나로 종료 |
+| 캐시를 잘못 이해한 첫 답 | 통과 — 원본 변경과 캐시 인지 시점을 타임라인으로 분리하고 같은 목표를 질문 |
+| 캐시를 다시 틀리게 답함 | 통과 — 다음 내용으로 넘어가지 않고 `낡아진 시점`과 `알아차린 시점`만 다시 그림 |
+| 기존 주문 코드에 예약 주문 추가 전 파악 | 통과 — 현재 흐름과 제안 흐름을 분리하고 지켜야 할 규칙·위험·테스트를 코드 근거로 설명 |
 
-틀린 뒤 같은 질문을 그대로 반복하지 않습니다. 지원 방식은 바꾸되 현재 목표에는 머뭅니다. 사용자가 답을 바로 알려 달라고 하면 문답을 멈추고 직접 설명합니다.
+같은 프롬프트를 스킬 없이 실행한 결과도 함께 비교했습니다.
 
-## 실제 답변 테스트
-
-아래 결과는 2026-08-24에 생성된 v1 스킬을 Codex와 Claude의 새 세션에서 직접 실행해 얻었습니다. 정해진 문장을 재생하는 방식이 아니므로 실행할 때마다 표현은 달라질 수 있습니다.
-
-| 호스트 | 테스트 상황 | 실제 결과 |
-|---|---|---|
-| Codex | 데이터베이스 인덱스 일반 설명 | 통과 — 책 색인 비유와 흐름·비교표를 사용하고 후속 질문 없이 종료 |
-| Claude | 데이터베이스 인덱스 일반 설명 | 통과 — B+tree 그림과 비교표를 사용하고 후속 질문 없이 종료 |
-| Codex | 캐시 freshness 오개념 | 통과 — 오개념을 수정하고 같은 목표에 머물며 질문 하나로 재확인 |
-| Claude | 캐시 freshness 오개념 | 통과 — 종이 메뉴판 비유로 표현을 바꾸고 같은 목표를 질문 하나로 재확인 |
-| Codex A/B | 기존 주문 서비스에 예약 주문 추가 전 파악 | 통과 — 양쪽 모두 코드를 정확히 읽었고, Socrates는 지금 있는 동작과 새로 만들 부분을 나눠 구현 전에 정할 것과 추가 테스트까지 정리 |
-
-### 같은 요청 A/B — 일반 응답과 Socrates
-
-같은 Codex 모델의 서로 독립된 새 세션에서 한쪽은 스킬을 사용하지 않고, 다른 쪽은 Socrates를 명시적으로 사용했습니다.
-
-| 요청 | 일반 응답 | Socrates 응답 | 관찰된 차이 |
+| 요청 | 일반 응답 | Socrates | 실제 차이 |
 |---|---|---|---|
-| 데이터베이스 인덱스 설명 | 책 비유, SQL 예시, 읽기·쓰기 비용을 설명하고 질문 없이 종료 | 책 비유, SQL 예시, 읽기·쓰기 비용을 설명하고 질문 없이 종료 | 단순 설명에서는 큰 차이가 없었음. Socrates가 불필요한 문답을 강제하지 않음 |
-| “캐시는 원본을 계속 봐서 자동으로 안다”는 답에서 학습 계속 | TTL·무효화·버전 검사·이벤트·폴링을 한꺼번에 소개한 뒤 TTL 계산을 질문 | 자동 감지가 아니라는 점을 바로잡고, 외부 신호가 전혀 없는 사례에서 오래된 값과 새 값 중 무엇을 반환하는지 질문 | 일반 응답은 관련 주제로 확장했고, Socrates는 다음 단계로 넘어가지 않고 같은 오개념을 재확인 |
-| 기존 주문 서비스에 예약 주문 추가 전 파악 | 현재 흐름·꼭 지킬 규칙·2단계 설계·현재 위험을 정확히 설명 | 같은 내용을 설명하고 지금 동작하는 부분과 새로 만들 부분을 나눈 뒤 구현 전에 정할 것과 추가할 테스트까지 연결 | 일반 응답도 충분히 좋았음. Socrates가 더 정확했던 것은 아니며, 기능을 바꾸기 전에 확인할 내용과 빠뜨리기 쉬운 테스트를 알아보기 쉽게 정리했음 |
+| 데이터베이스 인덱스 | 책 색인 비유와 장단점을 설명했지만 흐름 확인 질문 없이 종료 | 전체 스캔과 인덱스 탐색 경로를 그리고 사용자가 경로를 직접 설명하도록 질문 | Socrates가 시각적 흐름과 이해 확인을 일관되게 추가 |
+| 타임아웃 장애를 시각적으로 설명하고 질문 | 인과 흐름과 질문을 모두 제공 | 트리거와 복구를 나누고 재시도 피드백 루프를 더 명확히 표시 | 요청 자체가 구체적이면 일반 응답도 충분히 좋았으며 차이는 작았음 |
+| 기존 주문 코드에 예약 주문 추가 전 파악 | 현재 흐름·지켜야 할 규칙·제안 파이프라인과 위험을 정확히 설명하고 종료 | 현재와 제안 흐름을 따로 그리고 사용자가 분기 위치와 이유를 설명하도록 질문 | 두 응답 모두 정확했고, Socrates만 이해 확인까지 학습 흐름으로 연결 |
 
 <details>
-<summary>실제 오개념 A/B 응답 발췌 — Codex</summary>
+<summary>데이터베이스 인덱스 — 일반 응답과 Socrates 비교</summary>
 
-공통 요청:
+일반 응답은 책 색인 비유, SQL, 읽기·쓰기 비용을 설명한 뒤 끝났습니다.
+
+> A database index is like the index at the back of a book.
+>
+> - Reads become faster.
+> - Indexes consume disk space.
+> - Inserts, updates, and deletes become slightly slower.
+
+Socrates 응답은 탐색 경로를 먼저 보여줬습니다.
 
 ```text
-We are learning how a cache knows that source data changed. You asked,
-“How does a cache know its copy is stale?” and I answered,
-“It keeps watching the source and notices automatically.” Continue teaching me.
+Without an index
+users table: row 1? → row 2? → row 3? → ... → row 10,000,000?
+             └──────────── full table scan ────────────────┘
+
+With an index on email
+sorted email index → location of the row → matching users row
 ```
 
-일반 응답:
-
-> That’s possible, but caches usually don’t “notice automatically.” They need a signal or rule:
->
-> - **Expiration (TTL):** “This copy is valid for five minutes.”
-> - **Invalidation:** The source tells the cache, “Delete or update this key.”
-> - **Version checking:** The cache asks whether the source’s version, timestamp, or ETag changed.
-> - **Change events:** The cache subscribes to update notifications.
-> - **Polling:** The cache periodically checks the source.
->
-> Quick check: if a cache refreshes every five minutes and the source changes one minute after a refresh, how long might users receive stale data?
-
-Socrates 응답:
-
-> “Watching the source” is one possible design, but it isn’t automatic. A cache only detects staleness through a mechanism such as:
->
-> - the source sending an invalidation or update;
-> - the cached entry expiring after a TTL;
-> - the cache comparing a version number or ETag;
-> - a subscription or change stream that watches updates.
->
-> Without one of these, stale data can still look valid.
->
-> Suppose the source changes, but sends no notification, the TTL has not expired, and no version check occurs. What will the cache return on the next request: its old copy or the new source value?
+> Your turn: after adding an index on `email`, trace the path the database takes to find one user.
 
 </details>
 
 <details>
-<summary>실제 기존 코드 기능 추가 A/B 응답 발췌 — Codex</summary>
+<summary>잘못된 답을 두 번 이어서 교정한 결과</summary>
 
-테스트에 사용한 기존 코드: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
-
-공통 요청:
+첫 답이 “캐시는 원본이 바뀐 것을 스스로 알아차린다”였을 때:
 
 ```text
-I'm new to this codebase and need to add scheduled orders.
-Before I change anything, help me understand the current order-creation flow,
-what must remain true, and where this feature would likely connect.
+10:00  Source: A ──copy──▶ Cache: A
+10:01  Source: B           Cache: A  ← unaware
+
+The cache learns through:
+Source ──invalidation──▶ Cache
+Cache  ──version check──▶ Source
+Timer expires ─────────▶ revalidation
 ```
 
-일반 응답:
+> If the source changes at 10:01, no invalidation is sent, and the cache checks freshness at 10:05, when can the cache first discover that its copy is stale?
 
-> The fixture has one immediate order-creation path: `placeOrder`. There is currently no scheduler, pending-order state, API layer, or concrete repository implementation.
->
-> A two-stage design fits this flow best:
->
-> 1. `scheduleOrder` stores a scheduling intent containing `customerId`, items, `scheduledFor`, and a schedule ID.
-> 2. A worker claims that intent when due and invokes the existing `placeOrder` flow.
-> 3. Worker retries use a deterministic idempotency key derived from the schedule ID.
-> 4. The schedule records execution outcome separately: scheduled, processing, completed, cancelled, or failed.
->
-> - If event publication fails after insertion, the code releases inventory even though a confirmed order already exists; a retry then returns that order without republishing.
-> - If insertion fails after payment authorization, the authorization is not voided.
+여기에 다시 “10:01에 알아차린다”고 틀리게 답하자 다음 주제로 넘어가지 않았습니다.
 
-Socrates 응답:
+```text
+Time    Source              Cache
+10:00   value = A  ───────▶ value = A
+10:01   value = B           value = A   ← receives nothing
+10:05   ◀──── cache checks ────────────
+         returns B ────────▶ discovers its A was stale
+```
 
-> The core mental model is: `placeOrder` synchronously turns a request into a confirmed order. Scheduled orders would add a persisted “intent” that is fulfilled later.
+> 10:01 is when the cached copy **becomes stale**, not when the cache **discovers** it.
 >
-> There is no scheduler, API route, or concrete database implementation in this fixture. The visible extension point is this service and its injected dependencies.
->
-> Before implementation, decide:
->
-> - Whether inventory and price are locked when scheduled or evaluated at execution time.
-> - Whether payment is authorized now or at execution time.
-> - How cancellation and rescheduling affect queued work.
-> - Which failures are retryable and how duplicate charges are prevented.
->
-> Alongside preserving the existing three tests, cover:
->
-> - Scheduling persists a `scheduled` order without reserving inventory or authorizing payment.
-> - A due order is claimed and fulfilled exactly once under concurrent workers.
-> - Fulfillment retains the existing reserve → authorize → confirm → publish ordering.
-> - Retries cannot duplicate payment, confirmation, or event publication.
+> At 10:01, what new information actually reaches the cache: a notification/check result, or nothing?
 
 </details>
 
 <details>
-<summary>실제 일반 설명 발췌 — Codex</summary>
+<summary>기존 주문 코드에 예약 주문을 추가하기 전 응답 발췌</summary>
 
-요청:
-
-```text
-$socrates 데이터베이스 인덱스를 백엔드 입문자에게 설명해줘.
-```
-
-응답에서 핵심 부분을 그대로 발췌했습니다.
-
-> 데이터베이스 인덱스는 **테이블의 모든 행을 확인하지 않고 원하는 데이터를 빠르게 찾도록 만든 별도의 정렬된 찾아보기 구조**입니다.
->
-> 500쪽짜리 책에서 “트랜잭션”이라는 단어를 찾는다고 해봅시다.
->
-> - 색인이 없으면 1쪽부터 전부 읽어야 합니다.
-> - 색인이 있으면 색인에서 “트랜잭션 → 120쪽”을 찾고 바로 이동합니다.
+테스트에 사용한 코드: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
 
 ```text
-email 인덱스에서 값 검색
-        ↓
-해당 행의 위치 확인
-        ↓
-users 테이블에서 실제 데이터 조회
+placeOrder(input)
+      ↓
+Find order by idempotency key
+      ├── found ──▶ Return existing order
+      ↓
+Validate items → Reserve inventory → Authorize payment
+      ↓
+Insert "confirmed" order → Publish "order.confirmed" → Return
+
+After reservation, any failure
+      └──▶ Release reservation ──▶ Rethrow error
 ```
 
-| 장점 | 비용 |
-|---|---|
-| `SELECT`가 빨라질 수 있음 | 저장 공간을 추가로 사용함 |
-| 검색·정렬 범위를 줄임 | `INSERT`할 때 인덱스도 추가해야 함 |
-| 일부 `JOIN`이 빨라짐 | 인덱스 컬럼을 `UPDATE`하면 인덱스도 수정해야 함 |
+제안은 현재 동작과 분리해 표시했습니다.
 
-> 핵심은 이것입니다: **인덱스는 읽을 때 탐색 범위를 줄이는 대신, 저장 공간과 쓰기 성능을 지불하는 자료구조입니다.**
+```text
+Find by key → Validate items → Is execution time in the future?
+                                  ├─ no  → existing immediate path
+                                  └─ yes → persist "scheduled"
+                                             ↓
+                                          due-time trigger
+                                             ↓
+                                      reserve → pay → confirm
+```
+
+> In one sentence: where should a future-dated order leave the current flow, and what makes that boundary safer than branching after inventory reservation?
 
 </details>
 
-<details>
-<summary>실제 일반 설명 발췌 — Claude</summary>
-
-요청:
-
-```text
-/socrates 데이터베이스 인덱스를 백엔드 입문자에게 설명해줘.
-```
-
-응답에서 핵심 부분을 그대로 발췌했습니다.
-
-> 인덱스는 "테이블 전체를 훑지 않고 원하는 행을 바로 찾아가기 위해, 특정 컬럼을 **미리 정렬해 둔 별도의 자료구조**"입니다.
-
-```text
-              [ 50 | 200 ]              ← 루트
-             /      |      \
-    [10|30]    [80|150]    [400|900]    ← 중간 노드
-      |           |             |
-   실제 행 위치들 (정렬된 리프)          ← 옆으로 연결돼 있어 범위 스캔도 빠름
-```
-
-| | 인덱스 없음 | 인덱스 있음 |
-|---|---|---|
-| 100만 행에서 1건 조회 | 100만 행 읽음 | 3~4개 노드 읽음 |
-| 조회 비용 증가 속도 | 행 수에 비례 (O(n)) | 로그에 비례 (O(log n)) |
-| INSERT/UPDATE | 데이터만 씀 | 데이터 + 인덱스도 갱신 |
-| 저장 공간 | 데이터만 | 인덱스만큼 추가 |
-
-> 인덱스 5개 달린 테이블은 INSERT 한 번에 6곳을 씁니다. 쓰기가 많은 테이블에 인덱스를 남발하면 오히려 느려집니다.
-
-</details>
-
-<details>
-<summary>실제 오개념 교정 응답 — Codex</summary>
-
-요청:
-
-```text
-$socrates 캐시가 원본 데이터의 변경을 어떻게 아는지 배우고 있어.
-네가 “캐시는 자기 복사본이 오래됐는지 어떻게 알까?”라고 물었고,
-내가 “원본을 계속 보고 있어서 자동으로 알아”라고 답했어. 이어서 가르쳐줘.
-```
-
-전체 응답:
-
-> 방향은 일부 맞아. 캐시는 원본 변화와 연결되는 정보가 필요해. 하지만 보통 원본을 계속 감시하며 자동으로 아는 것은 아니야. 알림, 만료 시간(TTL), 원본 재확인 같은 장치가 있어야 해.
->
-> 원본 값이 `A`에서 `B`로 바뀌었는데, 캐시는 알림도 못 받았고 만료되지도 않았으며 원본에 다시 묻지도 않았어.
->
-> 이때 캐시는 `A`와 `B` 중 어떤 값을 돌려줄까?
-
-</details>
-
-<details>
-<summary>실제 오개념 교정 응답 발췌 — Claude</summary>
-
-같은 캐시 오개념 요청에 대한 응답에서 그대로 발췌했습니다.
-
-> "원본을 계속 보고 있다"는 부분이 핵심 오해야. 그리고 이건 그냥 틀린 게 아니라, **캐시가 존재하는 이유 자체와 모순**돼.
->
-> **주머니 속 종이 메뉴판**을 떠올려봐. 가게에서 아메리카노 가격을 4,000원 → 4,500원으로 올렸어. 네 주머니 속 종이는 그 순간 뭘 할까? 아무것도 안 해. 종이는 가게를 볼 수 없어. 그냥 4,000원이라고 적힌 채 조용히 틀린 정보가 돼.
->
-> 캐시도 똑같아. 복사본은 **수동적**이야. 스스로 낡음을 감지하는 능력이 없어.
->
-> 다시 물어볼게 (같은 지점이야). 주머니 속 종이 메뉴판이 스스로 가게를 볼 수 없다면 — 그런데도 네가 "이 종이는 이제 못 믿겠다"는 걸 알게 되는 경로가 있을 거야. 그중 **하나만** 구체적으로 말해봐. 누가/무엇이 움직여서 네가 알게 되는 거야?
-
-</details>
+Claude Code용 스킬은 Codex용 스킬과 같은 생성 패키지 검사와 `$skill-creator` 검증을 통과했습니다. 플러그인이 아니라 스킬로 설치되므로 `claude plugin validate` 대상은 아닙니다. 현재 로컬 Claude CLI가 로그아웃 상태라 v1.1.0의 실제 모델 응답은 실행하지 않았으며, 이를 통과로 표시하지 않았습니다.
 
 ## 호출 방법
 
-| 호스트 | 명시적 호출 |
+| 도구 | 명시적 호출 |
 |---|---|
 | Codex | `$socrates <요청>` |
 | Claude Code | `/socrates <요청>` |
 
-명시적인 설명·학습·퀴즈·teach-back·대상별 변환·이해 검토 요청에는 자동으로 선택될 수도 있습니다. 평범한 작업에 짧은 설명이 포함된다는 이유만으로는 활성화되지 않습니다.
+설명·학습·ELI5·그림 설명·코드 흐름·트레이드오프·장애 원인·멘탈 모델 점검 요청에는 자동으로 선택될 수도 있습니다. 일반적인 코드 수정이나 짧은 문장 편집에는 개입하지 않습니다.
 
-## 현재 checkout에서 설치
+## 설치
 
-요구 사항은 Node.js 22 이상과 Codex 또는 Claude Code입니다.
+Node.js 22 이상과 Codex 또는 Claude Code가 필요합니다.
 
-현재 사용자에게 설치:
+현재 사용자에게 Codex와 Claude Code용 스킬을 함께 설치:
 
 ```bash
 node scripts/install.mjs --mode install --platform both --scope global --source-root "$PWD"
 ```
 
-한 호스트에만 설치:
+<details>
+<summary>한쪽만 설치하거나 특정 저장소에 설치·삭제하기</summary>
 
 ```bash
+# Codex만 설치
 node scripts/install.mjs --mode install --platform codex --scope global --source-root "$PWD"
+
+# Claude Code만 설치
 node scripts/install.mjs --mode install --platform claude --scope global --source-root "$PWD"
-```
 
-특정 저장소에 설치:
-
-```bash
+# 특정 저장소에 둘 다 설치
 node scripts/install.mjs --mode install --platform both --scope repo --target-repo /absolute/path/to/repo --source-root "$PWD"
-```
 
-v1 삭제:
-
-```bash
+# 현재 사용자 범위에서 둘 다 삭제
 node scripts/install.mjs --mode uninstall --platform both --scope global --source-root "$PWD"
 ```
 
-| 호스트 | 사용자 범위 | 저장소 범위 |
+| 도구 | 사용자 범위 | 저장소 범위 |
 |---|---|---|
 | Codex | `$HOME/.agents/skills/socrates` | `.agents/skills/socrates` |
 | Claude Code | `$HOME/.claude/skills/socrates` | `.claude/skills/socrates` |
 
-사용자 지정 `CODEX_HOME`이 명시되어 있거나 기존 Codex 스킬 복사본이 발견되면 `$CODEX_HOME/skills/socrates`도 호환 경로로 함께 관리합니다.
+사용자 지정 `CODEX_HOME`이 있거나 기존 Codex 스킬 복사본이 발견되면 호환성을 위해 `$CODEX_HOME/skills/socrates`도 함께 관리합니다.
 
-## 0.10.x에서 업그레이드
+</details>
 
-1.0.0은 이전 `socrates-contract` 위험 변경 조정 제품을 대체합니다. contract scaffolder와 native role agent는 v1에 포함되지 않습니다. 기존 v0.10.0 설치는 원래 installer로 제거한 뒤 v1을 설치합니다.
+### 기존 버전에서 업데이트
+
+저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v1.1.0으로 교체됩니다.
+
+v0.10.0을 사용했다면 이전 설치를 먼저 제거합니다.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.0/scripts/install.mjs \
@@ -337,23 +238,19 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.
 node scripts/install.mjs --mode install --platform both --scope global --source-root "$PWD"
 ```
 
-v1 installer는 소유권을 검증할 수 없거나 사용자가 수정한 legacy directory를 재귀 삭제하지 않습니다.
+설치 스크립트는 설치 주체를 확인할 수 없거나 사용자가 수정한 기존 폴더를 강제로 지우지 않습니다.
 
-## 패키지와 검증
+## 개발 및 검증
 
-하나의 공용 원본에서 두 호스트 패키지를 생성합니다.
+하나의 원본에서 Codex와 Claude Code용 패키지를 생성합니다.
 
 ```text
 reference/skill-body.md
 reference/skill-references/
         │
-        ├── .agents/skills/socrates/   # Codex + agents/openai.yaml
+        ├── .agents/skills/socrates/   # Codex
         └── .claude/skills/socrates/   # Claude Code
 ```
-
-설치 패키지는 공용 `SKILL.md` 하나, 조건부 reference 두 개, Codex UI metadata로 구성됩니다. 실행 파일, model-policy sidecar, contract 상태, 필수 subagent workflow는 없습니다.
-
-자동 검사 실행:
 
 ```bash
 npm run build:skills
@@ -363,17 +260,13 @@ npm run test:evals
 npm test
 ```
 
-평가 카탈로그는 설명, 가이드 학습, 대상 보정, 비간섭, 패키징의 22개 case와 42개 자동 판정으로 구성됩니다. 선택적 격리 live eval:
+평가 세트에는 설명, 시각화, 대화형 학습, 독자에 맞춘 설명, 일반 작업 비개입, 패키징을 다루는 테스트 사례 23개와 자동 판정 45개가 있습니다.
 
-```bash
-SOCRATES_LIVE_EVAL=1 \
-SOCRATES_LIVE_EVAL_HOST=claude \
-SOCRATES_LIVE_EVAL_ARMS=skill,control \
-SOCRATES_LIVE_EVAL_CASES=guided-cache-misconception,guided-cache-correct \
-npm run eval:live
-```
+## 참고한 원본
 
-Codex에서는 `SOCRATES_LIVE_EVAL_HOST=codex`를 사용합니다. 모델 출력은 비결정적이므로 regex grader와 기록된 예시는 의미 정확성의 보조 증거입니다.
+Socrates의 시각화 우선 방향은 공개된 Claude Community ELI5 플러그인을 참고했습니다. 원본은 큰 그림과 적은 글자의 HTML 아티팩트에 집중하며, Socrates는 여기에 질문 기반 얼라인먼트, 틀린 답 교정, 코드 근거 확인을 더합니다.
+
+- [Claude Community ELI5 공개 코드](https://github.com/anthropics/claude-plugins-community/tree/main/eli5)
 
 ## 라이선스
 

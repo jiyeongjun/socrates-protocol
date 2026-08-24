@@ -45,7 +45,7 @@ test("structured eval catalog covers every required behavior and fixture group",
   assert.equal(schema.properties.schema_version.const, catalog.schema_version);
 
   const counts = Object.groupBy(catalog.cases, (evalCase) => evalCase.group);
-  assert.ok(counts.explanation.length >= 5);
+  assert.ok(counts.explanation.length >= 6);
   assert.ok(counts.guided.length >= 7);
   assert.ok(counts.calibration.length >= 5);
   assert.ok(counts.noninterference.length >= 2);
@@ -54,6 +54,7 @@ test("structured eval catalog covers every required behavior and fixture group",
   const ids = new Set(catalog.cases.map((evalCase) => evalCase.id));
   for (const required of [
     "explain-database-index-eli5",
+    "explain-incident-causal-map",
     "explain-race-condition-engineer",
     "deliverable-manager-rate-limit",
     "explain-source-grounded-code",
@@ -82,14 +83,15 @@ test("structured eval catalog covers every required behavior and fixture group",
   const visualCase = catalog.cases.find(
     (evalCase) => evalCase.id === "explain-database-index-eli5"
   );
-  assert.ok(visualCase.required_output_fields.includes("small visual"));
+  assert.deepEqual(visualCase.expected_questions, { min: 1, max: 1 });
+  assert.ok(visualCase.required_output_fields.includes("big-picture visual"));
   assert.ok(visualCase.static_grader_ids.includes("visual-explanation"));
 
   const brownfieldCase = catalog.cases.find(
     (evalCase) => evalCase.id === "explain-brownfield-scheduled-orders"
   );
   assert.equal(brownfieldCase.fixture, "fixtures/brownfield-orders");
-  assert.deepEqual(brownfieldCase.expected_questions, { min: 0, max: 0 });
+  assert.deepEqual(brownfieldCase.expected_questions, { min: 1, max: 1 });
   assert.ok(brownfieldCase.required_output_fields.includes("preserved invariants"));
   assert.ok(brownfieldCase.required_output_fields.includes("proposed extension point"));
   assert.ok(brownfieldCase.static_grader_ids.includes("brownfield-grounding"));
@@ -109,8 +111,8 @@ test("structured eval catalog covers every required behavior and fixture group",
 test("static eval runner executes every case and machine grader", async () => {
   const summary = await runStaticEvals();
   assert.equal(summary.passed, true);
-  assert.equal(summary.cases, 22);
-  assert.equal(summary.grader_checks, 42);
+  assert.equal(summary.cases, 23);
+  assert.equal(summary.grader_checks, 45);
   assert.deepEqual(summary.failures, []);
 });
 
@@ -432,17 +434,17 @@ test("live grading ignores question marks inside quoted examples", () => {
 test("direct explanation grader requires a compact explanatory visual", () => {
   const evalCase = {
     live_grader_id: "direct-eli5",
-    expected_questions: { min: 0, max: 0 },
+    expected_questions: { min: 1, max: 1 },
   };
   const withVisual = gradeResponse(
     evalCase,
-    "A database index is like a book index: it helps the database find a row without searching every page. Index entry -> row location -> matching row. That makes lookups faster, at the cost of extra storage and update work."
+    "A database index is like a book index: it helps the database find a row without searching every page. Index entry -> row location -> matching row. That makes lookups faster, at the cost of extra storage and update work. If the index entry points to one row, which step avoids scanning every other row?"
   );
   assert.equal(withVisual.passed, true);
 
   const proseOnly = gradeResponse(
     evalCase,
-    "A database index is like a book index: it helps the database find a row without searching every page, so lookups are faster."
+    "A database index is like a book index: it helps the database find a row without searching every page, so lookups are faster. Which part avoids the scan?"
   );
   assert.equal(proseOnly.passed, false);
   assert.equal(proseOnly.missing_patterns.length, 1);
@@ -451,13 +453,14 @@ test("direct explanation grader requires a compact explanatory visual", () => {
 test("brownfield grader requires source-grounded flow, invariants, proposals, and tests", () => {
   const evalCase = {
     live_grader_id: "brownfield-feature",
-    expected_questions: { min: 0, max: 0 },
+    expected_questions: { min: 1, max: 1 },
   };
   const response = [
     "Current flow: findByIdempotencyKey -> inventory.reserve -> payments.authorize -> orders.insert -> events.publish order.confirmed.",
     "Invariants to preserve: idempotency precedes side effects, persistence precedes the event, and downstream failure releases inventory.",
     "A likely proposal is a new scheduled state plus a scheduler or worker; that design is not present in the current code.",
     "Tests should cover duplicate requests, ordering, release on failure, and scheduled execution.",
+    "Which existing ordering must the scheduled worker preserve when it eventually creates the order?",
   ].join("\n\n");
   assert.equal(gradeResponse(evalCase, response).passed, true);
 

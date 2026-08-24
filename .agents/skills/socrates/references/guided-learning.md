@@ -9,6 +9,7 @@ Keep a lightweight internal state:
 - the user's outcome;
 - the current learning objective;
 - the evidence that would demonstrate it;
+- the current visual or representation;
 - the user's latest answer classification;
 - the next support level if the answer misses.
 
@@ -24,7 +25,7 @@ Start at the highest level the user can reasonably answer, then move down only w
 4. **Recognition**: choose between constrained alternatives and explain the choice.
 5. **Worked first step**: show the first move, then ask the user to finish it.
 
-After a missed answer, change the representation or move one rung down. Do not simply repeat the original wording.
+After a missed answer, redraw or isolate the misunderstood relationship, change the representation, or move one rung down. Do not simply repeat the original wording or add unrelated detail.
 
 Ask for one learner response at a time. Do not follow a choice or prediction with a separate “Why?” question. If the reason is the evidence you need, combine it into one prompt, such as “Which option fits, and what feature makes it fit?” Ask it once and end the turn; do not restate the same demand below the question.
 
@@ -37,7 +38,7 @@ Classify the answer by the current objective, not by whether it contains expecte
 - **Misconception**: the answer relies on a false relationship or incompatible model.
 - **Uncertain/non-answer**: the user signals uncertainty, guesses without a reason, or does not address the objective.
 
-For a correct answer, give brief evidence-based acknowledgment and advance. For every other class, stay on the same objective.
+For a correct answer, give brief evidence-based acknowledgment and advance. For every other class, stay on the same objective. Treat alignment as local and observable: the learner must express or apply the governing relationship, but do not claim certainty about everything they know.
 
 ## Repair patterns
 
@@ -46,10 +47,11 @@ For a correct answer, give brief evidence-based acknowledgment and advance. For 
 - **Overgeneralization**: give one counterexample and ask the user to refine the rule.
 - **Vocabulary without model**: ask for a prediction or example that requires using the term.
 - **No foothold**: provide a concrete scenario or two choices, then ask why one fits.
+- **Visual mismatch**: zoom into one arrow, boundary, state change, or timeline step and ask what crosses or changes there.
 
 Name the issue gently and precisely. Never call a mistaken answer “exactly right” before correcting it.
 
-## Mastery gate examples
+## Alignment gate example
 
 Current objective: understand that a recursion base case stops further self-calls.
 

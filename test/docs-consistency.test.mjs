@@ -30,10 +30,10 @@ async function readRepoFile(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("package metadata identifies the breaking 1.0.0 learning-skill release", async () => {
+test("package metadata identifies the 1.1.0 visual-learning release", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
-  assert.equal(pkg.version, "1.0.0");
-  assert.equal(DEFAULT_VERSION, "v1.0.0");
+  assert.equal(pkg.version, "1.1.0");
+  assert.equal(DEFAULT_VERSION, "v1.1.0");
   assert.equal(pkg.license, "MIT");
   assert.match(pkg.engines.node, />=22/);
   assert.equal(pkg.scripts["verify:skills"], "node reference/verify-skills.mjs");
@@ -47,6 +47,7 @@ test("generated layout is minimal and rejects unsafe names", () => {
   assert.deepEqual(skillReferenceNames, [
     "audience-calibration.md",
     "guided-learning.md",
+    "visual-explanations.md",
   ]);
   assert.deepEqual(skillScriptNames, []);
   assert.deepEqual(codexAgentNames, []);
@@ -79,42 +80,45 @@ test("frontmatter targets learning requests without hijacking ordinary tasks", (
     const raw = target.frontmatter.find((line) => line.startsWith("description: "));
     const description = JSON.parse(raw.slice("description: ".length));
     descriptions.push(description);
-    assert.match(description, /Teach and explain concepts/i);
+    assert.match(description, /Teach through visual-first explanations/i);
     assert.match(description, /ELI5/i);
+    assert.match(description, /picture explainer/i);
+    assert.match(description, /code\/module flow.*trade-off.*incident/is);
     assert.match(description, /Socratic tutoring or a quiz/i);
-    assert.match(description, /mistaken or incomplete answer/i);
-    assert.match(description, /re-check the same idea before advancing/i);
+    assert.match(description, /repair the same idea until the answer demonstrates it before advancing/i);
+    assert.match(description, /Respect finished-deliverable and no-question requests/i);
     assert.match(description, /Do not trigger merely because an ordinary task/i);
     assert.doesNotMatch(description, /production|billing|credential|destructive/i);
   }
   assert.equal(new Set(descriptions).size, 1);
 });
 
-test("canonical runtime leads with value and enforces the mastery gate", async () => {
+test("canonical runtime leads with a visual and enforces the alignment gate", async () => {
   const body = await readSkillBody();
   assert.ok(body.split("\n").length < 100, "runtime should stay compact");
-  assert.match(body, /Deliverable.*Explain.*Guided learning.*Review/is);
-  assert.match(body, /give a useful explanation immediately/i);
-  assert.match(body, /do not append a check, quiz, or follow-up question unless the user explicitly asks/i);
+  assert.match(body, /Audience-ready artifact.*Visual learning.*Guided learning.*Review/is);
+  assert.match(body, /show a useful visual explanation immediately, then ask one focused question/i);
+  assert.match(body, /Do not ask a learner question when.*finished audience-ready artifact.*no questions.*opts out/is);
   assert.match(body, /Preserve the concrete situation, constraints, alternatives/i);
   assert.match(body, /Decision needed:/i);
   assert.match(body, /the deliverable is incomplete until it names that decision/i);
-  assert.match(body, /phrase the offer as a statement rather than a second question/i);
-  assert.match(body, /advance only when the user's answer demonstrates the current learning objective/i);
+  assert.match(body, /Advance only when the user's answer demonstrates the current learning objective's key relationship/i);
+  assert.match(body, /observable alignment on the current objective/i);
   assert.match(body, /Partly correct.*same objective/is);
   assert.match(body, /Misconception.*Do not.*next concept/is);
   assert.match(body, /Uncertain or no answer.*re-check the same objective/is);
   assert.match(body, /Do not repeat the same question unchanged/i);
   assert.match(body, /one focused question means one response demand/i);
   assert.match(body, /Do not stack a prediction, a separate “why\?”/i);
-  assert.match(body, /Ask it once, then stop the turn/i);
-  assert.match(body, /respect that choice, explain it directly/i);
+  assert.match(body, /Ask once, then stop the turn/i);
+  assert.match(body, /respect that choice immediately/i);
   assert.match(body, /Simplify without introducing a false rule/i);
-  assert.match(body, /available visualization capability/i);
-  assert.match(body, /compact table or inline flow, timeline, or tree/i);
+  assert.match(body, /self-contained HTML artifact with large diagrams and few words/i);
+  assert.match(body, /artifact or visualization surface/i);
+  assert.match(body, /Do not write an HTML file into the user's repository/i);
   assert.match(body, /skip decorative visuals/i);
   assert.match(body, /never assume interests, intelligence, family status/is);
-  assert.match(body, /Do not append a quiz, recap, or next lesson/i);
+  assert.match(body, /Do not append a recap or next lesson/i);
   assert.match(body, /compact complete explanation over an exhaustive survey/i);
   assert.doesNotMatch(body, /contract-index|scaffold-contract|protected surface/i);
 });
@@ -123,12 +127,26 @@ test("guided-learning reference changes support after a miss and advances only o
   const guided = await readSkillReferenceSource("guided-learning.md");
   assert.match(guided, /Track one objective at a time/i);
   assert.match(guided, /Transfer.*Causal explanation.*Concrete application.*Recognition.*Worked first step/is);
+  assert.match(guided, /redraw or isolate the misunderstood relationship/i);
+  assert.match(guided, /alignment as local and observable/i);
   assert.match(guided, /For every other class, stay on the same objective/i);
   assert.match(guided, /computers do not decide to tire/i);
   assert.match(guided, /what the function must check before calling itself again/i);
   assert.match(guided, /base case returns without making another recursive call/i);
   assert.match(guided, /then advance to how calls unwind/i);
   assert.match(guided, /If the user asks for the answer.*explain directly/is);
+});
+
+test("visual reference produces readable grounded artifacts and focused repairs", async () => {
+  const visual = await readSkillReferenceSource("visual-explanations.md");
+  assert.match(visual, /in-conversation artifact or visualization.*self-contained HTML artifact.*inline diagram/is);
+  assert.match(visual, /Do not create files in the user's repository/i);
+  assert.match(visual, /title phrased as the question.*numbered sections.*large, simple diagrams.*arrows labeled/is);
+  assert.match(visual, /self-contained and responsive/i);
+  assert.match(visual, /avoid external scripts, fonts, trackers, network requests/i);
+  assert.match(visual, /distinguish current behavior from a proposal/i);
+  assert.match(visual, /trigger, propagation path, user-visible impact, recovery/is);
+  assert.match(visual, /Repair the visual after a miss/i);
 });
 
 test("audience reference calibrates by evidence instead of demographics", async () => {
@@ -176,7 +194,7 @@ test("Codex UI metadata invokes the renamed skill explicitly", async () => {
   const yaml = await readFile(agentTargetPath, "utf8");
   assert.equal(yaml, buildOpenAIYaml({ promptSource: prompt }));
   assert.match(yaml, /display_name: "Socrates"/);
-  assert.match(yaml, /short_description: "Explain clearly and build real understanding"/);
+  assert.match(yaml, /short_description: "See the idea, then align your understanding"/);
   assert.match(yaml, /default_prompt: "Use \$socrates/);
   assert.match(yaml, /allow_implicit_invocation: true/);
 });
@@ -208,49 +226,48 @@ test("English and Korean READMEs document behavior, installation, upgrade, and e
   const english = await readRepoFile("README.md");
   const korean = await readRepoFile("README.ko.md");
   for (const readme of [english, korean]) {
-    assert.match(readme, /version-1\.0\.0/);
+    assert.match(readme, /version-1\.1\.0/);
     assert.match(readme, /\$socrates/);
     assert.match(readme, /\/socrates/);
     assert.match(readme, /\.agents\/skills\/socrates/);
     assert.match(readme, /\.claude\/skills\/socrates/);
     assert.match(readme, /v0\.10\.0/);
-    assert.match(readme, /22/);
-    assert.match(readme, /42/);
+    assert.match(readme, /23/);
+    assert.match(readme, /45/);
     assert.match(readme, /npm run verify:skills/);
-    assert.match(readme, /SOCRATES_LIVE_EVAL_HOST=claude/);
+    assert.match(readme, /anthropics\/claude-plugins-community/);
     assert.doesNotMatch(readme, /DreambigOu\/ELI5/);
     assert.doesNotMatch(readme, /No quiz|퀴즈는 하지 마/i);
     assert.doesNotMatch(readme, /deterministic checks|결정적 검사/i);
   }
+  assert.match(english, /visual-first learning skill/i);
+  assert.match(english, /How it works/i);
+  assert.match(english, /Show the big picture visually.*Ask one focused question.*redraw that part.*check the same objective/is);
+  assert.match(english, /expressed or applied the current objective's key relationship/i);
   assert.match(english, /When to use Socrates/i);
-  assert.match(english, /Understand something quickly.*Learn through dialogue.*Check your understanding.*Explain it to someone else.*Understand a change to existing code/is);
-  assert.match(english, /what the code does today from what still needs to be built/i);
+  assert.match(english, /Understand a new concept.*Understand code or a module.*Prepare a change to an existing system.*Understand a trade-off.*Understand an incident.*Check your mental model.*Explain it to someone else/is);
   assert.match(english, /How it differs from a normal response/i);
   assert.match(english, /does not make the model smarter/i);
-  assert.match(english, /Same-prompt A\/B/i);
-  assert.match(english, /Actual existing-code feature A\/B excerpts/i);
-  assert.match(english, /normal response was already strong.*Socrates was not more correct/is);
-  assert.match(english, /normal response expanded to a related objective.*Socrates stayed on the original misconception/is);
-  assert.match(english, /A normal explanation gets a complete answer, not a surprise quiz/i);
-  assert.match(english, /Visual explanations/i);
+  assert.match(english, /self-contained HTML artifact with large diagrams and few words/i);
   assert.match(english, /Actual response tests/i);
-  assert.match(english, /Codex.*PASS.*Claude.*PASS/is);
-  assert.match(english, /checks the same idea again before moving forward/i);
-  assert.match(english, /never repeats the same question unchanged/i);
+  assert.match(english, /Database index.*PASS.*Timeout incident.*PASS.*Second wrong cache answer.*PASS.*Scheduled-order change/is);
+  assert.match(english, /did not advance; redrew only/i);
+  assert.match(english, /local Claude CLI was logged out.*not run.*not marked as a pass/is);
+  assert.match(english, /23 cases and 45 automated checks/i);
+  assert.match(korean, /시각화 우선 학습 스킬/);
+  assert.match(korean, /어떻게 동작하는가/);
+  assert.match(korean, /큰 흐름을 시각화.*핵심 질문 하나.*해당 부분을 다시 그림.*같은 목표 재확인/is);
+  assert.match(korean, /현재 학습 목표의 핵심 관계.*자기 말로 정확히 설명하거나 새 사례에 적용/is);
   assert.match(korean, /언제 쓰는가/);
-  assert.match(korean, /개념을 빠르게 이해.*대화하며 학습.*내 이해를 점검.*다른 사람에게 설명.*기존 코드에 기능 추가 전 파악/is);
-  assert.match(korean, /지금 코드가 실제로 어떻게 동작하는지와 새로 만들 부분을 나눠/);
+  assert.match(korean, /처음 보는 개념 이해.*코드나 모듈 흐름 파악.*기존 시스템에 기능 추가.*트레이드오프 이해.*장애 원인 이해.*내 이해 점검.*다른 사람에게 전달/is);
   assert.match(korean, /일반 응답과 무엇이 다른가/);
   assert.match(korean, /모델을 더 똑똑하게 만드는 것은 아닙니다/);
-  assert.match(korean, /같은 요청 A\/B/);
-  assert.match(korean, /실제 기존 코드 기능 추가 A\/B 응답 발췌/i);
-  assert.match(korean, /일반 응답도 충분히 좋았음.*Socrates가 더 정확했던 것은 아니며/is);
+  assert.match(korean, /큰 다이어그램.*적은 글자.*자체 완결형 HTML 아티팩트/is);
   assert.doesNotMatch(korean, /이해.?지도|정답 우위|현재.?제안 경계|별도로 구조화|불변 조건|확장 지점/);
-  assert.match(korean, /일반 응답은 관련 주제로 확장했고.*Socrates는 다음 단계로 넘어가지 않고 같은 오개념을 재확인/is);
-  assert.match(korean, /일반적인 설명 요청에는 완결된 답을 주며 갑자기 퀴즈를 시작하지 않습니다/);
-  assert.match(korean, /시각화는 언제 쓰는가/);
-  assert.match(korean, /실제 답변 테스트/);
-  assert.match(korean, /Codex.*통과.*Claude.*통과/is);
-  assert.match(korean, /다음 단계로 넘어가지 않고/);
-  assert.match(korean, /같은 질문을 그대로 반복하지 않습니다/);
+  assert.match(korean, /실제 응답 테스트/);
+  assert.match(korean, /데이터베이스 인덱스.*통과.*타임아웃 장애.*통과.*캐시를 다시 틀리게 답함.*통과.*예약 주문/is);
+  assert.match(korean, /다음 내용으로 넘어가지 않고.*낡아진 시점.*알아차린 시점/is);
+  assert.match(korean, /로컬 Claude CLI가 로그아웃 상태.*통과로 표시하지 않았/is);
+  assert.match(korean, /테스트 사례 23개와 자동 판정 45개/);
+  assert.match(korean, /Claude Community ELI5/);
 });

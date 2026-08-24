@@ -1,276 +1,184 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 [한국어](./README.ko.md)
 
-Socrates is a Codex and Claude Code skill for work whose real goal is understanding or learning. It covers concept explanations, interactive learning, understanding checks, audience-ready explanations, and learning an existing system before adding a feature.
+Socrates is a **visual-first learning skill** for Codex and Claude Code. It turns concepts, code, trade-offs, and incidents into a visible model, then asks one focused question to check the learner's mental model.
 
-It chooses the interaction from the request. A normal explanation gets a complete answer, not a surprise quiz. Socratic dialogue starts only when you ask to be taught, questioned, or tested interactively.
+When an answer is wrong or incomplete, Socrates does not move on. It redraws only the misunderstood relationship with a different visual, analogy, or example and stays on the same objective until the learner's answer shows the key relationship.
+
+## How it works
+
+```text
+Request
+  ↓
+Show the big picture visually
+  ↓
+Ask one focused question
+  ↓
+Learner's answer
+  ├─ Key relationship is correct → next objective or finish
+  └─ Wrong or incomplete → redraw that part → check the same objective
+```
+
+“Aligned” does not mean the model can read a person's mind or guarantee permanent mastery. It means the learner has **expressed or applied the current objective's key relationship without contradicting it**.
+
+If the user asks for no questions, requests the answer directly, or wants a finished artifact for someone else, Socrates stops the dialogue and provides the deliverable.
 
 ## When to use Socrates
 
-| Your goal | Example request | What Socrates does |
+| Goal | Example request | What Socrates does |
 |---|---|---|
-| Understand something quickly | `$socrates Explain database indexes briefly for someone new to backend development.` | Gives the core model, a useful example or visual, and the important caveat. It does not append a quiz. |
-| Learn through dialogue | `$socrates Teach me recursion Socratically. I know functions, but not the call stack.` | Teaches one objective at a time and asks one focused question at a time. |
-| Check your understanding | `$socrates Here is how I understand eventual consistency. Find the gap in my model: ...` | Separates what is correct from what is missing or mistaken before adding new material. |
-| Explain it to someone else | `$socrates Turn this API rate-limit issue into a short update I can send to my manager.` | Produces the finished audience-ready message instead of teaching the original user how to write it. |
-| Understand a change to existing code | `$socrates I need to add scheduled orders to this existing service. Explain how it works now, what rules must stay true, and where the new feature could connect.` | Separates what the code does today from what still needs to be built, then names the rules and tests the change must preserve. |
+| Understand a new concept | `$socrates Explain database indexes to someone new to backend development.` | Draws the whole model first, then checks it with one question |
+| Understand code or a module | `$socrates Show me how this payment module works, using the code as evidence.` | Visualizes data, control, and failure paths from the actual source |
+| Prepare a change to an existing system | `$socrates Before I add scheduled orders, explain the current flow and likely connection point.` | Separates current behavior from proposals and connects invariants to tests |
+| Understand a trade-off | `$socrates Explain when to choose polling or webhooks with a visual.` | Puts benefits and costs on the same causal map |
+| Understand an incident | `$socrates Show why this timeout change caused a retry storm.` | Maps trigger, propagation, impact, and recovery as a timeline or feedback loop |
+| Check your mental model | `$socrates Here is how I think cache refresh works. Find the wrong connection: ...` | Preserves correct parts, repairs the mismatch, and checks the same objective again |
+| Explain it to someone else | `$socrates Make a one-page explanation of this incident for my manager.` | Produces the finished artifact without quizzing the original user |
 
 ## How it differs from a normal response
 
-Socrates does not make the model smarter. Modern models already explain straightforward concepts well, so a one-shot explanation may look similar with or without the skill. The difference is not a second reasoning engine; it is a consistent **interaction policy for learning**.
+Socrates does not make the model smarter. It makes the learning flow consistent.
 
-| Situation | Normal response without the skill | With Socrates |
+| Situation | Normal response | With Socrates |
 |---|---|---|
-| One-shot explanation | Uses whatever depth and format the model considers appropriate | Gives an audience-calibrated, complete answer, uses the smallest useful visual when helpful, and does not append a surprise check |
-| Interactive learning | May explain several related ideas at once or choose any follow-up | Focuses on one learning objective and one response-demanding question at a time |
-| Wrong or unclear answer | May give the correction and continue to another topic | Changes the representation but stays on the same objective until the learner demonstrates the missing relationship |
-| Audience-ready deliverable | May mix the requested text with advice about how to explain it | Prioritizes the finished text the audience can read directly |
-| Feature in an existing system | May jump directly to a patch plan or file list | Explains how the code works now and which rules must stay true before discussing what needs to be added |
+| Starting an explanation | The model chooses prose, bullets, a table, or a diagram | Shows the big picture visually first |
+| Checking understanding | May omit a check or ask several questions | Asks one question about the key relationship |
+| Wrong answer | May correct it and continue elsewhere | Stays on the same objective and redraws the misunderstood part |
+| Code or incident explanation | May lead with a summary or solution | Shows the current flow and causal chain, then separates evidence from proposals |
+| Repeated use | Format can vary from request to request | Preserves the visual → question → repair loop |
 
-In short, Socrates makes explanation, guided learning, and understanding checks more predictable; it does not replace the base model's intelligence.
+A normal model can also do this well when the prompt explicitly asks for a visual and one question. Socrates is valuable because the user does not have to restate that format every time.
 
-Use the normal assistant for ordinary implementation work such as editing code, running tests, or refactoring. Use Socrates when understanding, teaching, evaluating a mental model, or adapting an explanation is the actual goal.
+## What the visual output looks like
 
-## How it responds
+- It uses the host's artifact or visualization surface when available.
+- An ELI5 or picture-explainer request prefers a self-contained HTML artifact with large diagrams and few words.
+- Without an artifact surface, it uses an inline flow, timeline, state map, tree, or comparison.
+- It does not add an HTML file to the user's repository unless the user requested a file.
+- For code and systems, it reads the source first and visually distinguishes observed behavior, proposals, and unknowns.
 
-- **Explain** — Requests such as “explain,” “ELI5,” “why,” and “how” receive a direct, complete explanation. No follow-up question is added unless you explicitly ask for interactive learning or an understanding check.
-- **Guided learning** — Requests such as “teach me Socratically,” “quiz me,” and “walk me through this” open an interactive lesson.
-- **Review** — A supplied answer or mental model is diagnosed before the skill introduces another concept.
-- **Deliverable** — “Explain this to my manager, child, or team” produces the text for that audience.
-
-The requested audience, prior knowledge, language, depth, and format take priority over demographic assumptions. Simplification must remain accurate.
-
-## Visual explanations
-
-Socrates uses a visual when sequence, comparison, hierarchy, spatial structure, or changing state is materially clearer that way. It chooses the smallest useful format:
-
-- a comparison table;
-- an inline flow, timeline, or tree;
-- a richer visualization capability when the host provides one and interaction would genuinely help.
-
-It does not add decorative diagrams to simple facts. Every visual must map back to the real concept, and an analogy must say where the comparison stops matching.
-
-## What happens after a wrong answer
-
-Guided learning advances only when the current idea is demonstrated in the learner's answer.
-
-| Learner response | What happens next |
-|---|---|
-| Correct | Names the relationship that shows understanding, then advances |
-| Partly correct | Keeps the correct part, isolates the missing link, and asks a narrower question on the same objective |
-| Misconception | Corrects the mismatch, changes the example or representation, and checks the same idea again before moving forward |
-| Unsure or no answer | Lowers the difficulty with a concrete case, constrained choice, or worked first step, then re-checks the same objective |
-
-Socrates never repeats the same question unchanged after a miss. It changes the support and stays on the current objective. A guided lesson can still be stopped at any time by asking for the answer directly.
+Simple facts do not get decorative diagrams. Every arrow, color, boundary, and label must explain a real relationship.
 
 ## Actual response tests
 
-These results came from fresh Codex and Claude sessions using the generated v1 skill on 2026-08-24. They are behavioral evidence, not scripted output; wording can vary between runs.
+On 2026-08-24, the generated v1.1.0 skill was given to independent fresh Codex agents. They received the user request and skill, but no evaluation conclusion or model answer.
 
-| Host | Scenario | Observed result |
-|---|---|---|
-| Codex | Direct database-index explanation | PASS — book-index model, comparison table, and no follow-up question |
-| Claude | Direct database-index explanation | PASS — B+tree sketch, comparison table, and no follow-up question |
-| Codex | Cache-freshness misconception | PASS — corrected the model, stayed on cache freshness, and asked one same-objective question |
-| Claude | Cache-freshness misconception | PASS — changed to a paper-menu analogy and re-checked the same objective with one question |
-| Codex A/B | Understand scheduled orders in an existing service | PASS — both arms read the code correctly; Socrates separated what exists from what must be added and listed decisions and new tests |
+| Test | Result |
+|---|---|
+| Database index | PASS — contrasted a full scan with the index path and ended with one question |
+| Timeout incident | PASS — visualized trigger, retry feedback loop, recovery, and one causal question |
+| First wrong cache answer | PASS — separated source change from cache awareness on a timeline and checked the same objective |
+| Second wrong cache answer | PASS — did not advance; redrew only “becomes stale” vs. “discovers stale” |
+| Scheduled-order change in existing code | PASS — separated current and proposed flows and grounded invariants, risks, and tests in the code |
 
-### Same-prompt A/B — normal response vs. Socrates
-
-These paired runs used the same Codex model in independent fresh sessions. One session was explicitly prevented from loading a skill; the other explicitly used Socrates.
+The same prompts were also run without the skill.
 
 | Request | Normal response | Socrates response | Observed difference |
 |---|---|---|---|
-| Explain a database index | Book analogy, SQL example, read/write trade-off, and no closing question | Book analogy, SQL example, read/write trade-off, and no closing question | Little difference for a straightforward explanation; Socrates did not force an unnecessary dialogue |
-| Continue after “the cache watches the source automatically” | Introduced TTL, invalidation, version checks, events, and polling together, then asked a TTL calculation | Corrected automatic detection, then asked what the cache returns when no signal, expiry, or version check occurs | The normal response expanded to a related objective; Socrates stayed on the original misconception and re-checked it |
-| Understand scheduled orders before changing an existing service | Correctly explained the current flow, rules to preserve, two-stage design, and existing risks | Covered the same evidence, separated what works today from what must be added, then listed decisions to make and tests to add | The normal response was already strong. Socrates was not more correct; it made the things to check before changing the code easier to scan and harder to miss |
+| Database index | Gave a book-index analogy and trade-offs, then stopped | Drew the full-scan and index paths, then asked the learner to trace the path | Socrates consistently added a visible flow and an understanding check |
+| Visual timeout incident with one question | Produced a causal flow and one question | Split trigger from recovery and made the retry feedback loop more explicit | The prompt was already specific, so the normal response was also strong and the difference was small |
+| Scheduled orders in existing code | Correctly explained current flow, invariants, a proposed pipeline, and risks, then stopped | Separated current and proposed flows and asked the learner to identify the safe branch point | Both were accurate; Socrates connected the explanation to an observable understanding check |
 
 <details>
-<summary>Actual misconception A/B excerpts — Codex</summary>
+<summary>Database index — normal response vs. Socrates</summary>
 
-Shared request:
+The normal response used a book analogy, SQL, and read/write costs, then ended.
+
+> A database index is like the index at the back of a book.
+>
+> - Reads become faster.
+> - Indexes consume disk space.
+> - Inserts, updates, and deletes become slightly slower.
+
+Socrates showed the lookup paths first:
 
 ```text
-We are learning how a cache knows that source data changed. You asked,
-“How does a cache know its copy is stale?” and I answered,
-“It keeps watching the source and notices automatically.” Continue teaching me.
+Without an index
+users table: row 1? → row 2? → row 3? → ... → row 10,000,000?
+             └──────────── full table scan ────────────────┘
+
+With an index on email
+sorted email index → location of the row → matching users row
 ```
 
-Normal response:
-
-> That’s possible, but caches usually don’t “notice automatically.” They need a signal or rule:
->
-> - **Expiration (TTL):** “This copy is valid for five minutes.”
-> - **Invalidation:** The source tells the cache, “Delete or update this key.”
-> - **Version checking:** The cache asks whether the source’s version, timestamp, or ETag changed.
-> - **Change events:** The cache subscribes to update notifications.
-> - **Polling:** The cache periodically checks the source.
->
-> Quick check: if a cache refreshes every five minutes and the source changes one minute after a refresh, how long might users receive stale data?
-
-Socrates response:
-
-> “Watching the source” is one possible design, but it isn’t automatic. A cache only detects staleness through a mechanism such as:
->
-> - the source sending an invalidation or update;
-> - the cached entry expiring after a TTL;
-> - the cache comparing a version number or ETag;
-> - a subscription or change stream that watches updates.
->
-> Without one of these, stale data can still look valid.
->
-> Suppose the source changes, but sends no notification, the TTL has not expired, and no version check occurs. What will the cache return on the next request: its old copy or the new source value?
+> Your turn: after adding an index on `email`, trace the path the database takes to find one user.
 
 </details>
 
 <details>
-<summary>Actual existing-code feature A/B excerpts — Codex</summary>
+<summary>Two consecutive wrong-answer repairs</summary>
 
-Test code: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
-
-Shared request:
+After the learner said that a cache notices a source change by itself:
 
 ```text
-I'm new to this codebase and need to add scheduled orders.
-Before I change anything, help me understand the current order-creation flow,
-what must remain true, and where this feature would likely connect.
+10:00  Source: A ──copy──▶ Cache: A
+10:01  Source: B           Cache: A  ← unaware
+
+The cache learns through:
+Source ──invalidation──▶ Cache
+Cache  ──version check──▶ Source
+Timer expires ─────────▶ revalidation
 ```
 
-Normal response:
+> If the source changes at 10:01, no invalidation is sent, and the cache checks freshness at 10:05, when can the cache first discover that its copy is stale?
 
-> The fixture has one immediate order-creation path: `placeOrder`. There is currently no scheduler, pending-order state, API layer, or concrete repository implementation.
->
-> A two-stage design fits this flow best:
->
-> 1. `scheduleOrder` stores a scheduling intent containing `customerId`, items, `scheduledFor`, and a schedule ID.
-> 2. A worker claims that intent when due and invokes the existing `placeOrder` flow.
-> 3. Worker retries use a deterministic idempotency key derived from the schedule ID.
-> 4. The schedule records execution outcome separately: scheduled, processing, completed, cancelled, or failed.
->
-> - If event publication fails after insertion, the code releases inventory even though a confirmed order already exists; a retry then returns that order without republishing.
-> - If insertion fails after payment authorization, the authorization is not voided.
+The learner then incorrectly answered “10:01.” Socrates stayed on the same objective and redrew only the mismatch:
 
-Socrates response:
+```text
+Time    Source              Cache
+10:00   value = A  ───────▶ value = A
+10:01   value = B           value = A   ← receives nothing
+10:05   ◀──── cache checks ────────────
+         returns B ────────▶ discovers its A was stale
+```
 
-> The core mental model is: `placeOrder` synchronously turns a request into a confirmed order. Scheduled orders would add a persisted “intent” that is fulfilled later.
+> 10:01 is when the cached copy **becomes stale**, not when the cache **discovers** it.
 >
-> There is no scheduler, API route, or concrete database implementation in this fixture. The visible extension point is this service and its injected dependencies.
->
-> Before implementation, decide:
->
-> - Whether inventory and price are locked when scheduled or evaluated at execution time.
-> - Whether payment is authorized now or at execution time.
-> - How cancellation and rescheduling affect queued work.
-> - Which failures are retryable and how duplicate charges are prevented.
->
-> Alongside preserving the existing three tests, cover:
->
-> - Scheduling persists a `scheduled` order without reserving inventory or authorizing payment.
-> - A due order is claimed and fulfilled exactly once under concurrent workers.
-> - Fulfillment retains the existing reserve → authorize → confirm → publish ordering.
-> - Retries cannot duplicate payment, confirmation, or event publication.
+> At 10:01, what new information actually reaches the cache: a notification/check result, or nothing?
 
 </details>
 
 <details>
-<summary>Actual direct-explanation excerpt — Codex</summary>
+<summary>Scheduled-order explanation grounded in existing code</summary>
 
-Prompt:
+Test source: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
 
 ```text
-$socrates Explain database indexes to someone new to backend development.
+placeOrder(input)
+      ↓
+Find order by idempotency key
+      ├── found ──▶ Return existing order
+      ↓
+Validate items → Reserve inventory → Authorize payment
+      ↓
+Insert "confirmed" order → Publish "order.confirmed" → Return
+
+After reservation, any failure
+      └──▶ Release reservation ──▶ Rethrow error
 ```
 
-Verbatim excerpt:
+The proposal was kept separate from observed behavior:
 
-> A database index is an extra data structure that helps the database find specific rows without checking every row in a table.
->
-> Think of it like a book:
->
-> - The table is the book’s pages.
-> - The index is the alphabetical index at the back.
-> - The index tells you where to look instead of reading every page.
+```text
+Find by key → Validate items → Is execution time in the future?
+                                  ├─ no  → existing immediate path
+                                  └─ yes → persist "scheduled"
+                                             ↓
+                                          due-time trigger
+                                             ↓
+                                      reserve → pay → confirm
+```
 
-|  | Without index | With index |
-|---|---|---|
-| Matching reads | Often slower | Usually faster |
-| Inserts and updates | Cheaper | Slightly slower |
-| Storage | No extra space | Uses extra space |
-
-> The most useful mental model is: **an index exchanges extra storage and write work for faster retrieval of particular data.**
+> In one sentence: where should a future-dated order leave the current flow, and what makes that boundary safer than branching after inventory reservation?
 
 </details>
 
-<details>
-<summary>Actual direct-explanation excerpt — Claude</summary>
-
-Prompt:
-
-```text
-/socrates 데이터베이스 인덱스를 백엔드 입문자에게 설명해줘.
-```
-
-Verbatim excerpts from the Korean test session:
-
-> 인덱스는 "테이블 전체를 훑지 않고 원하는 행을 바로 찾아가기 위해, 특정 컬럼을 **미리 정렬해 둔 별도의 자료구조**"입니다.
-
-```text
-              [ 50 | 200 ]              ← 루트
-             /      |      \
-    [10|30]    [80|150]    [400|900]    ← 중간 노드
-      |           |             |
-   실제 행 위치들 (정렬된 리프)          ← 옆으로 연결돼 있어 범위 스캔도 빠름
-```
-
-| | 인덱스 없음 | 인덱스 있음 |
-|---|---|---|
-| 100만 행에서 1건 조회 | 100만 행 읽음 | 3~4개 노드 읽음 |
-| 조회 비용 증가 속도 | 행 수에 비례 (O(n)) | 로그에 비례 (O(log n)) |
-| INSERT/UPDATE | 데이터만 씀 | 데이터 + 인덱스도 갱신 |
-| 저장 공간 | 데이터만 | 인덱스만큼 추가 |
-
-> 인덱스 5개 달린 테이블은 INSERT 한 번에 6곳을 씁니다. 쓰기가 많은 테이블에 인덱스를 남발하면 오히려 느려집니다.
-
-</details>
-
-<details>
-<summary>Actual misconception-repair response — Codex</summary>
-
-Prompt:
-
-```text
-$socrates We are learning how a cache knows that source data changed. You asked,
-“How does a cache know its copy is stale?” and I answered,
-“It keeps watching the source and notices automatically.” Continue teaching me.
-```
-
-Full response:
-
-> That describes one possible design, but it isn’t automatic. A cached copy becomes stale as soon as the source changes; the cache may remain unaware until it receives an invalidation/update, checks the source, or reaches an expiry time.
->
-> Suppose a cache stores `price = $10` for five minutes. After one minute, the database changes it to `$12`, but sends no notification. A request arrives after two minutes. What price will the cache return, and why?
-
-</details>
-
-<details>
-<summary>Actual misconception-repair excerpt — Claude</summary>
-
-Verbatim excerpts from the Korean cache-freshness test:
-
-> "원본을 계속 보고 있다"는 부분이 핵심 오해야. 그리고 이건 그냥 틀린 게 아니라, **캐시가 존재하는 이유 자체와 모순**돼.
->
-> **주머니 속 종이 메뉴판**을 떠올려봐. 가게에서 아메리카노 가격을 4,000원 → 4,500원으로 올렸어. 네 주머니 속 종이는 그 순간 뭘 할까? 아무것도 안 해. 종이는 가게를 볼 수 없어. 그냥 4,000원이라고 적힌 채 조용히 틀린 정보가 돼.
->
-> 캐시도 똑같아. 복사본은 **수동적**이야. 스스로 낡음을 감지하는 능력이 없어.
->
-> 다시 물어볼게 (같은 지점이야). 주머니 속 종이 메뉴판이 스스로 가게를 볼 수 없다면 — 그런데도 네가 "이 종이는 이제 못 믿겠다"는 걸 알게 되는 경로가 있을 거야. 그중 **하나만** 구체적으로 말해봐. 누가/무엇이 움직여서 네가 알게 되는 거야?
-
-</details>
+The Claude Code skill passed the same generated-package checks and `$skill-creator` validation as the Codex skill. It is installed as a skill, not as a plugin, so `claude plugin validate` is not applicable. The local Claude CLI was logged out, so a v1.1.0 Claude model response was not run and is not marked as a pass.
 
 ## Invoke the skill
 
@@ -279,34 +187,32 @@ Verbatim excerpts from the Korean cache-freshness test:
 | Codex | `$socrates <request>` |
 | Claude Code | `/socrates <request>` |
 
-The skill may also activate automatically for an explicit explanation, learning, quiz, teach-back, audience adaptation, or understanding-review request. An ordinary task does not trigger it merely because the answer may contain a short explanation.
+The skill may also activate for explicit explanation, learning, ELI5, picture-explainer, code-flow, trade-off, incident-cause, or mental-model review requests. It does not take over ordinary code edits or narrow rewrites.
 
-## Install from this checkout
+## Install
 
-Requirements: Node.js 22 or newer, plus Codex, Claude Code, or both.
+Requires Node.js 22 or newer, plus Codex, Claude Code, or both.
 
-Install for the current user:
+Install both host packages for the current user:
 
 ```bash
 node scripts/install.mjs --mode install --platform both --scope global --source-root "$PWD"
 ```
 
-Install for one host:
+<details>
+<summary>Install one host, install into a repository, or uninstall</summary>
 
 ```bash
+# Codex only
 node scripts/install.mjs --mode install --platform codex --scope global --source-root "$PWD"
+
+# Claude Code only
 node scripts/install.mjs --mode install --platform claude --scope global --source-root "$PWD"
-```
 
-Install into a repository:
-
-```bash
+# Both hosts in one repository
 node scripts/install.mjs --mode install --platform both --scope repo --target-repo /absolute/path/to/repo --source-root "$PWD"
-```
 
-Uninstall v1:
-
-```bash
+# Remove both current-user installations
 node scripts/install.mjs --mode uninstall --platform both --scope global --source-root "$PWD"
 ```
 
@@ -315,11 +221,15 @@ node scripts/install.mjs --mode uninstall --platform both --scope global --sourc
 | Codex | `$HOME/.agents/skills/socrates` | `.agents/skills/socrates` |
 | Claude Code | `$HOME/.claude/skills/socrates` | `.claude/skills/socrates` |
 
-When a custom `CODEX_HOME` is explicitly configured or already contains a Codex skill copy, the installer also maintains `$CODEX_HOME/skills/socrates` as a compatibility copy.
+When a custom `CODEX_HOME` exists or already contains a Codex skill copy, the installer also maintains `$CODEX_HOME/skills/socrates` for compatibility.
 
-## Upgrade from 0.10.x
+</details>
 
-Version 1.0.0 replaces the former `socrates-contract` risk-coordination product. The contract scaffolder and native role agents are not part of v1. Remove the managed v0.10.0 installation with its original installer, then install v1:
+### Update an existing installation
+
+Pull the latest repository state and run the install command again. Managed skill copies are replaced with v1.1.0.
+
+For a v0.10.0 installation, remove the old product first:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.0/scripts/install.mjs \
@@ -328,23 +238,19 @@ curl -fsSL https://raw.githubusercontent.com/jiyeongjun/socrates-protocol/v0.10.
 node scripts/install.mjs --mode install --platform both --scope global --source-root "$PWD"
 ```
 
-The v1 installer does not recursively delete an unverified or user-modified legacy directory.
+The installer does not force-delete an installation it cannot verify or a directory the user has modified.
 
-## Package and verification
+## Development and verification
 
-One canonical skill source generates both host packages:
+One source generates the Codex and Claude Code packages:
 
 ```text
 reference/skill-body.md
 reference/skill-references/
         │
-        ├── .agents/skills/socrates/   # Codex + agents/openai.yaml
+        ├── .agents/skills/socrates/   # Codex
         └── .claude/skills/socrates/   # Claude Code
 ```
-
-The installed package contains one shared `SKILL.md`, two conditional references, and Codex UI metadata. It has no bundled executable, model-policy sidecar, contract state, or required subagent workflow.
-
-Run automated checks:
 
 ```bash
 npm run build:skills
@@ -354,17 +260,13 @@ npm run test:evals
 npm test
 ```
 
-The catalog contains 22 cases and 42 automated grader checks across explanation, guided learning, audience calibration, noninterference, and packaging. Optional isolated live evaluation:
+The evaluation set contains 23 cases and 45 automated checks covering explanation, visualization, guided learning, audience adaptation, noninterference with ordinary work, and packaging.
 
-```bash
-SOCRATES_LIVE_EVAL=1 \
-SOCRATES_LIVE_EVAL_HOST=claude \
-SOCRATES_LIVE_EVAL_ARMS=skill,control \
-SOCRATES_LIVE_EVAL_CASES=guided-cache-misconception,guided-cache-correct \
-npm run eval:live
-```
+## Original inspiration
 
-Use `SOCRATES_LIVE_EVAL_HOST=codex` for Codex. Model output is nondeterministic, so regex graders and recorded examples are supporting evidence rather than semantic proof.
+Socrates' visual-first direction is based on the public Claude Community ELI5 plugin. The original focuses on HTML artifacts with large visuals and few words. Socrates adds the question-driven alignment loop, wrong-answer repair, and source grounding for code and systems.
+
+- [Claude Community ELI5 source](https://github.com/anthropics/claude-plugins-community/tree/main/eli5)
 
 ## License
 

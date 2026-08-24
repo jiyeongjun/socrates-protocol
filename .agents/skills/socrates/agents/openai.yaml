@@ -1,6 +1,6 @@
 interface:
   display_name: "Socrates"
-  short_description: "Explain clearly and build real understanding"
-  default_prompt: "Use $socrates to help me understand this topic, adapt to what I know, and check the key idea before moving on."
+  short_description: "See the idea, then align your understanding"
+  default_prompt: "Use $socrates to explain this visually, ask one focused question, and keep repairing the same idea until my answer shows the key relationship."
 policy:
   allow_implicit_invocation: true

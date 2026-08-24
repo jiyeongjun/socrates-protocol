@@ -1,7 +1,8 @@
 {
   "skillReferences": [
     "audience-calibration.md",
-    "guided-learning.md"
+    "guided-learning.md",
+    "visual-explanations.md"
   ],
   "skillScripts": [],
   "codexAgents": [],

@@ -1,8 +1,8 @@
 # Socrates Evaluations
 
-`cases.json` is the canonical evaluation catalog. It contains 22 cases in five groups:
+`cases.json` is the canonical evaluation catalog. It contains 23 cases in five groups:
 
-- `explanation`: direct, technical, audience-ready, source-grounded, and brownfield feature explanations;
+- `explanation`: visual-first concept and incident explanations, technical and audience-ready output, source-grounded walkthroughs, and brownfield feature explanations;
 - `guided`: opening a lesson, misconceptions, partial answers, correct answers, uncertainty, changed representations, and quiz opt-out;
 - `calibration`: children, age without stereotyping, mixed roles, bounded analogies, and language matching;
 - `noninterference`: ordinary tasks and narrow deliverables that must not become lessons;
@@ -14,7 +14,7 @@ Run the automated catalog checks with:
 npm run test:evals
 ```
 
-These checks validate the catalog, canonical/generated parity, package layout, reference routing, and explicit behavioral invariants. They do not call a model and do not prove model behavior.
+These 45 checks validate the catalog, canonical/generated parity, package layout, reference routing, and explicit behavioral invariants. They do not call a model and do not prove model behavior.
 
 ## Live paired evaluation
 
@@ -43,4 +43,4 @@ Useful options:
 - `SOCRATES_LIVE_EVAL_OUTPUT`: report directory, defaulting to ignored `.socrates-eval-results/`;
 - `SOCRATES_LIVE_EVAL_CASES=all`: deliberately run every live-capable case.
 
-Reports preserve raw output, parsed response, process state, timing, exact stream byte counts, available host telemetry, machine rubric results, and paired deltas only when both outcomes are genuinely comparable. Regex-based live graders are fast signals, not semantic proof; the question-count proxy ignores code and quoted examples but remains a punctuation heuristic. The guided live cases intentionally use cache freshness rather than the recursion example embedded in the skill reference. Final releases should also use independent forward tests with fresh model context, especially for the mastery gate.
+Reports preserve raw output, parsed response, process state, timing, exact stream byte counts, available host telemetry, machine rubric results, and paired deltas only when both outcomes are genuinely comparable. Regex-based live graders are fast signals, not semantic proof; the question-count proxy ignores code and quoted examples but remains a punctuation heuristic. The guided live cases intentionally use cache freshness rather than the recursion example embedded in the skill reference. Final releases should also use independent forward tests with fresh model context and inspect visual quality directly, especially for the alignment gate.
