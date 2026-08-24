@@ -6,7 +6,7 @@
 
 [English](./README.md)
 
-Socrates는 Codex와 Claude Code에서 다음 네 가지 상황에 쓰는 스킬입니다. 개념을 설명받을 때, 문답으로 배울 때, 내 이해가 맞는지 점검할 때, 다른 사람에게 전달할 설명을 만들 때 사용합니다.
+Socrates는 Codex와 Claude Code에서 이해와 학습이 작업의 핵심일 때 쓰는 스킬입니다. 개념 설명, 문답 학습, 이해도 점검, 대상별 설명뿐 아니라 기존 시스템에 기능을 추가하기 전 현재 구조와 변경 영향을 파악할 때도 사용합니다.
 
 요청을 보고 필요한 방식을 스스로 고릅니다. 일반적인 설명 요청에는 완결된 답을 주며 갑자기 퀴즈를 시작하지 않습니다. “소크라테스식으로 가르쳐줘”, “퀴즈로 확인해줘”처럼 대화형 학습을 명시했을 때만 질문을 이어갑니다.
 
@@ -18,6 +18,7 @@ Socrates는 Codex와 Claude Code에서 다음 네 가지 상황에 쓰는 스킬
 | 대화하며 학습 | `$socrates 재귀를 소크라테스식으로 가르쳐줘. 함수는 알지만 콜스택은 몰라.` | 한 번에 하나의 학습 목표를 다루고 핵심 질문 하나만 묻습니다. |
 | 내 이해를 점검 | `$socrates 내가 이해한 eventual consistency는 이래. 틀리거나 빠진 연결고리를 찾아줘: ...` | 맞는 부분과 부족하거나 잘못된 부분을 구분한 뒤 필요한 설명을 보충합니다. |
 | 다른 사람에게 설명 | `$socrates 이 API rate limit 문제를 매니저에게 보낼 짧은 글로 만들어줘.` | 글쓰기 수업을 시작하지 않고 상대에게 바로 보낼 완성본을 작성합니다. |
+| 기존 코드에 기능 추가 전 파악 | `$socrates 기존 주문 시스템에 예약 주문을 추가하려고 해. 먼저 현재 흐름, 꼭 지켜야 할 규칙, 기능을 연결할 위치를 코드 근거로 설명해줘.` | 지금 코드가 실제로 어떻게 동작하는지와 새로 만들 부분을 나눠 보여주고, 꼭 지킬 규칙과 추가하거나 고칠 테스트를 정리합니다. |
 
 ## 일반 응답과 무엇이 다른가
 
@@ -29,6 +30,7 @@ Socrates가 모델을 더 똑똑하게 만드는 것은 아닙니다. 일반 모
 | 문답으로 학습 | 관련 지식을 한꺼번에 설명하거나 임의의 후속 질문으로 이동할 수 있음 | 학습 목표 하나와 답을 요구하는 질문 하나에 집중 |
 | 틀리거나 애매한 답 | 정답을 알려준 뒤 다른 내용으로 넘어갈 수 있음 | 표현이나 예시를 바꾸되 다음 단계로 넘어가지 않고 같은 목표를 재확인 |
 | 다른 사람에게 전달 | 설명 방법이나 배경 해설이 섞일 수 있음 | 상대가 그대로 읽을 수 있는 완성본을 우선 제공 |
+| 기존 시스템에 기능 추가 | 바로 수정안이나 파일 목록으로 이동할 수 있음 | 현재 동작과 꼭 지킬 규칙을 먼저 설명하고, 지금 있는 코드와 앞으로 만들 부분을 나눠 보여줌 |
 
 즉, 일반 응답을 대체하는 별도 추론 엔진이 아니라 설명·학습·이해도 점검의 진행 방식을 일관되게 만드는 스킬입니다.
 
@@ -76,6 +78,7 @@ Socrates가 모델을 더 똑똑하게 만드는 것은 아닙니다. 일반 모
 | Claude | 데이터베이스 인덱스 일반 설명 | 통과 — B+tree 그림과 비교표를 사용하고 후속 질문 없이 종료 |
 | Codex | 캐시 freshness 오개념 | 통과 — 오개념을 수정하고 같은 목표에 머물며 질문 하나로 재확인 |
 | Claude | 캐시 freshness 오개념 | 통과 — 종이 메뉴판 비유로 표현을 바꾸고 같은 목표를 질문 하나로 재확인 |
+| Codex A/B | 기존 주문 서비스에 예약 주문 추가 전 파악 | 통과 — 양쪽 모두 코드를 정확히 읽었고, Socrates는 지금 있는 동작과 새로 만들 부분을 나눠 구현 전에 정할 것과 추가 테스트까지 정리 |
 
 ### 같은 요청 A/B — 일반 응답과 Socrates
 
@@ -85,6 +88,7 @@ Socrates가 모델을 더 똑똑하게 만드는 것은 아닙니다. 일반 모
 |---|---|---|---|
 | 데이터베이스 인덱스 설명 | 책 비유, SQL 예시, 읽기·쓰기 비용을 설명하고 질문 없이 종료 | 책 비유, SQL 예시, 읽기·쓰기 비용을 설명하고 질문 없이 종료 | 단순 설명에서는 큰 차이가 없었음. Socrates가 불필요한 문답을 강제하지 않음 |
 | “캐시는 원본을 계속 봐서 자동으로 안다”는 답에서 학습 계속 | TTL·무효화·버전 검사·이벤트·폴링을 한꺼번에 소개한 뒤 TTL 계산을 질문 | 자동 감지가 아니라는 점을 바로잡고, 외부 신호가 전혀 없는 사례에서 오래된 값과 새 값 중 무엇을 반환하는지 질문 | 일반 응답은 관련 주제로 확장했고, Socrates는 다음 단계로 넘어가지 않고 같은 오개념을 재확인 |
+| 기존 주문 서비스에 예약 주문 추가 전 파악 | 현재 흐름·꼭 지킬 규칙·2단계 설계·현재 위험을 정확히 설명 | 같은 내용을 설명하고 지금 동작하는 부분과 새로 만들 부분을 나눈 뒤 구현 전에 정할 것과 추가할 테스트까지 연결 | 일반 응답도 충분히 좋았음. Socrates가 더 정확했던 것은 아니며, 기능을 바꾸기 전에 확인할 내용과 빠뜨리기 쉬운 테스트를 알아보기 쉽게 정리했음 |
 
 <details>
 <summary>실제 오개념 A/B 응답 발췌 — Codex</summary>
@@ -121,6 +125,55 @@ Socrates 응답:
 > Without one of these, stale data can still look valid.
 >
 > Suppose the source changes, but sends no notification, the TTL has not expired, and no version check occurs. What will the cache return on the next request: its old copy or the new source value?
+
+</details>
+
+<details>
+<summary>실제 기존 코드 기능 추가 A/B 응답 발췌 — Codex</summary>
+
+테스트에 사용한 기존 코드: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
+
+공통 요청:
+
+```text
+I'm new to this codebase and need to add scheduled orders.
+Before I change anything, help me understand the current order-creation flow,
+what must remain true, and where this feature would likely connect.
+```
+
+일반 응답:
+
+> The fixture has one immediate order-creation path: `placeOrder`. There is currently no scheduler, pending-order state, API layer, or concrete repository implementation.
+>
+> A two-stage design fits this flow best:
+>
+> 1. `scheduleOrder` stores a scheduling intent containing `customerId`, items, `scheduledFor`, and a schedule ID.
+> 2. A worker claims that intent when due and invokes the existing `placeOrder` flow.
+> 3. Worker retries use a deterministic idempotency key derived from the schedule ID.
+> 4. The schedule records execution outcome separately: scheduled, processing, completed, cancelled, or failed.
+>
+> - If event publication fails after insertion, the code releases inventory even though a confirmed order already exists; a retry then returns that order without republishing.
+> - If insertion fails after payment authorization, the authorization is not voided.
+
+Socrates 응답:
+
+> The core mental model is: `placeOrder` synchronously turns a request into a confirmed order. Scheduled orders would add a persisted “intent” that is fulfilled later.
+>
+> There is no scheduler, API route, or concrete database implementation in this fixture. The visible extension point is this service and its injected dependencies.
+>
+> Before implementation, decide:
+>
+> - Whether inventory and price are locked when scheduled or evaluated at execution time.
+> - Whether payment is authorized now or at execution time.
+> - How cancellation and rescheduling affect queued work.
+> - Which failures are retryable and how duplicate charges are prevented.
+>
+> Alongside preserving the existing three tests, cover:
+>
+> - Scheduling persists a `scheduled` order without reserving inventory or authorizing payment.
+> - A due order is claimed and fulfilled exactly once under concurrent workers.
+> - Fulfillment retains the existing reserve → authorize → confirm → publish ordering.
+> - Retries cannot duplicate payment, confirmation, or event publication.
 
 </details>
 
@@ -310,7 +363,7 @@ npm run test:evals
 npm test
 ```
 
-평가 카탈로그는 설명, 가이드 학습, 대상 보정, 비간섭, 패키징의 21개 case와 38개 정적 판정으로 구성됩니다. 선택적 격리 live eval:
+평가 카탈로그는 설명, 가이드 학습, 대상 보정, 비간섭, 패키징의 22개 case와 42개 자동 판정으로 구성됩니다. 선택적 격리 live eval:
 
 ```bash
 SOCRATES_LIVE_EVAL=1 \

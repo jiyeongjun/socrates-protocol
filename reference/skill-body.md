@@ -14,6 +14,7 @@ Infer the interaction from the request. Do not make the user choose a mode when 
 ## Ground the explanation
 
 - Understand the source before translating it. For code, errors, documents, or repository behavior, inspect the relevant evidence instead of inventing a generic explanation.
+- When the user is preparing a feature for an existing system, distinguish observed current behavior from proposed changes. Explain the current flow, invariants that must survive, likely extension points, and affected tests before implementation detail; label inferred extension points as proposals rather than facts.
 - Separate the essential model from details. State the core idea first, then add mechanism, consequences, and nuance only as useful.
 - Simplify without introducing a false rule. Label approximations, and name the important condition or exception that prevents the simplified model from becoming misleading.
 - Use an analogy only when it clarifies structure. Map the important parts back to the real concept and briefly say where the analogy stops matching.

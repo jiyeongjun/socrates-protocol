@@ -72,6 +72,21 @@
       "live_grader_id": "source-grounded"
     },
     {
+      "id": "explain-brownfield-scheduled-orders",
+      "group": "explanation",
+      "prompt": "I'm new to this codebase and need to add scheduled orders. Before I change anything, help me understand the current order-creation flow, what must remain true, and where this feature would likely connect.",
+      "fixture": "fixtures/brownfield-orders",
+      "expected_action_class": "brownfield-change-explanation",
+      "forbidden_actions": ["edit the fixture", "blur current behavior with a proposed design", "present scheduled-order support as already implemented"],
+      "required_output_fields": ["current flow", "preserved invariants", "proposed extension point", "test impact", "compact visual"],
+      "expected_mutation": "none",
+      "expected_questions": {"min": 0, "max": 0},
+      "hosts": ["codex", "claude"],
+      "models": "cross-host-default",
+      "static_grader_ids": ["source-grounding", "brownfield-grounding", "brownfield-fixture", "visual-explanation"],
+      "live_grader_id": "brownfield-feature"
+    },
+    {
       "id": "guided-photosynthesis-opening",
       "group": "guided",
       "prompt": "Teach me photosynthesis Socratically. I know plants need sunlight, but not much else. Start the lesson.",

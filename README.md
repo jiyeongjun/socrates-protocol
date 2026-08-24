@@ -6,7 +6,7 @@
 
 [한국어](./README.ko.md)
 
-Socrates is a Codex and Claude Code skill for four jobs: explaining a concept, learning it interactively, checking your own understanding, and writing an explanation for someone else.
+Socrates is a Codex and Claude Code skill for work whose real goal is understanding or learning. It covers concept explanations, interactive learning, understanding checks, audience-ready explanations, and learning an existing system before adding a feature.
 
 It chooses the interaction from the request. A normal explanation gets a complete answer, not a surprise quiz. Socratic dialogue starts only when you ask to be taught, questioned, or tested interactively.
 
@@ -18,6 +18,7 @@ It chooses the interaction from the request. A normal explanation gets a complet
 | Learn through dialogue | `$socrates Teach me recursion Socratically. I know functions, but not the call stack.` | Teaches one objective at a time and asks one focused question at a time. |
 | Check your understanding | `$socrates Here is how I understand eventual consistency. Find the gap in my model: ...` | Separates what is correct from what is missing or mistaken before adding new material. |
 | Explain it to someone else | `$socrates Turn this API rate-limit issue into a short update I can send to my manager.` | Produces the finished audience-ready message instead of teaching the original user how to write it. |
+| Understand a change to existing code | `$socrates I need to add scheduled orders to this existing service. Explain how it works now, what rules must stay true, and where the new feature could connect.` | Separates what the code does today from what still needs to be built, then names the rules and tests the change must preserve. |
 
 ## How it differs from a normal response
 
@@ -29,6 +30,7 @@ Socrates does not make the model smarter. Modern models already explain straight
 | Interactive learning | May explain several related ideas at once or choose any follow-up | Focuses on one learning objective and one response-demanding question at a time |
 | Wrong or unclear answer | May give the correction and continue to another topic | Changes the representation but stays on the same objective until the learner demonstrates the missing relationship |
 | Audience-ready deliverable | May mix the requested text with advice about how to explain it | Prioritizes the finished text the audience can read directly |
+| Feature in an existing system | May jump directly to a patch plan or file list | Explains how the code works now and which rules must stay true before discussing what needs to be added |
 
 In short, Socrates makes explanation, guided learning, and understanding checks more predictable; it does not replace the base model's intelligence.
 
@@ -76,6 +78,7 @@ These results came from fresh Codex and Claude sessions using the generated v1 s
 | Claude | Direct database-index explanation | PASS — B+tree sketch, comparison table, and no follow-up question |
 | Codex | Cache-freshness misconception | PASS — corrected the model, stayed on cache freshness, and asked one same-objective question |
 | Claude | Cache-freshness misconception | PASS — changed to a paper-menu analogy and re-checked the same objective with one question |
+| Codex A/B | Understand scheduled orders in an existing service | PASS — both arms read the code correctly; Socrates separated what exists from what must be added and listed decisions and new tests |
 
 ### Same-prompt A/B — normal response vs. Socrates
 
@@ -85,6 +88,7 @@ These paired runs used the same Codex model in independent fresh sessions. One s
 |---|---|---|---|
 | Explain a database index | Book analogy, SQL example, read/write trade-off, and no closing question | Book analogy, SQL example, read/write trade-off, and no closing question | Little difference for a straightforward explanation; Socrates did not force an unnecessary dialogue |
 | Continue after “the cache watches the source automatically” | Introduced TTL, invalidation, version checks, events, and polling together, then asked a TTL calculation | Corrected automatic detection, then asked what the cache returns when no signal, expiry, or version check occurs | The normal response expanded to a related objective; Socrates stayed on the original misconception and re-checked it |
+| Understand scheduled orders before changing an existing service | Correctly explained the current flow, rules to preserve, two-stage design, and existing risks | Covered the same evidence, separated what works today from what must be added, then listed decisions to make and tests to add | The normal response was already strong. Socrates was not more correct; it made the things to check before changing the code easier to scan and harder to miss |
 
 <details>
 <summary>Actual misconception A/B excerpts — Codex</summary>
@@ -121,6 +125,55 @@ Socrates response:
 > Without one of these, stale data can still look valid.
 >
 > Suppose the source changes, but sends no notification, the TTL has not expired, and no version check occurs. What will the cache return on the next request: its old copy or the new source value?
+
+</details>
+
+<details>
+<summary>Actual existing-code feature A/B excerpts — Codex</summary>
+
+Test code: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
+
+Shared request:
+
+```text
+I'm new to this codebase and need to add scheduled orders.
+Before I change anything, help me understand the current order-creation flow,
+what must remain true, and where this feature would likely connect.
+```
+
+Normal response:
+
+> The fixture has one immediate order-creation path: `placeOrder`. There is currently no scheduler, pending-order state, API layer, or concrete repository implementation.
+>
+> A two-stage design fits this flow best:
+>
+> 1. `scheduleOrder` stores a scheduling intent containing `customerId`, items, `scheduledFor`, and a schedule ID.
+> 2. A worker claims that intent when due and invokes the existing `placeOrder` flow.
+> 3. Worker retries use a deterministic idempotency key derived from the schedule ID.
+> 4. The schedule records execution outcome separately: scheduled, processing, completed, cancelled, or failed.
+>
+> - If event publication fails after insertion, the code releases inventory even though a confirmed order already exists; a retry then returns that order without republishing.
+> - If insertion fails after payment authorization, the authorization is not voided.
+
+Socrates response:
+
+> The core mental model is: `placeOrder` synchronously turns a request into a confirmed order. Scheduled orders would add a persisted “intent” that is fulfilled later.
+>
+> There is no scheduler, API route, or concrete database implementation in this fixture. The visible extension point is this service and its injected dependencies.
+>
+> Before implementation, decide:
+>
+> - Whether inventory and price are locked when scheduled or evaluated at execution time.
+> - Whether payment is authorized now or at execution time.
+> - How cancellation and rescheduling affect queued work.
+> - Which failures are retryable and how duplicate charges are prevented.
+>
+> Alongside preserving the existing three tests, cover:
+>
+> - Scheduling persists a `scheduled` order without reserving inventory or authorizing payment.
+> - A due order is claimed and fulfilled exactly once under concurrent workers.
+> - Fulfillment retains the existing reserve → authorize → confirm → publish ordering.
+> - Retries cannot duplicate payment, confirmation, or event publication.
 
 </details>
 
@@ -301,7 +354,7 @@ npm run test:evals
 npm test
 ```
 
-The catalog contains 21 cases and 38 static grader checks across explanation, guided learning, audience calibration, noninterference, and packaging. Optional isolated live evaluation:
+The catalog contains 22 cases and 42 automated grader checks across explanation, guided learning, audience calibration, noninterference, and packaging. Optional isolated live evaluation:
 
 ```bash
 SOCRATES_LIVE_EVAL=1 \

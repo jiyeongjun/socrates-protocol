@@ -169,6 +169,27 @@ const staticGraders = {
     assert.match(context.body, /Simplify without introducing a false rule/i);
     assert.match(context.body, /where the analogy stops matching/i);
   },
+  "brownfield-grounding": async ({ context }) => {
+    assert.match(context.body, /preparing a feature for an existing system/i);
+    assert.match(context.body, /observed current behavior from proposed changes/i);
+    assert.match(context.body, /current flow, invariants that must survive, likely extension points, and affected tests/i);
+    assert.match(context.body, /proposals rather than facts/i);
+  },
+  "brownfield-fixture": async ({ evalCase }) => {
+    const resolved = fixturePath(evalCase.fixture);
+    assert.ok(resolved);
+    assert.equal(path.basename(resolved), "brownfield-orders");
+    for (const name of ["package.json", "order-service.js", "order-service.test.js"]) {
+      assert.equal(await pathExists(path.join(resolved, name)), true);
+    }
+    const service = await readFile(path.join(resolved, "order-service.js"), "utf8");
+    const tests = await readFile(path.join(resolved, "order-service.test.js"), "utf8");
+    assert.match(service, /findByIdempotencyKey.*inventory\.reserve.*payments\.authorize.*orders\.insert.*events\.publish/is);
+    assert.match(service, /inventory\.release/);
+    assert.match(tests, /existing idempotent order.*before starting side effects/is);
+    assert.match(tests, /persists, then publishes/is);
+    assert.match(tests, /releases inventory when a downstream step fails/is);
+  },
   "visual-explanation": async ({ context }) => {
     assert.match(context.body, /sequence, comparison, hierarchy, spatial relationship, or changing state/i);
     assert.match(context.body, /compact table or inline flow, timeline, or tree/i);

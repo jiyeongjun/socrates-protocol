@@ -214,8 +214,8 @@ test("English and Korean READMEs document behavior, installation, upgrade, and e
     assert.match(readme, /\.agents\/skills\/socrates/);
     assert.match(readme, /\.claude\/skills\/socrates/);
     assert.match(readme, /v0\.10\.0/);
-    assert.match(readme, /21/);
-    assert.match(readme, /38/);
+    assert.match(readme, /22/);
+    assert.match(readme, /42/);
     assert.match(readme, /npm run verify:skills/);
     assert.match(readme, /SOCRATES_LIVE_EVAL_HOST=claude/);
     assert.doesNotMatch(readme, /DreambigOu\/ELI5/);
@@ -223,10 +223,13 @@ test("English and Korean READMEs document behavior, installation, upgrade, and e
     assert.doesNotMatch(readme, /deterministic checks|결정적 검사/i);
   }
   assert.match(english, /When to use Socrates/i);
-  assert.match(english, /Understand something quickly.*Learn through dialogue.*Check your understanding.*Explain it to someone else/is);
+  assert.match(english, /Understand something quickly.*Learn through dialogue.*Check your understanding.*Explain it to someone else.*Understand a change to existing code/is);
+  assert.match(english, /what the code does today from what still needs to be built/i);
   assert.match(english, /How it differs from a normal response/i);
   assert.match(english, /does not make the model smarter/i);
   assert.match(english, /Same-prompt A\/B/i);
+  assert.match(english, /Actual existing-code feature A\/B excerpts/i);
+  assert.match(english, /normal response was already strong.*Socrates was not more correct/is);
   assert.match(english, /normal response expanded to a related objective.*Socrates stayed on the original misconception/is);
   assert.match(english, /A normal explanation gets a complete answer, not a surprise quiz/i);
   assert.match(english, /Visual explanations/i);
@@ -235,10 +238,14 @@ test("English and Korean READMEs document behavior, installation, upgrade, and e
   assert.match(english, /checks the same idea again before moving forward/i);
   assert.match(english, /never repeats the same question unchanged/i);
   assert.match(korean, /언제 쓰는가/);
-  assert.match(korean, /개념을 빠르게 이해.*대화하며 학습.*내 이해를 점검.*다른 사람에게 설명/is);
+  assert.match(korean, /개념을 빠르게 이해.*대화하며 학습.*내 이해를 점검.*다른 사람에게 설명.*기존 코드에 기능 추가 전 파악/is);
+  assert.match(korean, /지금 코드가 실제로 어떻게 동작하는지와 새로 만들 부분을 나눠/);
   assert.match(korean, /일반 응답과 무엇이 다른가/);
   assert.match(korean, /모델을 더 똑똑하게 만드는 것은 아닙니다/);
   assert.match(korean, /같은 요청 A\/B/);
+  assert.match(korean, /실제 기존 코드 기능 추가 A\/B 응답 발췌/i);
+  assert.match(korean, /일반 응답도 충분히 좋았음.*Socrates가 더 정확했던 것은 아니며/is);
+  assert.doesNotMatch(korean, /이해.?지도|정답 우위|현재.?제안 경계|별도로 구조화|불변 조건|확장 지점/);
   assert.match(korean, /일반 응답은 관련 주제로 확장했고.*Socrates는 다음 단계로 넘어가지 않고 같은 오개념을 재확인/is);
   assert.match(korean, /일반적인 설명 요청에는 완결된 답을 주며 갑자기 퀴즈를 시작하지 않습니다/);
   assert.match(korean, /시각화는 언제 쓰는가/);

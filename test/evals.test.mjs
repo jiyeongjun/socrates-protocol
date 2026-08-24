@@ -45,7 +45,7 @@ test("structured eval catalog covers every required behavior and fixture group",
   assert.equal(schema.properties.schema_version.const, catalog.schema_version);
 
   const counts = Object.groupBy(catalog.cases, (evalCase) => evalCase.group);
-  assert.ok(counts.explanation.length >= 4);
+  assert.ok(counts.explanation.length >= 5);
   assert.ok(counts.guided.length >= 7);
   assert.ok(counts.calibration.length >= 5);
   assert.ok(counts.noninterference.length >= 2);
@@ -57,6 +57,7 @@ test("structured eval catalog covers every required behavior and fixture group",
     "explain-race-condition-engineer",
     "deliverable-manager-rate-limit",
     "explain-source-grounded-code",
+    "explain-brownfield-scheduled-orders",
     "guided-photosynthesis-opening",
     "guided-cache-misconception",
     "guided-cache-partial",
@@ -84,6 +85,16 @@ test("structured eval catalog covers every required behavior and fixture group",
   assert.ok(visualCase.required_output_fields.includes("small visual"));
   assert.ok(visualCase.static_grader_ids.includes("visual-explanation"));
 
+  const brownfieldCase = catalog.cases.find(
+    (evalCase) => evalCase.id === "explain-brownfield-scheduled-orders"
+  );
+  assert.equal(brownfieldCase.fixture, "fixtures/brownfield-orders");
+  assert.deepEqual(brownfieldCase.expected_questions, { min: 0, max: 0 });
+  assert.ok(brownfieldCase.required_output_fields.includes("preserved invariants"));
+  assert.ok(brownfieldCase.required_output_fields.includes("proposed extension point"));
+  assert.ok(brownfieldCase.static_grader_ids.includes("brownfield-grounding"));
+  assert.ok(brownfieldCase.static_grader_ids.includes("brownfield-fixture"));
+
   const knownLiveGraders = new Set(liveGraderIds);
   for (const evalCase of catalog.cases) {
     if (evalCase.live_grader_id) {
@@ -98,8 +109,8 @@ test("structured eval catalog covers every required behavior and fixture group",
 test("static eval runner executes every case and machine grader", async () => {
   const summary = await runStaticEvals();
   assert.equal(summary.passed, true);
-  assert.equal(summary.cases, 21);
-  assert.ok(summary.grader_checks >= summary.cases);
+  assert.equal(summary.cases, 22);
+  assert.equal(summary.grader_checks, 42);
   assert.deepEqual(summary.failures, []);
 });
 
@@ -435,6 +446,24 @@ test("direct explanation grader requires a compact explanatory visual", () => {
   );
   assert.equal(proseOnly.passed, false);
   assert.equal(proseOnly.missing_patterns.length, 1);
+});
+
+test("brownfield grader requires source-grounded flow, invariants, proposals, and tests", () => {
+  const evalCase = {
+    live_grader_id: "brownfield-feature",
+    expected_questions: { min: 0, max: 0 },
+  };
+  const response = [
+    "Current flow: findByIdempotencyKey -> inventory.reserve -> payments.authorize -> orders.insert -> events.publish order.confirmed.",
+    "Invariants to preserve: idempotency precedes side effects, persistence precedes the event, and downstream failure releases inventory.",
+    "A likely proposal is a new scheduled state plus a scheduler or worker; that design is not present in the current code.",
+    "Tests should cover duplicate requests, ordering, release on failure, and scheduled execution.",
+  ].join("\n\n");
+  assert.equal(gradeResponse(evalCase, response).passed, true);
+
+  const mutationClaim = gradeResponse(evalCase, `${response}\n\nI implemented the worker.`);
+  assert.equal(mutationClaim.passed, false);
+  assert.equal(mutationClaim.forbidden_patterns.length, 1);
 });
 
 test("paired comparisons separate outcome from nullable performance deltas", () => {

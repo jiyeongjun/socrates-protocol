@@ -1,14 +1,14 @@
 # Socrates Evaluations
 
-`cases.json` is the canonical evaluation catalog. It contains 21 cases in five groups:
+`cases.json` is the canonical evaluation catalog. It contains 22 cases in five groups:
 
-- `explanation`: direct, technical, audience-ready, and source-grounded explanations;
+- `explanation`: direct, technical, audience-ready, source-grounded, and brownfield feature explanations;
 - `guided`: opening a lesson, misconceptions, partial answers, correct answers, uncertainty, changed representations, and quiz opt-out;
 - `calibration`: children, age without stereotyping, mixed roles, bounded analogies, and language matching;
 - `noninterference`: ordinary tasks and narrow deliverables that must not become lessons;
 - `packaging`: generated Codex/Claude parity and installer layout.
 
-Run deterministic checks with:
+Run the automated catalog checks with:
 
 ```bash
 npm run test:evals

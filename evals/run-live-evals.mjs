@@ -39,6 +39,19 @@ const liveGraders = {
     must: [/3 (?:attempts|tries)|attempts.*3/iu, /100\s*(?:ms|milliseconds)/iu, /last error|rethrows?|throw/iu],
     mustNot: [/exponential backoff|jitter/iu],
   },
+  "brownfield-feature": {
+    must: [
+      /idempotenc|findByIdempotencyKey/iu,
+      /reserv(?:e|ation)[\s\S]*authori[sz]|inventory[\s\S]*payment/iu,
+      /insert|persist|save/iu,
+      /publish|order\.confirmed|event/iu,
+      /invariant|must (?:remain|stay|preserve)|preserve/iu,
+      /propos|likely|could|would|new (?:path|state|scheduler|worker)/iu,
+      /test|coverage/iu,
+      /→|->|├|└|\|[^\n]+\|/u,
+    ],
+    mustNot: [/I (?:implemented|changed|modified)|files? (?:were )?(?:changed|modified)|scheduled orders? (?:are|is) already supported/iu],
+  },
   "guided-opening": {
     must: [/photosynthesis/iu, /light|sunlight/iu],
     mustNot: [/quiz has \d+ questions|first question.*second question/iu],
