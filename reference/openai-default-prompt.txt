@@ -1,1 +1,1 @@
-Use $socrates-contract only for protected mutation or explicit durable handoff/resume. Keep ordinary reversible work on the host's normal path; contract state records decisions but never grants approval.
+Use $socrates to help me understand this topic, adapt to what I know, and check the key idea before moving on.

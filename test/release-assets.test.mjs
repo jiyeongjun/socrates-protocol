@@ -51,9 +51,18 @@ test("release asset manifest stays aligned with package version and shipped file
 
   assert.equal(DEFAULT_VERSION, `v${pkg.version}`);
   assert.match(JSON.stringify(assetPaths), /scripts\/install\.mjs/);
-  assert.match(JSON.stringify(assetPaths), /scripts\/scaffold-contract\.mjs/);
+  assert.equal(assetPaths.some((asset) => asset.includes("scaffold-contract")), false);
+  assert.equal(assetPaths.some((asset) => asset.includes("socrates-contract")), false);
+  assert.equal(assetPaths.some((asset) => asset.includes("model-policy")), false);
+  assert.equal(assetPaths.includes(".agents/skills/socrates/SKILL.md"), true);
+  assert.equal(assetPaths.includes(".claude/skills/socrates/SKILL.md"), true);
+  assert.equal(
+    assetPaths.includes(
+      ".agents/skills/socrates/references/guided-learning.md"
+    ),
+    true
+  );
   assert.equal(assetPaths.includes("reference/skill-layout.json"), true);
-  assert.equal(assetPaths.includes("reference/model-policy.json"), true);
 
   for (const relativePath of assetPaths) {
     await assert.doesNotReject(() =>

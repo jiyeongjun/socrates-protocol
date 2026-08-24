@@ -20,14 +20,14 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const DEFAULT_VERSION = "v0.10.0";
+export const DEFAULT_VERSION = "v1.0.0";
 export const INSTALL_MANIFEST_NAME = ".socrates-install.json";
 
 const DEFAULT_MODE = "install";
 const REPO_SLUG = "jiyeongjun/socrates-protocol";
 const MANIFEST_SCHEMA_VERSION = 1;
 const OWNERSHIP_LEDGER_SCHEMA_VERSION = 1;
-const PROTOCOL = "socrates-contract";
+const PROTOCOL = "socrates";
 const PROTOCOL_VERSION = DEFAULT_VERSION.slice(1);
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/u;
 const KNOWN_SHARED_AGENTS = Object.freeze({
@@ -47,17 +47,14 @@ const KNOWN_SHARED_AGENTS = Object.freeze({
 
 const ASSETS = Object.freeze({
   skillLayout: "reference/skill-layout.json",
-  modelPolicy: "reference/model-policy.json",
-  codexSkill: ".agents/skills/socrates-contract/SKILL.md",
-  codexAgent: ".agents/skills/socrates-contract/agents/openai.yaml",
-  codexModelPolicy: ".agents/skills/socrates-contract/model-policy.json",
-  codexReferencesDir: ".agents/skills/socrates-contract/references",
-  codexScriptsDir: ".agents/skills/socrates-contract/scripts",
+  codexSkill: ".agents/skills/socrates/SKILL.md",
+  codexAgent: ".agents/skills/socrates/agents/openai.yaml",
+  codexReferencesDir: ".agents/skills/socrates/references",
+  codexScriptsDir: ".agents/skills/socrates/scripts",
   codexAgentsDir: ".codex/agents",
-  claudeSkill: ".claude/skills/socrates-contract/SKILL.md",
-  claudeModelPolicy: ".claude/skills/socrates-contract/model-policy.json",
-  claudeReferencesDir: ".claude/skills/socrates-contract/references",
-  claudeScriptsDir: ".claude/skills/socrates-contract/scripts",
+  claudeSkill: ".claude/skills/socrates/SKILL.md",
+  claudeReferencesDir: ".claude/skills/socrates/references",
+  claudeScriptsDir: ".claude/skills/socrates/scripts",
   claudeAgentsDir: ".claude/agents",
 });
 
@@ -164,15 +161,12 @@ export function listReleaseAssetPaths(rawSkillLayout) {
   return [
     "scripts/install.mjs",
     ASSETS.skillLayout,
-    ASSETS.modelPolicy,
     ASSETS.codexSkill,
     ASSETS.codexAgent,
-    ASSETS.codexModelPolicy,
     ...Object.values(codexReferenceAssets),
     ...Object.values(codexScriptAssets),
     ...Object.values(codexAgentAssets),
     ASSETS.claudeSkill,
-    ASSETS.claudeModelPolicy,
     ...Object.values(claudeReferenceAssets),
     ...Object.values(claudeScriptAssets),
     ...Object.values(claudeAgentAssets),
@@ -414,7 +408,6 @@ function listInstallAssetSources(platforms, layout) {
   if (platforms.includes("codex")) {
     sources.add(ASSETS.codexSkill);
     sources.add(ASSETS.codexAgent);
-    sources.add(ASSETS.codexModelPolicy);
     for (const name of layout.skillReferences) {
       sources.add(`${ASSETS.codexReferencesDir}/${name}`);
     }
@@ -427,7 +420,6 @@ function listInstallAssetSources(platforms, layout) {
   }
   if (platforms.includes("claude")) {
     sources.add(ASSETS.claudeSkill);
-    sources.add(ASSETS.claudeModelPolicy);
     for (const name of layout.skillReferences) {
       sources.add(`${ASSETS.claudeReferencesDir}/${name}`);
     }
@@ -539,7 +531,7 @@ async function resolveCodexSkillDirs(options, ops) {
         path.resolve(options.targetRepo),
         ".agents",
         "skills",
-        "socrates-contract"
+        "socrates"
       ),
     ];
   }
@@ -547,12 +539,12 @@ async function resolveCodexSkillDirs(options, ops) {
     options.homeDir,
     ".agents",
     "skills",
-    "socrates-contract"
+    "socrates"
   );
   const legacy = path.join(
     options.codexHome,
     "skills",
-    "socrates-contract"
+    "socrates"
   );
   const [hasCanonical, hasLegacy] = await Promise.all([
     pathExists(canonical, ops),
@@ -570,9 +562,9 @@ function resolveClaudeSkillDir(options) {
         path.resolve(options.targetRepo),
         ".claude",
         "skills",
-        "socrates-contract"
+        "socrates"
       )
-    : path.join(options.homeDir, ".claude", "skills", "socrates-contract");
+    : path.join(options.homeDir, ".claude", "skills", "socrates");
 }
 
 function resolveAgentDir(options, platform) {
@@ -851,17 +843,17 @@ function allowedTransactionTargets(options, platforms, installerPaths = null) {
           repoRoot,
           ".agents",
           "skills",
-          "socrates-contract"
+          "socrates"
         ),
         repoRoot
       );
     } else {
       skillRoots.set(
-        path.join(options.homeDir, ".agents", "skills", "socrates-contract"),
+        path.join(options.homeDir, ".agents", "skills", "socrates"),
         options.homeDir
       );
       skillRoots.set(
-        path.join(options.codexHome, "skills", "socrates-contract"),
+        path.join(options.codexHome, "skills", "socrates"),
         options.codexHome
       );
     }
@@ -918,7 +910,6 @@ function validateJournalUnit(unit, allowed) {
       const relative = path.relative(skillDir, resolvedTarget).split(path.sep).join("/");
       if (
         relative === "SKILL.md" ||
-        relative === "model-policy.json" ||
         relative === "agents/openai.yaml" ||
         relative === INSTALL_MANIFEST_NAME ||
         /^references\/[a-z0-9][a-z0-9._-]*\.md$/u.test(relative) ||
@@ -960,7 +951,7 @@ function validateJournalUnit(unit, allowed) {
     const isSkillStage =
       allowed.skillRoots.has(resolvedTarget) &&
       stagedParent === path.dirname(resolvedTarget) &&
-      path.basename(unit.staged).startsWith(".socrates-contract.stage-");
+      path.basename(unit.staged).startsWith(".socrates.stage-");
     let isAgentStage = false;
     for (const agentDir of allowed.agentRoots.keys()) {
       if (
@@ -1204,7 +1195,6 @@ function buildCodexAssets(skillDir, agentDir, layout, loaded, includeAgents) {
   const internal = [
     makeInternalAsset(ASSETS.codexSkill, "SKILL.md", loaded),
     makeInternalAsset(ASSETS.codexAgent, path.join("agents", "openai.yaml"), loaded),
-    makeInternalAsset(ASSETS.codexModelPolicy, "model-policy.json", loaded),
     ...layout.skillReferences.map((name) =>
       makeInternalAsset(
         `${ASSETS.codexReferencesDir}/${name}`,
@@ -1237,7 +1227,6 @@ function buildCodexAssets(skillDir, agentDir, layout, loaded, includeAgents) {
 function buildClaudeAssets(skillDir, agentDir, layout, loaded) {
   const internal = [
     makeInternalAsset(ASSETS.claudeSkill, "SKILL.md", loaded),
-    makeInternalAsset(ASSETS.claudeModelPolicy, "model-policy.json", loaded),
     ...layout.skillReferences.map((name) =>
       makeInternalAsset(
         `${ASSETS.claudeReferencesDir}/${name}`,
@@ -1311,11 +1300,9 @@ function trustedInternalManifestPair(asset, platform) {
       ? new Map([
           ["SKILL.md", ASSETS.codexSkill],
           ["agents/openai.yaml", ASSETS.codexAgent],
-          ["model-policy.json", ASSETS.codexModelPolicy],
         ])
       : new Map([
           ["SKILL.md", ASSETS.claudeSkill],
-          ["model-policy.json", ASSETS.claudeModelPolicy],
         ]);
   if (exactPairs.get(asset.target) === asset.source) return true;
 
@@ -1900,7 +1887,7 @@ async function stageDescriptor(descriptor, manifest, removals, expectedState, op
   await ops.mkdir(path.dirname(descriptor.skillDir), { recursive: true });
   await assertDescriptorPathsSafe(descriptor, ops);
   const skillStage = await ops.mkdtemp(
-    path.join(path.dirname(descriptor.skillDir), ".socrates-contract.stage-")
+    path.join(path.dirname(descriptor.skillDir), ".socrates.stage-")
   );
   const cleanupRoots = [skillStage];
   const units = [];
@@ -2520,7 +2507,7 @@ export async function installSocrates(rawOptions = {}, dependencies = {}) {
         cleanupEntries.push(
           ...staged.cleanupRoots.map((target) => ({
             target,
-            safeRoot: target.includes(".socrates-contract.stage-")
+            safeRoot: target.includes(".socrates.stage-")
               ? descriptor.skillRoot
               : descriptor.agentRoot,
           }))
@@ -2744,17 +2731,17 @@ export async function uninstallSocrates(rawOptions = {}, dependencies = {}) {
               path.resolve(options.targetRepo),
               ".agents",
               "skills",
-              "socrates-contract"
+              "socrates"
             )
           : path.join(
               options.homeDir,
               ".agents",
               "skills",
-              "socrates-contract"
+              "socrates"
             );
       const legacy =
         options.scope === "global"
-          ? path.join(options.codexHome, "skills", "socrates-contract")
+          ? path.join(options.codexHome, "skills", "socrates")
           : null;
       targets.push({
         platform: "codex",

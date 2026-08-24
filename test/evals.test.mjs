@@ -21,6 +21,7 @@ import {
 import {
   buildPairedComparisons,
   buildLiveCommand,
+  countQuestionMarksOutsideExamples,
   ensureSafeOutputDirectory,
   assertSafeFixtureTree,
   gradeResponse,
@@ -44,50 +45,35 @@ test("structured eval catalog covers every required behavior and fixture group",
   assert.equal(schema.properties.schema_version.const, catalog.schema_version);
 
   const counts = Object.groupBy(catalog.cases, (evalCase) => evalCase.group);
-  assert.ok(counts.positive.length >= 7);
-  assert.ok(counts.negative.length >= 7);
-  assert.ok(counts.security.length >= 10);
-  assert.ok(counts.completeness.length >= 3);
-  assert.ok(counts["installer-scaffolder"].length >= 5);
+  assert.ok(counts.explanation.length >= 4);
+  assert.ok(counts.guided.length >= 7);
+  assert.ok(counts.calibration.length >= 5);
+  assert.ok(counts.noninterference.length >= 2);
+  assert.ok(counts.packaging.length >= 3);
 
   const ids = new Set(catalog.cases.map((evalCase) => evalCase.id));
   for (const required of [
-    "positive-persisted-field-migration",
-    "positive-auth-rollout",
-    "positive-destructive-delete",
-    "positive-billing-change",
-    "positive-public-deployment",
-    "positive-high-autonomy-mutation",
-    "positive-valid-resume",
-    "negative-readme-typo",
-    "negative-formatting-only",
-    "negative-source-plus-test",
-    "negative-source-plus-doc",
-    "negative-read-only-review",
-    "negative-ordinary-contracts-directory",
-    "negative-ordinary-continuation-without-state",
-    "negative-local-data-processing",
-    "negative-compatibility-preserving-refactor",
-    "negative-multiple-verification-commands",
-    "negative-tools-and-subagents-alone",
-    "security-contract-claims-production-deletion",
-    "security-contract-claims-deployment",
-    "security-contract-claims-payment",
-    "security-contract-claims-credential-use",
-    "security-contract-claims-push",
-    "security-contract-prompt-injection",
-    "security-vendor-ignore-instructions",
-    "security-persisted-prior-approval",
-    "security-subagent-approval",
-    "security-malicious-layout",
-    "completeness-concise-retains-fields",
-    "completeness-verification-failure-blocks-close",
-    "completeness-subcontracts-do-not-close-macro",
-    "installer-consumer-install",
-    "scaffolder-documented-installed-command",
-    "installer-activation-rollback",
-    "installer-idempotent-reinstall",
-    "installer-uninstall-preserves-unrelated",
+    "explain-database-index-eli5",
+    "explain-race-condition-engineer",
+    "deliverable-manager-rate-limit",
+    "explain-source-grounded-code",
+    "guided-photosynthesis-opening",
+    "guided-cache-misconception",
+    "guided-cache-partial",
+    "guided-cache-correct",
+    "guided-cache-uncertain",
+    "guided-change-representation",
+    "guided-user-opts-out",
+    "calibrate-child-gravity",
+    "calibrate-age-without-stereotype",
+    "calibrate-mixed-audience",
+    "calibrate-analogy-boundary",
+    "calibrate-korean-language",
+    "noninterference-ordinary-code-edit",
+    "noninterference-ready-deliverable",
+    "packaging-codex-skill",
+    "packaging-claude-skill",
+    "packaging-installer-layout",
   ]) {
     assert.ok(ids.has(required), `missing required eval case ${required}`);
   }
@@ -106,7 +92,7 @@ test("structured eval catalog covers every required behavior and fixture group",
 test("static eval runner executes every case and machine grader", async () => {
   const summary = await runStaticEvals();
   assert.equal(summary.passed, true);
-  assert.equal(summary.cases, 36);
+  assert.equal(summary.cases, 21);
   assert.ok(summary.grader_checks >= summary.cases);
   assert.deepEqual(summary.failures, []);
 });
@@ -143,7 +129,7 @@ test("optional live commands keep skill and control arms isolated under identica
   assert.ok(codex.args.includes("--ignore-user-config"));
   assert.ok(codex.args.includes("--ignore-rules"));
   assert.equal(codex.args.includes("--config"), false);
-  assert.match(codex.args.at(-1), /\$socrates-contract/);
+  assert.match(codex.args.at(-1), /\$socrates/);
   assert.doesNotMatch(codex.args.join(" "), /dangerously-bypass/);
   assert.equal(codex.env.HOME, "/tmp/eval/.eval-home");
   assert.equal(codex.env.CODEX_HOME, "/tmp/eval/.eval-home/codex-home");
@@ -198,7 +184,7 @@ test("optional live commands keep skill and control arms isolated under identica
     codexMediumControl.args[controlConfigIndex + 1],
     'model_reasoning_effort="medium"'
   );
-  assert.doesNotMatch(codexControl.args.at(-1), /socrates-contract/i);
+  assert.doesNotMatch(codexControl.args.at(-1), /\$socrates/i);
   assert.match(codexControl.args.at(-1), /^Review this case/m);
 
   const claude = buildLiveCommand({
@@ -219,7 +205,7 @@ test("optional live commands keep skill and control arms isolated under identica
   assert.equal(claude.args[mcpIndex + 1], '{"mcpServers":{}}');
   assert.doesNotMatch(claude.args.join(" "), /--allowed-tools|--setting-sources/);
   assert.ok(claude.args.includes("--no-session-persistence"));
-  assert.match(claude.args.at(-1), /^\/socrates-contract/);
+  assert.match(claude.args.at(-1), /^\/socrates/);
   assert.doesNotMatch(claude.args.join(" "), /dangerously-skip/);
   assert.equal(claude.env.HOME, "/tmp/eval/.eval-home");
   assert.equal(claude.env.CLAUDE_CONFIG_DIR, "/tmp/eval/.eval-home/claude-config");
@@ -232,7 +218,7 @@ test("optional live commands keep skill and control arms isolated under identica
     prompt: "Review this case",
     arm: "control",
   });
-  assert.doesNotMatch(claudeControl.args.at(-1), /socrates-contract/i);
+  assert.doesNotMatch(claudeControl.args.at(-1), /^\/socrates/i);
   assert.deepEqual(claudeControl.args.slice(0, -1), claude.args.slice(0, -1));
 });
 
@@ -322,16 +308,73 @@ test("live output parsers preserve host telemetry without estimating missing val
   assert.equal(plainCodex.telemetry.tool_calls_by_type, null);
 });
 
-test("live grading exposes completeness and punctuation only as a question-mark proxy", () => {
+test("live grading ignores question marks inside quoted examples", () => {
   const evalCase = {
-    live_grader_id: "inline-local",
+    live_grader_id: "ordinary-task",
     expected_questions: { min: 0, max: 0 },
   };
-  const grade = gradeResponse(evalCase, "Use a bounded change and focused verification.");
+  const grade = gradeResponse(
+    evalCase,
+    "Rename parseCount to parseInteger, update the focused test, and run verification."
+  );
   assert.equal(grade.passed, true);
-  assert.deepEqual(grade.completeness, { matched: 1, required: 1, ratio: 1 });
+  assert.deepEqual(grade.completeness, { matched: 3, required: 3, ratio: 1 });
   assert.equal(grade.question_mark_count, 0);
   assert.equal("question_count" in grade, false);
+
+  const managerGrade = gradeResponse(
+    {
+      live_grader_id: "manager-deliverable",
+      expected_questions: { min: 0, max: 0 },
+    },
+    'Peak-time failures occur because every "is this card valid?" request counts toward the limit. We can reduce calls or pay for a higher tier. I recommend reducing calls first, then deciding whether the added cost is justified.'
+  );
+  assert.equal(managerGrade.passed, true);
+  assert.equal(managerGrade.question_mark_count, 0);
+
+  const misconceptionGrade = gradeResponse(
+    {
+      live_grader_id: "mastery-misconception",
+      expected_questions: { min: 1, max: 1 },
+    },
+    "Not quite—the cached copy has no awareness of the original by itself. Suppose the cache stores A, then the original changes to B. When requested, will the cache return A or B, and why?"
+  );
+  assert.equal(misconceptionGrade.passed, true);
+
+  const correctGrade = gradeResponse(
+    {
+      live_grader_id: "mastery-correct",
+      expected_questions: { min: 1, max: 1 },
+    },
+    "Expiration or invalidation makes the cached copy unusable, and a later read repopulates it. What stale data might readers see, and what trade-off would a shorter TTL create?"
+  );
+  assert.equal(correctGrade.passed, true);
+
+  const abstractCorrectGrade = gradeResponse(
+    {
+      live_grader_id: "mastery-correct",
+      expected_questions: { min: 1, max: 1 },
+    },
+    "The cache is passive: freshness comes from expiration or invalidation. TTL bounds staleness by time, while invalidation bounds it by event. Which failure mode is safer when invalidation signals can be lost?"
+  );
+  assert.equal(abstractCorrectGrade.passed, true);
+
+  const managerDecisionGrade = gradeResponse(
+    {
+      live_grader_id: "manager-deliverable",
+      expected_questions: { min: 0, max: 1 },
+    },
+    "Peak-time failures are affecting users. We can reduce calls through engineering work or pay for a higher tier. Decision needed: which option best balances engineering time and added cost? I can tighten this draft once the cost figures are available."
+  );
+  assert.equal(managerDecisionGrade.passed, true);
+  assert.equal(managerDecisionGrade.question_mark_count, 1);
+
+  assert.equal(
+    countQuestionMarksOutsideExamples(
+      'An unmatched "example delimiter must not hide this real question?'
+    ),
+    1
+  );
 });
 
 test("paired comparisons separate outcome from nullable performance deltas", () => {
@@ -556,13 +599,8 @@ test("live process preserves split UTF-8 and exact raw stream byte counts", asyn
 });
 
 test("live workspace preparation isolates both controls and preserves non-null fixtures", async () => {
-  const evalCase = { fixture: "fixtures/valid-resume" };
-  const fixtureRelative = path.join(
-    ".socrates",
-    "contracts",
-    "billing-migration",
-    "contract-index.md"
-  );
+  const evalCase = { fixture: "fixtures/source-grounded" };
+  const fixtureRelative = "retry.js";
   const fixtureSource = await readFile(
     path.join(repoRoot, "evals", evalCase.fixture, fixtureRelative),
     "utf8"
@@ -576,7 +614,7 @@ test("live workspace preparation isolates both controls and preserves non-null f
       await assertSafeFixtureTree(prepared.skill, "", {
         allowedHostControls:
           host === "codex"
-            ? new Set([".agents", ".codex", ".eval-home"])
+            ? new Set([".agents", ".eval-home"])
             : new Set([".claude", ".eval-home"]),
       });
       await assertSafeFixtureTree(prepared.control, "", {
@@ -585,7 +623,7 @@ test("live workspace preparation isolates both controls and preserves non-null f
       const skillEntries = await readdir(prepared.skill);
       const controlEntries = await readdir(prepared.control);
       assert.equal(skillEntries.includes(".agents"), host === "codex");
-      assert.equal(skillEntries.includes(".codex"), host === "codex");
+      assert.equal(skillEntries.includes(".codex"), false);
       assert.equal(skillEntries.includes(".claude"), host === "claude");
       for (const hostControl of [".agents", ".codex", ".claude"]) {
         assert.equal(controlEntries.includes(hostControl), false);
@@ -612,12 +650,12 @@ test("live orchestration pairs arms in alternating order without model or networ
   const calls = [];
   const fakeRunProcess = async (invocation) => {
     const renderedPrompt = invocation.args.at(-1);
-    const caseId = renderedPrompt.includes("recieve")
-      ? "negative-readme-typo"
-      : "negative-formatting-only";
-    const arm = renderedPrompt.includes("$socrates-contract") ? "skill" : "control";
+    const caseId = renderedPrompt.includes("parseCount")
+      ? "noninterference-ordinary-code-edit"
+      : "noninterference-ready-deliverable";
+    const arm = renderedPrompt.includes("$socrates") ? "skill" : "control";
     calls.push([caseId, arm]);
-    if (caseId === "negative-formatting-only" && arm === "skill") {
+    if (caseId === "noninterference-ready-deliverable" && arm === "skill") {
       return {
         code: 2,
         signal: null,
@@ -636,7 +674,10 @@ test("live orchestration pairs arms in alternating order without model or networ
         item: {
           id: `${caseId}-${arm}-message`,
           type: "agent_message",
-          text: "Use a bounded focused change and verification.",
+          text:
+            caseId === "noninterference-ordinary-code-edit"
+              ? "Rename parseCount to parseInteger, update its test, and run verification."
+              : "The database issue was resolved and service was restored.",
         },
       }),
       JSON.stringify({
@@ -665,16 +706,16 @@ test("live orchestration pairs arms in alternating order without model or networ
         SOCRATES_LIVE_EVAL_HOST: "codex",
         SOCRATES_LIVE_EVAL_ARMS: "skill,control",
         SOCRATES_LIVE_EVAL_CASES:
-          "negative-readme-typo,negative-formatting-only",
+          "noninterference-ordinary-code-edit,noninterference-ready-deliverable",
         SOCRATES_LIVE_EVAL_OUTPUT: path.join(outputRoot, "reports"),
       },
       runProcess: fakeRunProcess,
     });
     assert.deepEqual(calls, [
-      ["negative-readme-typo", "skill"],
-      ["negative-readme-typo", "control"],
-      ["negative-formatting-only", "control"],
-      ["negative-formatting-only", "skill"],
+      ["noninterference-ordinary-code-edit", "skill"],
+      ["noninterference-ordinary-code-edit", "control"],
+      ["noninterference-ready-deliverable", "control"],
+      ["noninterference-ready-deliverable", "skill"],
     ]);
     assert.deepEqual(report.arms, ["skill", "control"]);
     assert.deepEqual(
@@ -682,14 +723,14 @@ test("live orchestration pairs arms in alternating order without model or networ
       calls
     );
     const successfulPair = report.comparisons.find(
-      ({ case_id: caseId }) => caseId === "negative-readme-typo"
+      ({ case_id: caseId }) => caseId === "noninterference-ordinary-code-edit"
     );
     assert.equal(successfulPair.outcome_comparable, true);
     assert.equal(successfulPair.performance_comparable, true);
     assert.equal(successfulPair.grade_delta, 0);
     assert.equal(successfulPair.wall_time_ms_delta, 2);
     const failedPair = report.comparisons.find(
-      ({ case_id: caseId }) => caseId === "negative-formatting-only"
+      ({ case_id: caseId }) => caseId === "noninterference-ready-deliverable"
     );
     assert.equal(failedPair.skill_outcome_available, false);
     assert.equal(failedPair.control_outcome_available, true);

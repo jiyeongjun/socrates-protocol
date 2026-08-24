@@ -8,13 +8,11 @@ import {
   codexAgentTargets,
   claudeAgentNames,
   claudeAgentTargets,
-  modelPolicyTargetPaths,
   findUnexpectedGeneratedPaths,
   readAgentPromptSource,
   readCodexAgentSource,
   readClaudeAgentSource,
   readClaudeSkillAppendix,
-  readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
   readSkillScriptSource,
@@ -28,7 +26,6 @@ import {
 const body = await readSkillBody();
 const claudeAppendix = await readClaudeSkillAppendix();
 const promptSource = await readAgentPromptSource();
-const modelPolicy = `${await readModelPolicySource()}\n`;
 let hasMismatch = false;
 const unexpectedGeneratedPaths = await findUnexpectedGeneratedPaths();
 for (const unexpected of unexpectedGeneratedPaths) {
@@ -74,17 +71,6 @@ for (const [platform, targets] of Object.entries(skillScriptTargets)) {
         `${platform} skill script ${name} is out of sync with scripts/${name}`
       );
     }
-  }
-}
-
-for (const [platform, target] of Object.entries(modelPolicyTargetPaths)) {
-  const actual = await readFile(target, "utf8");
-
-  if (actual !== modelPolicy) {
-    hasMismatch = true;
-    console.error(
-      `${platform} skill model-policy.json is out of sync with reference/model-policy.json`
-    );
   }
 }
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOCRATES_DESCRIPTION =
-  "Use only for mutation with material external, irreversible, public or production, credential or permission, billing, destructive-data, or breaking public/persisted-contract risk; also use for explicit Socrates durable handoff or resume. Skip read-only work and ordinary reversible local changes regardless of file count, tools, subagents, or number of checks. Do not trigger for local data work or compatibility-preserving refactors.";
+  "Teach and explain concepts through audience-calibrated explanations, Socratic questions, analogies, and mastery checks. Use when the user asks to understand or learn something, requests ELI5 or an explanation for a specific audience, wants Socratic tutoring or a quiz, asks to reason through a concept, or wants their understanding evaluated. In guided learning, repair a mistaken or incomplete answer and re-check the same idea before advancing. Do not trigger merely because an ordinary task needs a brief explanation.";
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");
@@ -14,7 +14,6 @@ export const claudeSkillAppendixPath = path.join(
   __dirname,
   "claude-skill-appendix.md"
 );
-export const modelPolicySourcePath = path.join(__dirname, "model-policy.json");
 export const skillReferenceSourceDir = path.join(__dirname, "skill-references");
 export const skillScriptSourceDir = path.resolve(__dirname, "../scripts");
 export const claudeAgentSourceDir = path.join(__dirname, "claude-agents");
@@ -30,16 +29,16 @@ export const codexAgentNames = skillLayout.codexAgents;
 
 export const skillTargets = {
   codex: {
-    path: path.resolve(__dirname, "../.agents/skills/socrates-contract/SKILL.md"),
+    path: path.resolve(__dirname, "../.agents/skills/socrates/SKILL.md"),
     frontmatter: [
-      "name: socrates-contract",
+      "name: socrates",
       `description: ${JSON.stringify(SOCRATES_DESCRIPTION)}`,
     ],
   },
   claude: {
-    path: path.resolve(__dirname, "../.claude/skills/socrates-contract/SKILL.md"),
+    path: path.resolve(__dirname, "../.claude/skills/socrates/SKILL.md"),
     frontmatter: [
-      "name: socrates-contract",
+      "name: socrates",
       `description: ${JSON.stringify(SOCRATES_DESCRIPTION)}`,
     ],
   },
@@ -47,34 +46,29 @@ export const skillTargets = {
 
 export const agentTargetPath = path.resolve(
   __dirname,
-  "../.agents/skills/socrates-contract/agents/openai.yaml"
+  "../.agents/skills/socrates/agents/openai.yaml"
 );
 
 export const skillReferenceTargets = {
   codex: buildNamedTargetPaths(
-    path.resolve(__dirname, "../.agents/skills/socrates-contract/references"),
+    path.resolve(__dirname, "../.agents/skills/socrates/references"),
     skillReferenceNames
   ),
   claude: buildNamedTargetPaths(
-    path.resolve(__dirname, "../.claude/skills/socrates-contract/references"),
+    path.resolve(__dirname, "../.claude/skills/socrates/references"),
     skillReferenceNames
   ),
 };
 
 export const skillScriptTargets = {
   codex: buildNamedTargetPaths(
-    path.resolve(__dirname, "../.agents/skills/socrates-contract/scripts"),
+    path.resolve(__dirname, "../.agents/skills/socrates/scripts"),
     skillScriptNames
   ),
   claude: buildNamedTargetPaths(
-    path.resolve(__dirname, "../.claude/skills/socrates-contract/scripts"),
+    path.resolve(__dirname, "../.claude/skills/socrates/scripts"),
     skillScriptNames
   ),
-};
-
-export const modelPolicyTargetPaths = {
-  codex: path.resolve(__dirname, "../.agents/skills/socrates-contract/model-policy.json"),
-  claude: path.resolve(__dirname, "../.claude/skills/socrates-contract/model-policy.json"),
 };
 
 export const claudeAgentTargets = buildNamedTargetPaths(
@@ -174,13 +168,8 @@ export async function readClaudeSkillAppendix() {
 }
 
 export function buildPlatformSkillBody(platform, body, claudeAppendix) {
-  return platform === "claude"
-    ? `${body.trim()}\n\n${claudeAppendix.trim()}`
-    : body.trim();
-}
-
-export async function readModelPolicySource() {
-  return (await readFile(modelPolicySourcePath, "utf8")).trim();
+  const appendix = platform === "claude" ? claudeAppendix.trim() : "";
+  return appendix ? `${body.trim()}\n\n${appendix}` : body.trim();
 }
 
 export async function readSkillReferenceSource(name) {
@@ -226,19 +215,19 @@ export function normalizeAgentPrompt(source) {
 
 export function buildOpenAIYaml({ promptSource }) {
   const prompt = normalizeAgentPrompt(promptSource);
-  return `interface:\n  display_name: "Socrates Contract"\n  short_description: "Align risky changes before editing"\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
+  return `interface:\n  display_name: "Socrates"\n  short_description: "Explain clearly and build real understanding"\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
 }
 
 function generatedDirectorySpecs() {
   return [
     {
       dir: path.dirname(skillTargets.codex.path),
-      expected: new Set(["SKILL.md", "model-policy.json", "agents", "references", "scripts"]),
+      expected: new Set(["SKILL.md", "agents", "references"]),
       managed: () => true,
     },
     {
       dir: path.dirname(skillTargets.claude.path),
-      expected: new Set(["SKILL.md", "model-policy.json", "references", "scripts"]),
+      expected: new Set(["SKILL.md", "references"]),
       managed: () => true,
     },
     {
@@ -265,6 +254,16 @@ function generatedDirectorySpecs() {
       dir: path.resolve(__dirname, "../.claude/agents"),
       expected: new Set(claudeAgentNames),
       managed: (name) => name.startsWith("socrates-"),
+    },
+    {
+      dir: path.resolve(__dirname, "../.agents/skills/socrates-contract"),
+      expected: new Set(),
+      managed: () => true,
+    },
+    {
+      dir: path.resolve(__dirname, "../.claude/skills/socrates-contract"),
+      expected: new Set(),
+      managed: () => true,
     },
   ];
 }

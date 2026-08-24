@@ -1,31 +1,9 @@
 {
   "skillReferences": [
-    "artifact-recovery.md",
-    "contract-files.md",
-    "orchestration.md",
-    "protected-surfaces.md",
-    "engineering-quality.md",
-    "engineering-language-framework.md",
-    "engineering-automation.md",
-    "engineering-security.md",
-    "engineering-distributed-systems.md",
-    "clarification.md",
-    "verify-repair.md",
-    "example.md"
+    "audience-calibration.md",
+    "guided-learning.md"
   ],
-  "skillScripts": [
-    "scaffold-contract.mjs"
-  ],
-  "codexAgents": [
-    "socrates-explore.toml",
-    "socrates-plan.toml",
-    "socrates-verify.toml",
-    "socrates-evaluate.toml"
-  ],
-  "claudeAgents": [
-    "socrates-explore.md",
-    "socrates-plan.md",
-    "socrates-verify.md",
-    "socrates-evaluate.md"
-  ]
+  "skillScripts": [],
+  "codexAgents": [],
+  "claudeAgents": []
 }

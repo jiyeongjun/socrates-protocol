@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/jiyeongjun/socrates-protocol/evals/cases.schema.json",
-  "title": "Socrates Contract evaluation catalog",
+  "title": "Socrates learning-skill evaluation catalog",
   "type": "object",
   "additionalProperties": false,
   "required": ["protocol", "schema_version", "model_sets", "cases"],
   "properties": {
-    "protocol": {"const": "socrates-contract-evals"},
+    "protocol": {"const": "socrates-evals"},
     "schema_version": {"const": "1.0"},
     "model_sets": {
       "type": "object",
@@ -56,7 +56,7 @@
       "properties": {
         "id": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
         "group": {
-          "enum": ["positive", "negative", "security", "completeness", "installer-scaffolder"]
+          "enum": ["explanation", "guided", "calibration", "noninterference", "packaging"]
         },
         "prompt": {"type": "string", "minLength": 10},
         "fixture": {"type": ["string", "null"]},

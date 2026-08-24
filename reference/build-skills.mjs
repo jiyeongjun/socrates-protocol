@@ -13,11 +13,9 @@ import {
   readCodexAgentSource,
   readClaudeAgentSource,
   readClaudeSkillAppendix,
-  readModelPolicySource,
   readSkillBody,
   readSkillReferenceSource,
   readSkillScriptSource,
-  modelPolicyTargetPaths,
   pruneUnexpectedGeneratedPaths,
   skillReferenceNames,
   skillReferenceTargets,
@@ -34,16 +32,17 @@ async function writeTextFile(target, contents) {
 const body = await readSkillBody();
 const claudeAppendix = await readClaudeSkillAppendix();
 const promptSource = await readAgentPromptSource();
-const modelPolicy = await readModelPolicySource();
 
 for (const [platform, target] of Object.entries(skillTargets)) {
   const output = buildSkillDocument({
     frontmatter: target.frontmatter,
     body: buildPlatformSkillBody(platform, body, claudeAppendix),
   });
+  await mkdir(path.dirname(target.path), { recursive: true });
   await writeFile(target.path, output, "utf8");
 }
 
+await mkdir(path.dirname(agentTargetPath), { recursive: true });
 await writeFile(
   agentTargetPath,
   buildOpenAIYaml({ promptSource }),
@@ -62,10 +61,6 @@ for (const [platform, targets] of Object.entries(skillScriptTargets)) {
     const contents = await readSkillScriptSource(name);
     await writeTextFile(targets[name], contents);
   }
-}
-
-for (const target of Object.values(modelPolicyTargetPaths)) {
-  await writeTextFile(target, modelPolicy);
 }
 
 for (const name of claudeAgentNames) {
