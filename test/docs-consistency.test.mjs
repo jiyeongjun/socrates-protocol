@@ -220,9 +220,14 @@ test("English and Korean READMEs document behavior, installation, upgrade, and e
     assert.match(readme, /SOCRATES_LIVE_EVAL_HOST=claude/);
     assert.doesNotMatch(readme, /DreambigOu\/ELI5/);
     assert.doesNotMatch(readme, /No quiz|퀴즈는 하지 마/i);
+    assert.doesNotMatch(readme, /deterministic checks|결정적 검사/i);
   }
   assert.match(english, /When to use Socrates/i);
   assert.match(english, /Understand something quickly.*Learn through dialogue.*Check your understanding.*Explain it to someone else/is);
+  assert.match(english, /How it differs from a normal response/i);
+  assert.match(english, /does not make the model smarter/i);
+  assert.match(english, /Same-prompt A\/B/i);
+  assert.match(english, /normal response expanded to a related objective.*Socrates stayed on the original misconception/is);
   assert.match(english, /A normal explanation gets a complete answer, not a surprise quiz/i);
   assert.match(english, /Visual explanations/i);
   assert.match(english, /Actual response tests/i);
@@ -231,6 +236,10 @@ test("English and Korean READMEs document behavior, installation, upgrade, and e
   assert.match(english, /never repeats the same question unchanged/i);
   assert.match(korean, /언제 쓰는가/);
   assert.match(korean, /개념을 빠르게 이해.*대화하며 학습.*내 이해를 점검.*다른 사람에게 설명/is);
+  assert.match(korean, /일반 응답과 무엇이 다른가/);
+  assert.match(korean, /모델을 더 똑똑하게 만드는 것은 아닙니다/);
+  assert.match(korean, /같은 요청 A\/B/);
+  assert.match(korean, /일반 응답은 관련 주제로 확장했고.*Socrates는 다음 단계로 넘어가지 않고 같은 오개념을 재확인/is);
   assert.match(korean, /일반적인 설명 요청에는 완결된 답을 주며 갑자기 퀴즈를 시작하지 않습니다/);
   assert.match(korean, /시각화는 언제 쓰는가/);
   assert.match(korean, /실제 답변 테스트/);

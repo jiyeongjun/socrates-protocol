@@ -19,6 +19,19 @@ It chooses the interaction from the request. A normal explanation gets a complet
 | Check your understanding | `$socrates Here is how I understand eventual consistency. Find the gap in my model: ...` | Separates what is correct from what is missing or mistaken before adding new material. |
 | Explain it to someone else | `$socrates Turn this API rate-limit issue into a short update I can send to my manager.` | Produces the finished audience-ready message instead of teaching the original user how to write it. |
 
+## How it differs from a normal response
+
+Socrates does not make the model smarter. Modern models already explain straightforward concepts well, so a one-shot explanation may look similar with or without the skill. The difference is not a second reasoning engine; it is a consistent **interaction policy for learning**.
+
+| Situation | Normal response without the skill | With Socrates |
+|---|---|---|
+| One-shot explanation | Uses whatever depth and format the model considers appropriate | Gives an audience-calibrated, complete answer, uses the smallest useful visual when helpful, and does not append a surprise check |
+| Interactive learning | May explain several related ideas at once or choose any follow-up | Focuses on one learning objective and one response-demanding question at a time |
+| Wrong or unclear answer | May give the correction and continue to another topic | Changes the representation but stays on the same objective until the learner demonstrates the missing relationship |
+| Audience-ready deliverable | May mix the requested text with advice about how to explain it | Prioritizes the finished text the audience can read directly |
+
+In short, Socrates makes explanation, guided learning, and understanding checks more predictable; it does not replace the base model's intelligence.
+
 Use the normal assistant for ordinary implementation work such as editing code, running tests, or refactoring. Use Socrates when understanding, teaching, evaluating a mental model, or adapting an explanation is the actual goal.
 
 ## How it responds
@@ -63,6 +76,53 @@ These results came from fresh Codex and Claude sessions using the generated v1 s
 | Claude | Direct database-index explanation | PASS — B+tree sketch, comparison table, and no follow-up question |
 | Codex | Cache-freshness misconception | PASS — corrected the model, stayed on cache freshness, and asked one same-objective question |
 | Claude | Cache-freshness misconception | PASS — changed to a paper-menu analogy and re-checked the same objective with one question |
+
+### Same-prompt A/B — normal response vs. Socrates
+
+These paired runs used the same Codex model in independent fresh sessions. One session was explicitly prevented from loading a skill; the other explicitly used Socrates.
+
+| Request | Normal response | Socrates response | Observed difference |
+|---|---|---|---|
+| Explain a database index | Book analogy, SQL example, read/write trade-off, and no closing question | Book analogy, SQL example, read/write trade-off, and no closing question | Little difference for a straightforward explanation; Socrates did not force an unnecessary dialogue |
+| Continue after “the cache watches the source automatically” | Introduced TTL, invalidation, version checks, events, and polling together, then asked a TTL calculation | Corrected automatic detection, then asked what the cache returns when no signal, expiry, or version check occurs | The normal response expanded to a related objective; Socrates stayed on the original misconception and re-checked it |
+
+<details>
+<summary>Actual misconception A/B excerpts — Codex</summary>
+
+Shared request:
+
+```text
+We are learning how a cache knows that source data changed. You asked,
+“How does a cache know its copy is stale?” and I answered,
+“It keeps watching the source and notices automatically.” Continue teaching me.
+```
+
+Normal response:
+
+> That’s possible, but caches usually don’t “notice automatically.” They need a signal or rule:
+>
+> - **Expiration (TTL):** “This copy is valid for five minutes.”
+> - **Invalidation:** The source tells the cache, “Delete or update this key.”
+> - **Version checking:** The cache asks whether the source’s version, timestamp, or ETag changed.
+> - **Change events:** The cache subscribes to update notifications.
+> - **Polling:** The cache periodically checks the source.
+>
+> Quick check: if a cache refreshes every five minutes and the source changes one minute after a refresh, how long might users receive stale data?
+
+Socrates response:
+
+> “Watching the source” is one possible design, but it isn’t automatic. A cache only detects staleness through a mechanism such as:
+>
+> - the source sending an invalidation or update;
+> - the cached entry expiring after a TTL;
+> - the cache comparing a version number or ETag;
+> - a subscription or change stream that watches updates.
+>
+> Without one of these, stale data can still look valid.
+>
+> Suppose the source changes, but sends no notification, the TTL has not expired, and no version check occurs. What will the cache return on the next request: its old copy or the new source value?
+
+</details>
 
 <details>
 <summary>Actual direct-explanation excerpt — Codex</summary>
@@ -231,7 +291,7 @@ reference/skill-references/
 
 The installed package contains one shared `SKILL.md`, two conditional references, and Codex UI metadata. It has no bundled executable, model-policy sidecar, contract state, or required subagent workflow.
 
-Run deterministic checks:
+Run automated checks:
 
 ```bash
 npm run build:skills

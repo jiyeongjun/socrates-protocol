@@ -19,6 +19,19 @@ Socrates는 Codex와 Claude Code에서 다음 네 가지 상황에 쓰는 스킬
 | 내 이해를 점검 | `$socrates 내가 이해한 eventual consistency는 이래. 틀리거나 빠진 연결고리를 찾아줘: ...` | 맞는 부분과 부족하거나 잘못된 부분을 구분한 뒤 필요한 설명을 보충합니다. |
 | 다른 사람에게 설명 | `$socrates 이 API rate limit 문제를 매니저에게 보낼 짧은 글로 만들어줘.` | 글쓰기 수업을 시작하지 않고 상대에게 바로 보낼 완성본을 작성합니다. |
 
+## 일반 응답과 무엇이 다른가
+
+Socrates가 모델을 더 똑똑하게 만드는 것은 아닙니다. 일반 모델도 단순한 설명은 이미 잘하므로, 한 번 설명하고 끝나는 요청에서는 결과가 비슷할 수 있습니다. 차이는 **답변의 지능**보다 **학습을 진행하는 규칙**에 있습니다.
+
+| 상황 | 스킬을 쓰지 않은 일반 응답 | Socrates 사용 |
+|---|---|---|
+| 한 번에 설명 | 모델이 적절하다고 판단한 깊이와 형식으로 설명 | 대상과 목적에 맞춰 완결된 설명을 제공하고, 필요할 때만 작은 시각화를 사용하며 갑작스러운 확인 문제를 붙이지 않음 |
+| 문답으로 학습 | 관련 지식을 한꺼번에 설명하거나 임의의 후속 질문으로 이동할 수 있음 | 학습 목표 하나와 답을 요구하는 질문 하나에 집중 |
+| 틀리거나 애매한 답 | 정답을 알려준 뒤 다른 내용으로 넘어갈 수 있음 | 표현이나 예시를 바꾸되 다음 단계로 넘어가지 않고 같은 목표를 재확인 |
+| 다른 사람에게 전달 | 설명 방법이나 배경 해설이 섞일 수 있음 | 상대가 그대로 읽을 수 있는 완성본을 우선 제공 |
+
+즉, 일반 응답을 대체하는 별도 추론 엔진이 아니라 설명·학습·이해도 점검의 진행 방식을 일관되게 만드는 스킬입니다.
+
 코드 수정, 테스트 실행, 리팩터링 같은 일반 작업은 평소처럼 에이전트에게 요청하면 됩니다. 이해·학습·이해도 점검·대상별 설명이 작업의 목적일 때 Socrates를 사용합니다.
 
 ## 요청을 어떻게 해석하는가
@@ -63,6 +76,53 @@ Socrates는 Codex와 Claude Code에서 다음 네 가지 상황에 쓰는 스킬
 | Claude | 데이터베이스 인덱스 일반 설명 | 통과 — B+tree 그림과 비교표를 사용하고 후속 질문 없이 종료 |
 | Codex | 캐시 freshness 오개념 | 통과 — 오개념을 수정하고 같은 목표에 머물며 질문 하나로 재확인 |
 | Claude | 캐시 freshness 오개념 | 통과 — 종이 메뉴판 비유로 표현을 바꾸고 같은 목표를 질문 하나로 재확인 |
+
+### 같은 요청 A/B — 일반 응답과 Socrates
+
+같은 Codex 모델의 서로 독립된 새 세션에서 한쪽은 스킬을 사용하지 않고, 다른 쪽은 Socrates를 명시적으로 사용했습니다.
+
+| 요청 | 일반 응답 | Socrates 응답 | 관찰된 차이 |
+|---|---|---|---|
+| 데이터베이스 인덱스 설명 | 책 비유, SQL 예시, 읽기·쓰기 비용을 설명하고 질문 없이 종료 | 책 비유, SQL 예시, 읽기·쓰기 비용을 설명하고 질문 없이 종료 | 단순 설명에서는 큰 차이가 없었음. Socrates가 불필요한 문답을 강제하지 않음 |
+| “캐시는 원본을 계속 봐서 자동으로 안다”는 답에서 학습 계속 | TTL·무효화·버전 검사·이벤트·폴링을 한꺼번에 소개한 뒤 TTL 계산을 질문 | 자동 감지가 아니라는 점을 바로잡고, 외부 신호가 전혀 없는 사례에서 오래된 값과 새 값 중 무엇을 반환하는지 질문 | 일반 응답은 관련 주제로 확장했고, Socrates는 다음 단계로 넘어가지 않고 같은 오개념을 재확인 |
+
+<details>
+<summary>실제 오개념 A/B 응답 발췌 — Codex</summary>
+
+공통 요청:
+
+```text
+We are learning how a cache knows that source data changed. You asked,
+“How does a cache know its copy is stale?” and I answered,
+“It keeps watching the source and notices automatically.” Continue teaching me.
+```
+
+일반 응답:
+
+> That’s possible, but caches usually don’t “notice automatically.” They need a signal or rule:
+>
+> - **Expiration (TTL):** “This copy is valid for five minutes.”
+> - **Invalidation:** The source tells the cache, “Delete or update this key.”
+> - **Version checking:** The cache asks whether the source’s version, timestamp, or ETag changed.
+> - **Change events:** The cache subscribes to update notifications.
+> - **Polling:** The cache periodically checks the source.
+>
+> Quick check: if a cache refreshes every five minutes and the source changes one minute after a refresh, how long might users receive stale data?
+
+Socrates 응답:
+
+> “Watching the source” is one possible design, but it isn’t automatic. A cache only detects staleness through a mechanism such as:
+>
+> - the source sending an invalidation or update;
+> - the cached entry expiring after a TTL;
+> - the cache comparing a version number or ETag;
+> - a subscription or change stream that watches updates.
+>
+> Without one of these, stale data can still look valid.
+>
+> Suppose the source changes, but sends no notification, the TTL has not expired, and no version check occurs. What will the cache return on the next request: its old copy or the new source value?
+
+</details>
 
 <details>
 <summary>실제 일반 설명 발췌 — Codex</summary>
@@ -240,7 +300,7 @@ reference/skill-references/
 
 설치 패키지는 공용 `SKILL.md` 하나, 조건부 reference 두 개, Codex UI metadata로 구성됩니다. 실행 파일, model-policy sidecar, contract 상태, 필수 subagent workflow는 없습니다.
 
-결정적 검사:
+자동 검사 실행:
 
 ```bash
 npm run build:skills
