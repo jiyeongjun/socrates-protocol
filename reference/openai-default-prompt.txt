@@ -1,1 +1,1 @@
-Use $socrates to explain this visually, ask one focused question, and keep repairing the same idea until my answer shows the key relationship.
+Use $socrates to build shared understanding. For coding, inspect the context, clarify consequential gaps in my intent, cross-check the design with useful diagrams, and implement after the concrete scope is confirmed. For learning, explain visually and check one key relationship at a time.

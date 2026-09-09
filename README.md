@@ -1,12 +1,35 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 [한국어](./README.ko.md)
 
-Socrates is a **visual-first learning skill** for Codex and Claude Code. It turns concepts, code, trade-offs, and incidents into a visible model, then asks one focused question to check the learner's mental model.
+Socrates aligns natural-language intent with code for Codex and Claude Code. It inspects existing context, asks about consequential gaps, makes the proposed behavior and design reviewable, and carries the confirmed scope through implementation and verification. It also remains a **visual-first learning skill** for concepts, code, trade-offs, and incidents.
+
+## Align a coding request
+
+```text
+Request → inspect code and context → identify consequential decisions
+   → ask and integrate answers → agree behavior and acceptance examples
+   → cross-check useful diagrams → final confirmation
+   → implement → verify the agreed behavior
+```
+
+The model presents its interpretation for correction. It does not quiz the user about implementation concepts. It discovers existing facts itself and asks when different answers would change behavior, scope, data semantics, failure handling, or important design constraints. Internal choices within the agreement follow repository conventions.
+
+Use `$socrates Add batch invitations; align the intended behavior with me before coding` in Codex, or `/socrates` in Claude Code. The skill can also activate for consequential ambiguity in feature requests. A fully specified ordinary edit proceeds under the existing authorization without an extra ceremony.
+
+Before implementation, review a compact agreement: goal, scope, observable behavior, relevant exceptions, preserved behavior, and acceptance examples. Unresolved consequential decisions prevent a claim of alignment. Choose diagrams by the relationship being checked: classes for object responsibilities, components for module boundaries, sequences for call order and failures, data flow for transformation and storage, states for lifecycles, or flowcharts for branching. Diagrams distinguish current behavior from proposals and include material failure paths. Simple changes need no diagram.
+
+In the alignment workflow, final confirmation covers the concrete agreement and design. Until then, the model may inspect evidence and prepare an inline design, but does not edit product code, tests, dependencies, or configuration. An earlier final approval of the same concrete scope remains valid. Explicit delegation or a user waiver is respected; silence and urgency are not waivers. After approval, implementation and verification proceed. Reopen only decisions whose behavior, scope, or constraints must change.
+
+Learning and implementation have different completion criteria: the learner demonstrates a relationship; the coding user confirms the model's interpretation. A no-quiz learning request does not delegate unresolved product policy. The skill cannot guarantee intent fidelity; inspect actual decisions, tool traces, and acceptance results.
+
+See [the implementation workflow](reference/skill-references/implementation-alignment.md) and [behavioral evaluation instructions](evals/README.md).
+
+## Learning behavior
 
 When an answer is wrong or incomplete, Socrates does not move on. It redraws only the misunderstood relationship with a different visual, analogy, or example and stays on the same objective until the learner's answer shows the key relationship.
 
@@ -32,6 +55,7 @@ If the user asks for no questions, requests the answer directly, or wants a fini
 
 | Goal | Example request | What Socrates does |
 |---|---|---|
+| Align a coding request | `$socrates Add batch invitations. Agree the behavior and design with me before coding.` | Inspects the code, clarifies consequential gaps, cross-checks the design, and implements after final confirmation |
 | Understand a new concept | `$socrates Explain database indexes to someone new to backend development.` | Draws the whole model first, then checks it with one question |
 | Understand code or a module | `$socrates Show me how this payment module works, using the code as evidence.` | Visualizes data, control, and failure paths from the actual source |
 | Prepare a change to an existing system | `$socrates Before I add scheduled orders, explain the current flow and likely connection point.` | Separates current behavior from proposals and connects invariants to tests |
@@ -66,119 +90,11 @@ Simple facts do not get decorative diagrams. Every arrow, color, boundary, and l
 
 ## Actual response tests
 
-On 2026-08-24, the generated v1.1.0 skill was given to independent fresh Codex agents. They received the user request and skill, but no evaluation conclusion or model answer.
+The writable suite runs five scenarios on Astra and Fable 5.1: a four-turn implementation agreement, conflicting requirements, an already approved edit, learning repair, and learning opt-out. It records tool traces and file changes and runs independent acceptance checks after implementation. See [evaluation instructions](evals/README.md) for commands, model selection, isolation limits, and semantic review requirements.
 
-| Test | Result |
-|---|---|
-| Database index | PASS — contrasted a full scan with the index path and ended with one question |
-| Timeout incident | PASS — visualized trigger, retry feedback loop, recovery, and one causal question |
-| First wrong cache answer | PASS — separated source change from cache awareness on a timeline and checked the same objective |
-| Second wrong cache answer | PASS — did not advance; redrew only “becomes stale” vs. “discovers stale” |
-| Scheduled-order change in existing code | PASS — separated current and proposed flows and grounded invariants, risks, and tests in the code |
+The 2026-09-09 runs passed the implementation and regression checks after two focused refinements and affected-case reruns. The [verification report](evals/reports/2026-09-09.md) records the evidence, changes, and limits.
 
-The same prompts were also run without the skill.
-
-| Request | Normal response | Socrates response | Observed difference |
-|---|---|---|---|
-| Database index | Gave a book-index analogy and trade-offs, then stopped | Drew the full-scan and index paths, then asked the learner to trace the path | Socrates consistently added a visible flow and an understanding check |
-| Visual timeout incident with one question | Produced a causal flow and one question | Split trigger from recovery and made the retry feedback loop more explicit | The prompt was already specific, so the normal response was also strong and the difference was small |
-| Scheduled orders in existing code | Correctly explained current flow, invariants, a proposed pipeline, and risks, then stopped | Separated current and proposed flows and asked the learner to identify the safe branch point | Both were accurate; Socrates connected the explanation to an observable understanding check |
-
-<details>
-<summary>Database index — normal response vs. Socrates</summary>
-
-The normal response used a book analogy, SQL, and read/write costs, then ended.
-
-> A database index is like the index at the back of a book.
->
-> - Reads become faster.
-> - Indexes consume disk space.
-> - Inserts, updates, and deletes become slightly slower.
-
-Socrates showed the lookup paths first:
-
-```text
-Without an index
-users table: row 1? → row 2? → row 3? → ... → row 10,000,000?
-             └──────────── full table scan ────────────────┘
-
-With an index on email
-sorted email index → location of the row → matching users row
-```
-
-> Your turn: after adding an index on `email`, trace the path the database takes to find one user.
-
-</details>
-
-<details>
-<summary>Two consecutive wrong-answer repairs</summary>
-
-After the learner said that a cache notices a source change by itself:
-
-```text
-10:00  Source: A ──copy──▶ Cache: A
-10:01  Source: B           Cache: A  ← unaware
-
-The cache learns through:
-Source ──invalidation──▶ Cache
-Cache  ──version check──▶ Source
-Timer expires ─────────▶ revalidation
-```
-
-> If the source changes at 10:01, no invalidation is sent, and the cache checks freshness at 10:05, when can the cache first discover that its copy is stale?
-
-The learner then incorrectly answered “10:01.” Socrates stayed on the same objective and redrew only the mismatch:
-
-```text
-Time    Source              Cache
-10:00   value = A  ───────▶ value = A
-10:01   value = B           value = A   ← receives nothing
-10:05   ◀──── cache checks ────────────
-         returns B ────────▶ discovers its A was stale
-```
-
-> 10:01 is when the cached copy **becomes stale**, not when the cache **discovers** it.
->
-> At 10:01, what new information actually reaches the cache: a notification/check result, or nothing?
-
-</details>
-
-<details>
-<summary>Scheduled-order explanation grounded in existing code</summary>
-
-Test source: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
-
-```text
-placeOrder(input)
-      ↓
-Find order by idempotency key
-      ├── found ──▶ Return existing order
-      ↓
-Validate items → Reserve inventory → Authorize payment
-      ↓
-Insert "confirmed" order → Publish "order.confirmed" → Return
-
-After reservation, any failure
-      └──▶ Release reservation ──▶ Rethrow error
-```
-
-The proposal was kept separate from observed behavior:
-
-```text
-Find by key → Validate items → Is execution time in the future?
-                                  ├─ no  → existing immediate path
-                                  └─ yes → persist "scheduled"
-                                             ↓
-                                          due-time trigger
-                                             ↓
-                                      reserve → pay → confirm
-```
-
-> In one sentence: where should a future-dated order leave the current flow, and what makes that boundary safer than branching after inventory reservation?
-
-</details>
-
-The Claude Code skill passed the same generated-package checks and `$skill-creator` validation as the Codex skill. It is installed as a skill, not as a plugin, so `claude plugin validate` is not applicable. The local Claude CLI was logged out, so a v1.1.0 Claude model response was not run and is not marked as a pass.
+The earlier v1.1.0 learning evaluation was run on 2026-08-24 with Codex. It is historical evidence, not a result for the current models or implementation workflow.
 
 ## Invoke the skill
 
@@ -187,7 +103,7 @@ The Claude Code skill passed the same generated-package checks and `$skill-creat
 | Codex | `$socrates <request>` |
 | Claude Code | `/socrates <request>` |
 
-The skill may also activate for explicit explanation, learning, ELI5, picture-explainer, code-flow, trade-off, incident-cause, or mental-model review requests. It does not take over ordinary code edits or narrow rewrites.
+The skill may also activate for explicit explanation, learning, ELI5, picture-explainer, code-flow, trade-off, incident-cause, or mental-model review requests. Fully specified ordinary edits and narrow rewrites do not become lessons or approval ceremonies.
 
 ## Install
 
@@ -227,7 +143,7 @@ When a custom `CODEX_HOME` exists or already contains a Codex skill copy, the in
 
 ### Update an existing installation
 
-Pull the latest repository state and run the install command again. Managed skill copies are replaced with v1.1.0.
+Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.0.0. The local source command works before a release tag is published.
 
 For a v0.10.0 installation, remove the old product first:
 
@@ -261,6 +177,13 @@ npm test
 ```
 
 The evaluation set contains 23 cases and 45 automated checks covering explanation, visualization, guided learning, audience adaptation, noninterference with ordinary work, and packaging.
+
+The separate writable suite covers implementation alignment and learning regressions on both hosts. These commands make real model calls using the current CLI and its account credentials:
+
+```bash
+SOCRATES_LIVE_EVAL=1 SOCRATES_ALIGNMENT_HOST=codex npm run eval:alignment
+SOCRATES_LIVE_EVAL=1 SOCRATES_ALIGNMENT_HOST=claude npm run eval:alignment
+```
 
 ## Original inspiration
 

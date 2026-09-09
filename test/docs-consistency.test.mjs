@@ -6,13 +6,11 @@ import { fileURLToPath } from "node:url";
 import {
   agentTargetPath,
   buildOpenAIYaml,
-  buildPlatformSkillBody,
   buildSkillDocument,
   claudeAgentNames,
   codexAgentNames,
   findUnexpectedGeneratedPaths,
   readAgentPromptSource,
-  readClaudeSkillAppendix,
   readSkillBody,
   readSkillReferenceSource,
   skillReferenceNames,
@@ -30,10 +28,10 @@ async function readRepoFile(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("package metadata identifies the 1.1.0 visual-learning release", async () => {
+test("package metadata identifies the 2.0.0 intent-alignment release", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
-  assert.equal(pkg.version, "1.1.0");
-  assert.equal(DEFAULT_VERSION, "v1.1.0");
+  assert.equal(pkg.version, "2.0.0");
+  assert.equal(DEFAULT_VERSION, "v2.0.0");
   assert.equal(pkg.license, "MIT");
   assert.match(pkg.engines.node, />=22/);
   assert.equal(pkg.scripts["verify:skills"], "node reference/verify-skills.mjs");
@@ -47,6 +45,7 @@ test("generated layout is minimal and rejects unsafe names", () => {
   assert.deepEqual(skillReferenceNames, [
     "audience-calibration.md",
     "guided-learning.md",
+    "implementation-alignment.md",
     "visual-explanations.md",
   ]);
   assert.deepEqual(skillScriptNames, []);
@@ -80,14 +79,13 @@ test("frontmatter targets learning requests without hijacking ordinary tasks", (
     const raw = target.frontmatter.find((line) => line.startsWith("description: "));
     const description = JSON.parse(raw.slice("description: ".length));
     descriptions.push(description);
-    assert.match(description, /Teach through visual-first explanations/i);
+    assert.match(description, /teach through visual-first explanations/i);
     assert.match(description, /ELI5/i);
     assert.match(description, /picture explainer/i);
     assert.match(description, /code\/module flow.*trade-off.*incident/is);
     assert.match(description, /Socratic tutoring or a quiz/i);
-    assert.match(description, /repair the same idea until the answer demonstrates it before advancing/i);
-    assert.match(description, /Respect finished-deliverable and no-question requests/i);
-    assert.match(description, /Do not trigger merely because an ordinary task/i);
+    assert.match(description, /Preserve finished-deliverable and no-question learning requests/i);
+    assert.match(description, /Do not turn fully specified ordinary edits/i);
     assert.doesNotMatch(description, /production|billing|credential|destructive/i);
   }
   assert.equal(new Set(descriptions).size, 1);
@@ -163,8 +161,6 @@ test("audience reference calibrates by evidence instead of demographics", async 
 
 test("Codex and Claude packages are generated from one shared runtime", async () => {
   const body = await readSkillBody();
-  const claudeAppendix = await readClaudeSkillAppendix();
-  assert.equal(claudeAppendix, "");
 
   const generated = {};
   for (const [platform, target] of Object.entries(skillTargets)) {
@@ -173,7 +169,7 @@ test("Codex and Claude packages are generated from one shared runtime", async ()
       generated[platform],
       buildSkillDocument({
         frontmatter: target.frontmatter,
-        body: buildPlatformSkillBody(platform, body, claudeAppendix),
+        body,
       })
     );
 
@@ -194,12 +190,12 @@ test("Codex UI metadata invokes the renamed skill explicitly", async () => {
   const yaml = await readFile(agentTargetPath, "utf8");
   assert.equal(yaml, buildOpenAIYaml({ promptSource: prompt }));
   assert.match(yaml, /display_name: "Socrates"/);
-  assert.match(yaml, /short_description: "See the idea, then align your understanding"/);
+  assert.match(yaml, /short_description: "Align intent, visualize decisions, then implement"/);
   assert.match(yaml, /default_prompt: "Use \$socrates/);
   assert.match(yaml, /allow_implicit_invocation: true/);
 });
 
-test("release manifest ships only the v1 Socrates package", async () => {
+test("release manifest ships only the Socrates package", async () => {
   const layout = JSON.parse(await readRepoFile("reference/skill-layout.json"));
   const assets = listReleaseAssetPaths(layout);
   assert.equal(assets.includes(".agents/skills/socrates/SKILL.md"), true);
@@ -222,52 +218,20 @@ test("release manifest ships only the v1 Socrates package", async () => {
   }
 });
 
-test("English and Korean READMEs document behavior, installation, upgrade, and evaluation", async () => {
-  const english = await readRepoFile("README.md");
-  const korean = await readRepoFile("README.ko.md");
-  for (const readme of [english, korean]) {
-    assert.match(readme, /version-1\.1\.0/);
-    assert.match(readme, /\$socrates/);
-    assert.match(readme, /\/socrates/);
-    assert.match(readme, /\.agents\/skills\/socrates/);
-    assert.match(readme, /\.claude\/skills\/socrates/);
-    assert.match(readme, /v0\.10\.0/);
-    assert.match(readme, /23/);
-    assert.match(readme, /45/);
-    assert.match(readme, /npm run verify:skills/);
-    assert.match(readme, /anthropics\/claude-plugins-community/);
-    assert.doesNotMatch(readme, /DreambigOu\/ELI5/);
-    assert.doesNotMatch(readme, /No quiz|퀴즈는 하지 마/i);
-    assert.doesNotMatch(readme, /deterministic checks|결정적 검사/i);
+test("READMEs link to shipped workflows and document executable package commands", async () => {
+  const pkg = JSON.parse(await readRepoFile("package.json"));
+  for (const name of ["README.md", "README.ko.md"]) {
+    const readme = await readRepoFile(name);
+    assert.ok(readme.includes(`version-${pkg.version}-`));
+    assert.ok(readme.includes("$socrates"));
+    assert.ok(readme.includes("/socrates"));
+    for (const match of readme.matchAll(/npm run ([a-z:-]+)/g)) {
+      assert.ok(pkg.scripts[match[1]], `undocumented command: ${match[1]}`);
+    }
+    for (const match of readme.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      const target = match[1].split("#")[0];
+      if (!target || /^[a-z]+:/i.test(target)) continue;
+      await access(path.resolve(repoRoot, target));
+    }
   }
-  assert.match(english, /visual-first learning skill/i);
-  assert.match(english, /How it works/i);
-  assert.match(english, /Show the big picture visually.*Ask one focused question.*redraw that part.*check the same objective/is);
-  assert.match(english, /expressed or applied the current objective's key relationship/i);
-  assert.match(english, /When to use Socrates/i);
-  assert.match(english, /Understand a new concept.*Understand code or a module.*Prepare a change to an existing system.*Understand a trade-off.*Understand an incident.*Check your mental model.*Explain it to someone else/is);
-  assert.match(english, /How it differs from a normal response/i);
-  assert.match(english, /does not make the model smarter/i);
-  assert.match(english, /self-contained HTML artifact with large diagrams and few words/i);
-  assert.match(english, /Actual response tests/i);
-  assert.match(english, /Database index.*PASS.*Timeout incident.*PASS.*Second wrong cache answer.*PASS.*Scheduled-order change/is);
-  assert.match(english, /did not advance; redrew only/i);
-  assert.match(english, /local Claude CLI was logged out.*not run.*not marked as a pass/is);
-  assert.match(english, /23 cases and 45 automated checks/i);
-  assert.match(korean, /시각화 우선 학습 스킬/);
-  assert.match(korean, /어떻게 동작하는가/);
-  assert.match(korean, /큰 흐름을 시각화.*핵심 질문 하나.*해당 부분을 다시 그림.*같은 목표 재확인/is);
-  assert.match(korean, /현재 학습 목표의 핵심 관계.*자기 말로 정확히 설명하거나 새 사례에 적용/is);
-  assert.match(korean, /언제 쓰는가/);
-  assert.match(korean, /처음 보는 개념 이해.*코드나 모듈 흐름 파악.*기존 시스템에 기능 추가.*트레이드오프 이해.*장애 원인 이해.*내 이해 점검.*다른 사람에게 전달/is);
-  assert.match(korean, /일반 응답과 무엇이 다른가/);
-  assert.match(korean, /모델을 더 똑똑하게 만드는 것은 아닙니다/);
-  assert.match(korean, /큰 다이어그램.*적은 글자.*자체 완결형 HTML 아티팩트/is);
-  assert.doesNotMatch(korean, /이해.?지도|정답 우위|현재.?제안 경계|별도로 구조화|불변 조건|확장 지점/);
-  assert.match(korean, /실제 응답 테스트/);
-  assert.match(korean, /데이터베이스 인덱스.*통과.*타임아웃 장애.*통과.*캐시를 다시 틀리게 답함.*통과.*예약 주문/is);
-  assert.match(korean, /다음 내용으로 넘어가지 않고.*낡아진 시점.*알아차린 시점/is);
-  assert.match(korean, /로컬 Claude CLI가 로그아웃 상태.*통과로 표시하지 않았/is);
-  assert.match(korean, /테스트 사례 23개와 자동 판정 45개/);
-  assert.match(korean, /Claude Community ELI5/);
 });

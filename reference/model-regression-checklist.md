@@ -4,6 +4,8 @@ Use this checklist for release-level forward testing. Static repository checks a
 
 ## Routing
 
+- Requirements clarification, design confirmation, and consequential feature ambiguity select implementation alignment. Existing-code explanations remain explanations.
+- Already approved, fully specified ordinary edits proceed without a new confirmation ceremony.
 - Explicit ELI5, visual explanation, learning, Socratic, quiz, teach-back, module-flow, trade-off, incident, audience-specific explanation, and mental-model review requests select Socrates.
 - Ordinary coding work and narrow rewriting do not become lessons merely because an explanation could be useful.
 - Codex explicit invocation is `$socrates`; Claude Code explicit invocation is `/socrates`.
@@ -38,6 +40,11 @@ Use this checklist for release-level forward testing. Static repository checks a
 
 ## Cross-host evaluation
 
+- Test `gpt-6-astra` and `claude-fable-5-1` with exact requested model IDs and record the CLI versions and resolved identity when exposed. Report unavailable models and authentication failures; do not silently substitute a model.
+- Run `eval:alignment` in writable temporary workspaces. Inspect actual tool calls before and after final confirmation, including attempted edits that failed or were later reverted.
+- Check a consequential ambiguity, source discovery, contradictory requirements, a corrected decision reflected in the diagram, final approval followed by implementation, and already approved scope without a repeated gate.
+- Check the batch acceptance examples independently of model-authored tests. An unchanged hash under a read-only host is not evidence of a successful implementation gate.
+- Treat explicit local invocation results separately from automatic skill discovery; the writable suite does not measure trigger recall or a skill/control performance advantage.
 - Rebuild generated skills before each run.
 - Use fresh isolated workspaces and avoid leaking expected answers to the evaluated model.
 - Test the alignment gate on a concept and misconception not used as a worked example in the skill references.

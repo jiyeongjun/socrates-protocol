@@ -1,12 +1,35 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 [English](./README.md)
 
-Socrates는 Codex와 Claude Code를 위한 **시각화 우선 학습 스킬**입니다. 개념·코드·트레이드오프·장애 원인을 먼저 그림으로 보여주고, 질문 하나로 사용자의 멘탈 모델을 확인합니다.
+Socrates는 Codex와 Claude Code에서 자연어 의도를 코드까지 일관되게 연결하는 스킬입니다. 기존 맥락을 조사하고, 결과를 바꾸는 빈칸에 질문하고, 요구사항과 설계를 교차 확인한 뒤 합의한 범위를 구현하고 검증합니다. 개념·코드·트레이드오프·장애 원인을 설명하는 **시각화 우선 학습 스킬**의 역할도 유지합니다.
+
+## 코딩 요청을 정렬하는 흐름
+
+```text
+요청 → 코드와 맥락 조사 → 중요한 미결정 사항 확인
+    → 역질문과 답변 반영 → 동작과 완료 조건 합의
+    → 필요한 다이어그램 교차 확인 → 최종 확인
+    → 구현 → 합의한 동작 검증
+```
+
+LLM이 자신이 이해한 요구사항을 제시하고 사용자가 수정합니다. 사용자에게 구현 개념을 퀴즈로 묻지 않습니다. 기존 코드에서 알 수 있는 사실은 직접 조사하고, 답에 따라 동작·범위·데이터 의미·실패 처리·중요한 설계 제약이 달라지는 부분을 질문합니다. 합의한 동작 안의 내부 구현은 저장소 관례를 따릅니다.
+
+Codex에서는 `$socrates 일괄 초대 기능을 추가해줘. 코딩 전에 원하는 동작부터 맞추자`, Claude Code에서는 `/socrates`로 호출합니다. 중요한 해석 차이가 생길 수 있는 기능 요청에도 자동으로 선택될 수 있습니다. 이미 명확하고 승인된 일반 수정에는 추가 확인 절차를 붙이지 않습니다.
+
+구현 전에는 목표·범위·실제 동작·관련 예외·유지할 기존 동작·완료 조건을 간결하게 확인합니다. 결과를 바꾸는 미결정 사항이 남아 있으면 정렬됐다고 선언하지 않습니다. 객체 책임은 클래스, 모듈 경계는 컴포넌트, 호출 순서와 실패는 시퀀스, 데이터 변환과 저장은 데이터 흐름도, 수명주기는 상태도, 조건 분기는 플로우차트로 확인합니다. 현재 동작과 제안을 구분하고 중요한 실패 경로를 포함합니다. 단순한 변경은 그림 없이 진행합니다.
+
+정렬 흐름의 최종 확인은 구체적인 요구사항과 설계를 대상으로 합니다. 확인 전에는 자료 조사와 채팅 안의 설계를 진행하되 제품 코드·테스트·의존성·설정은 수정하지 않습니다. 동일한 구체적 범위에 대해 이미 받은 최종 승인은 재사용합니다. 사용자의 명시적인 결정 위임이나 확인 생략 지시는 존중하지만 침묵이나 급하다는 말로 이를 추정하지 않습니다. 확인 후 구현과 검증을 이어가고, 합의한 동작·범위·제약이 달라져야 할 때만 해당 결정을 다시 확인합니다.
+
+학습에서는 사용자가 관계를 이해했는지, 구현에서는 LLM의 해석이 사용자 의도와 맞는지를 확인합니다. 학습 중 퀴즈를 생략해 달라는 말이 제품 정책의 결정 위임을 뜻하지는 않습니다. 스킬만으로 정합성을 보장할 수는 없으므로 실제 결정 과정·도구 호출·완료 조건의 검증 결과를 함께 평가합니다.
+
+[구현 정렬 지침](reference/skill-references/implementation-alignment.md)과 [실제 모델 평가 안내](evals/README.md)를 참고하세요.
+
+## 학습 동작
 
 답이 어긋나면 다음 내용으로 넘어가지 않습니다. 이해하지 못한 부분만 다른 그림·비유·사례로 다시 설명하고, 사용자의 답에서 핵심 관계가 정확히 드러날 때까지 같은 목표를 이어갑니다.
 
@@ -32,6 +55,7 @@ Socrates는 Codex와 Claude Code를 위한 **시각화 우선 학습 스킬**입
 
 | 원하는 결과 | 요청 예시 | Socrates의 동작 |
 |---|---|---|
+| 코딩 의도 정렬 | `$socrates 일괄 초대를 추가해줘. 코딩 전에 동작과 설계부터 맞추자.` | 코드 조사, 중요한 빈칸의 역질문, 설계 교차 확인을 거쳐 최종 확인 후 구현 |
 | 처음 보는 개념 이해 | `$socrates 데이터베이스 인덱스를 백엔드 입문자에게 설명해줘.` | 전체 구조를 먼저 그리고 핵심 질문 하나로 이해를 확인 |
 | 코드나 모듈 흐름 파악 | `$socrates 이 결제 모듈이 어떻게 동작하는지 코드 근거로 보여줘.` | 실제 코드를 읽고 데이터·제어·실패 경로를 시각화 |
 | 기존 시스템에 기능 추가 | `$socrates 주문 서비스에 예약 주문을 넣기 전에 현재 흐름과 연결 지점을 설명해줘.` | 현재 동작과 제안을 구분하고 지켜야 할 규칙과 테스트까지 연결 |
@@ -66,119 +90,11 @@ Socrates가 모델을 더 똑똑하게 만드는 것은 아닙니다. 차이는 
 
 ## 실제 응답 테스트
 
-2026-08-24에 v1.1.0 생성 스킬만 전달한 독립된 새 Codex 에이전트로 테스트했습니다. 평가 결론이나 모범 답안은 전달하지 않았습니다.
+편집 가능한 임시 저장소에서 Astra와 Fable 5.1에 다섯 시나리오를 실행합니다. 네 턴에 걸친 구현 합의, 모순된 요구사항, 이미 승인된 수정, 학습 오개념 교정, 질문 생략을 다룹니다. 실제 도구 호출과 파일 변경을 기록하고 구현 후 별도로 준비한 완료 조건을 검증합니다. 실행 명령·모델 선택·격리 범위·의미 검토 기준은 [평가 안내](evals/README.md)에 정리했습니다.
 
-| 테스트 | 결과 |
-|---|---|
-| 데이터베이스 인덱스 | 통과 — 전체 스캔과 인덱스 경로를 나란히 그리고 질문 하나로 종료 |
-| 타임아웃 장애 | 통과 — 트리거·재시도 피드백 루프·복구 흐름을 그리고 인과 질문 하나로 종료 |
-| 캐시를 잘못 이해한 첫 답 | 통과 — 원본 변경과 캐시 인지 시점을 타임라인으로 분리하고 같은 목표를 질문 |
-| 캐시를 다시 틀리게 답함 | 통과 — 다음 내용으로 넘어가지 않고 `낡아진 시점`과 `알아차린 시점`만 다시 그림 |
-| 기존 주문 코드에 예약 주문 추가 전 파악 | 통과 — 현재 흐름과 제안 흐름을 분리하고 지켜야 할 규칙·위험·테스트를 코드 근거로 설명 |
+2026-09-09 실행에서는 두 가지 표현 문제를 보완하고 관련 사례를 재실행한 뒤 구현·회귀 검증을 통과했습니다. 근거·수정 이력·검증 범위는 [검증 보고서](evals/reports/2026-09-09.md)에 기록했습니다.
 
-같은 프롬프트를 스킬 없이 실행한 결과도 함께 비교했습니다.
-
-| 요청 | 일반 응답 | Socrates | 실제 차이 |
-|---|---|---|---|
-| 데이터베이스 인덱스 | 책 색인 비유와 장단점을 설명했지만 흐름 확인 질문 없이 종료 | 전체 스캔과 인덱스 탐색 경로를 그리고 사용자가 경로를 직접 설명하도록 질문 | Socrates가 시각적 흐름과 이해 확인을 일관되게 추가 |
-| 타임아웃 장애를 시각적으로 설명하고 질문 | 인과 흐름과 질문을 모두 제공 | 트리거와 복구를 나누고 재시도 피드백 루프를 더 명확히 표시 | 요청 자체가 구체적이면 일반 응답도 충분히 좋았으며 차이는 작았음 |
-| 기존 주문 코드에 예약 주문 추가 전 파악 | 현재 흐름·지켜야 할 규칙·제안 파이프라인과 위험을 정확히 설명하고 종료 | 현재와 제안 흐름을 따로 그리고 사용자가 분기 위치와 이유를 설명하도록 질문 | 두 응답 모두 정확했고, Socrates만 이해 확인까지 학습 흐름으로 연결 |
-
-<details>
-<summary>데이터베이스 인덱스 — 일반 응답과 Socrates 비교</summary>
-
-일반 응답은 책 색인 비유, SQL, 읽기·쓰기 비용을 설명한 뒤 끝났습니다.
-
-> A database index is like the index at the back of a book.
->
-> - Reads become faster.
-> - Indexes consume disk space.
-> - Inserts, updates, and deletes become slightly slower.
-
-Socrates 응답은 탐색 경로를 먼저 보여줬습니다.
-
-```text
-Without an index
-users table: row 1? → row 2? → row 3? → ... → row 10,000,000?
-             └──────────── full table scan ────────────────┘
-
-With an index on email
-sorted email index → location of the row → matching users row
-```
-
-> Your turn: after adding an index on `email`, trace the path the database takes to find one user.
-
-</details>
-
-<details>
-<summary>잘못된 답을 두 번 이어서 교정한 결과</summary>
-
-첫 답이 “캐시는 원본이 바뀐 것을 스스로 알아차린다”였을 때:
-
-```text
-10:00  Source: A ──copy──▶ Cache: A
-10:01  Source: B           Cache: A  ← unaware
-
-The cache learns through:
-Source ──invalidation──▶ Cache
-Cache  ──version check──▶ Source
-Timer expires ─────────▶ revalidation
-```
-
-> If the source changes at 10:01, no invalidation is sent, and the cache checks freshness at 10:05, when can the cache first discover that its copy is stale?
-
-여기에 다시 “10:01에 알아차린다”고 틀리게 답하자 다음 주제로 넘어가지 않았습니다.
-
-```text
-Time    Source              Cache
-10:00   value = A  ───────▶ value = A
-10:01   value = B           value = A   ← receives nothing
-10:05   ◀──── cache checks ────────────
-         returns B ────────▶ discovers its A was stale
-```
-
-> 10:01 is when the cached copy **becomes stale**, not when the cache **discovers** it.
->
-> At 10:01, what new information actually reaches the cache: a notification/check result, or nothing?
-
-</details>
-
-<details>
-<summary>기존 주문 코드에 예약 주문을 추가하기 전 응답 발췌</summary>
-
-테스트에 사용한 코드: [`order-service.js`](./evals/fixtures/brownfield-orders/order-service.js), [`order-service.test.js`](./evals/fixtures/brownfield-orders/order-service.test.js)
-
-```text
-placeOrder(input)
-      ↓
-Find order by idempotency key
-      ├── found ──▶ Return existing order
-      ↓
-Validate items → Reserve inventory → Authorize payment
-      ↓
-Insert "confirmed" order → Publish "order.confirmed" → Return
-
-After reservation, any failure
-      └──▶ Release reservation ──▶ Rethrow error
-```
-
-제안은 현재 동작과 분리해 표시했습니다.
-
-```text
-Find by key → Validate items → Is execution time in the future?
-                                  ├─ no  → existing immediate path
-                                  └─ yes → persist "scheduled"
-                                             ↓
-                                          due-time trigger
-                                             ↓
-                                      reserve → pay → confirm
-```
-
-> In one sentence: where should a future-dated order leave the current flow, and what makes that boundary safer than branching after inventory reservation?
-
-</details>
-
-Claude Code용 스킬은 Codex용 스킬과 같은 생성 패키지 검사와 `$skill-creator` 검증을 통과했습니다. 플러그인이 아니라 스킬로 설치되므로 `claude plugin validate` 대상은 아닙니다. 현재 로컬 Claude CLI가 로그아웃 상태라 v1.1.0의 실제 모델 응답은 실행하지 않았으며, 이를 통과로 표시하지 않았습니다.
+이전 v1.1.0 학습 평가는 2026-08-24에 Codex로 실행한 기록입니다. 현재 모델이나 새 구현 흐름의 검증 결과로 사용하지 않습니다.
 
 ## 호출 방법
 
@@ -187,7 +103,7 @@ Claude Code용 스킬은 Codex용 스킬과 같은 생성 패키지 검사와 `$
 | Codex | `$socrates <요청>` |
 | Claude Code | `/socrates <요청>` |
 
-설명·학습·ELI5·그림 설명·코드 흐름·트레이드오프·장애 원인·멘탈 모델 점검 요청에는 자동으로 선택될 수도 있습니다. 일반적인 코드 수정이나 짧은 문장 편집에는 개입하지 않습니다.
+설명·학습·ELI5·그림 설명·코드 흐름·트레이드오프·장애 원인·멘탈 모델 점검 요청에도 자동으로 선택될 수 있습니다. 이미 명확한 일반 코드 수정이나 짧은 문장 편집을 학습이나 추가 승인 절차로 바꾸지 않습니다.
 
 ## 설치
 
@@ -227,7 +143,7 @@ node scripts/install.mjs --mode uninstall --platform both --scope global --sourc
 
 ### 기존 버전에서 업데이트
 
-저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v1.1.0으로 교체됩니다.
+저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v2.0.0으로 교체됩니다. 릴리스 태그를 발행하기 전에도 로컬 원본 설치 명령을 사용할 수 있습니다.
 
 v0.10.0을 사용했다면 이전 설치를 먼저 제거합니다.
 
@@ -261,6 +177,13 @@ npm test
 ```
 
 평가 세트에는 설명, 시각화, 대화형 학습, 독자에 맞춘 설명, 일반 작업 비개입, 패키징을 다루는 테스트 사례 23개와 자동 판정 45개가 있습니다.
+
+구현 정렬과 학습 회귀는 편집 가능한 별도 평가로 두 호스트에서 확인합니다. 다음 명령은 최신 CLI와 해당 계정 인증을 사용해 실제 모델을 호출합니다.
+
+```bash
+SOCRATES_LIVE_EVAL=1 SOCRATES_ALIGNMENT_HOST=codex npm run eval:alignment
+SOCRATES_LIVE_EVAL=1 SOCRATES_ALIGNMENT_HOST=claude npm run eval:alignment
+```
 
 ## 참고한 원본
 

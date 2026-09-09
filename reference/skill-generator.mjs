@@ -6,14 +6,10 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SOCRATES_DESCRIPTION =
-  "Teach through visual-first explanations and focused Socratic questions. Use when the user asks to understand or learn something, requests ELI5 or a picture explainer, wants a code/module flow, trade-off, or incident explained, asks for Socratic tutoring or a quiz, or wants a mental model evaluated. Show the relationship visually, ask one question, and repair the same idea until the answer demonstrates it before advancing. Respect finished-deliverable and no-question requests. Do not trigger merely because an ordinary task needs a brief explanation.";
+  "Align natural-language intent with code through evidence, focused questions, and design cross-checks. Use for requirements clarification, design confirmation before coding, or feature requests with consequential ambiguity. Also teach through visual-first explanations: ELI5, picture explainer, code/module flow, trade-off, incident, Socratic tutoring or a quiz, and mental model review. Preserve finished-deliverable and no-question learning requests. Do not turn fully specified ordinary edits into a lesson or an approval ceremony.";
 
 export const skillBodyPath = path.join(__dirname, "skill-body.md");
 export const agentPromptPath = path.join(__dirname, "openai-default-prompt.txt");
-export const claudeSkillAppendixPath = path.join(
-  __dirname,
-  "claude-skill-appendix.md"
-);
 export const skillReferenceSourceDir = path.join(__dirname, "skill-references");
 export const skillScriptSourceDir = path.resolve(__dirname, "../scripts");
 export const claudeAgentSourceDir = path.join(__dirname, "claude-agents");
@@ -163,15 +159,6 @@ export async function readAgentPromptSource() {
   return (await readFile(agentPromptPath, "utf8")).trim();
 }
 
-export async function readClaudeSkillAppendix() {
-  return (await readFile(claudeSkillAppendixPath, "utf8")).trim();
-}
-
-export function buildPlatformSkillBody(platform, body, claudeAppendix) {
-  const appendix = platform === "claude" ? claudeAppendix.trim() : "";
-  return appendix ? `${body.trim()}\n\n${appendix}` : body.trim();
-}
-
 export async function readSkillReferenceSource(name) {
   return readNamedSource({
     dir: skillReferenceSourceDir,
@@ -215,7 +202,7 @@ export function normalizeAgentPrompt(source) {
 
 export function buildOpenAIYaml({ promptSource }) {
   const prompt = normalizeAgentPrompt(promptSource);
-  return `interface:\n  display_name: "Socrates"\n  short_description: "See the idea, then align your understanding"\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
+  return `interface:\n  display_name: "Socrates"\n  short_description: "Align intent, visualize decisions, then implement"\n  default_prompt: ${JSON.stringify(prompt)}\npolicy:\n  allow_implicit_invocation: true\n`;
 }
 
 function generatedDirectorySpecs() {

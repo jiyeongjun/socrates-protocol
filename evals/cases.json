@@ -3,8 +3,8 @@
   "schema_version": "1.0",
   "model_sets": {
     "cross-host-default": {
-      "codex": ["gpt-5.6-sol", "gpt-5.6-terra"],
-      "claude": ["sonnet", "haiku"]
+      "codex": ["gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra"],
+      "claude": ["claude-fable-5-1", "sonnet", "haiku"]
     },
     "node-lts": {
       "node": ["22", "24"]

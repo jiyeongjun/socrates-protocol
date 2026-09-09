@@ -6,10 +6,8 @@ import { DEFAULT_VERSION, listReleaseAssetPaths, validateSkillLayout } from "../
 import {
   agentTargetPath,
   buildOpenAIYaml,
-  buildPlatformSkillBody,
   buildSkillDocument,
   readAgentPromptSource,
-  readClaudeSkillAppendix,
   readSkillBody,
   readSkillReferenceSource,
   skillReferenceNames,
@@ -92,7 +90,6 @@ async function loadContext() {
     guided,
     visual,
     prompt,
-    appendix,
     layoutText,
     packageText,
     installTests,
@@ -102,7 +99,6 @@ async function loadContext() {
     readSkillReferenceSource("guided-learning.md"),
     readSkillReferenceSource("visual-explanations.md"),
     readAgentPromptSource(),
-    readClaudeSkillAppendix(),
     readFile(path.join(repoRoot, "reference/skill-layout.json"), "utf8"),
     readFile(path.join(repoRoot, "package.json"), "utf8"),
     readFile(path.join(repoRoot, "test/install.test.mjs"), "utf8"),
@@ -117,7 +113,6 @@ async function loadContext() {
     guided,
     visual,
     prompt,
-    appendix,
     layout,
     packageJson: JSON.parse(packageText),
     installTests,
@@ -132,14 +127,14 @@ const staticGraders = {
       "ELI5",
       "picture explainer",
       "code/module flow",
-      "incident explained",
+      "incident",
       "Socratic tutoring",
       "quiz",
-      "mental model evaluated",
+      "mental model review",
     ]) {
       assert.match(context.description, new RegExp(term, "i"));
     }
-    assert.match(context.description, /Do not trigger merely because an ordinary task/i);
+    assert.match(context.description, /Do not turn fully specified ordinary edits/i);
   },
   "interaction-routing": async ({ context }) => {
     for (const mode of ["Audience-ready artifact", "Visual learning", "Guided learning", "Review"]) {
@@ -223,7 +218,7 @@ const staticGraders = {
     for (const [platform, target] of Object.entries(skillTargets)) {
       const expected = buildSkillDocument({
         frontmatter: target.frontmatter,
-        body: buildPlatformSkillBody(platform, context.body, context.appendix),
+        body: context.body,
       });
       assert.equal(await readFile(target.path, "utf8"), expected);
       for (const name of skillReferenceNames) {
@@ -248,8 +243,7 @@ const staticGraders = {
   },
   "installer-layout": async ({ context }) => {
     const assets = listReleaseAssetPaths(context.layout);
-    assert.equal(DEFAULT_VERSION, "v1.1.0");
-    assert.equal(context.packageJson.version, "1.1.0");
+    assert.equal(DEFAULT_VERSION, `v${context.packageJson.version}`);
     assert.ok(assets.includes(".agents/skills/socrates/SKILL.md"));
     assert.ok(assets.includes(".claude/skills/socrates/SKILL.md"));
     assert.equal(assets.some((asset) => asset.includes("socrates-contract")), false);

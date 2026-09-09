@@ -1,6 +1,27 @@
 # Socrates Evaluations
 
-`cases.json` is the canonical evaluation catalog. It contains 23 cases in five groups:
+## Writable, multi-turn alignment evaluation
+
+Run the new behavior suite with the installed native CLI account:
+
+```bash
+SOCRATES_LIVE_EVAL=1 SOCRATES_ALIGNMENT_HOST=codex npm run eval:alignment
+SOCRATES_LIVE_EVAL=1 SOCRATES_ALIGNMENT_HOST=claude npm run eval:alignment
+```
+
+Defaults are `gpt-6-astra` and `claude-fable-5-1`. Use a current CLI supporting the requested model. The runner never substitutes a fallback model. `SOCRATES_ALIGNMENT_MODEL` overrides the model; `SOCRATES_ALIGNMENT_CODEX_BIN` and `SOCRATES_ALIGNMENT_CLAUDE_BIN` select executables. `SOCRATES_ALIGNMENT_CASES` selects comma-separated case IDs; `SOCRATES_ALIGNMENT_OUTPUT` selects the report directory (default: ignored `.socrates-eval-results/`). Each turn has a five-minute timeout.
+
+The five scenarios cover a four-turn batch feature with a corrected decision, contradictory requirements, an already approved exact edit, learning misconception repair, and learning question opt-out. The batch case reads real fixture code, settles failure handling, changes duplicate behavior, then confirms implementation. Independent acceptance code checks partial failure, order, sequential execution, duplicates after failure, per-call reset, exact string identity, empty input, and the existing API. Acceptance code is not mounted in the model workspace or shown before implementation.
+
+The evaluator uses real session IDs for subsequent turns. File hashes are compared after each turn; raw tool traces and produced files are preserved in private reports before removing temporary workspaces. A missing session ID fails continuation. CLI sessions remain in the native host's history. Codex uses workspace-write sandboxing; Claude exposes file tools and permits Node commands, with hooks, setting sources, and MCP configuration disabled. No read-only restriction prevents the agent from making the edit under evaluation.
+
+Native account authentication is retained rather than copied into an isolated HOME. Global skill discovery can still be visible; prompts explicitly select the fresh local skill copy. This suite tests behavior under those recorded conditions, not fully isolated skill/control performance. Claude's existing OAuth login is supported; the older `--bare` runner below requires API/provider credentials. Authentication or model-access failures are execution failures, not behavioral passes.
+
+Mechanical checks do not establish semantic success: manually inspect the response and tool trace for premature edit attempts, policy invention, repeated questions, diagram/agreement contradictions, and incorrect approval handling. A file could be changed and restored within one turn, so an unchanged final hash alone is insufficient. Confirm that the batch diagram includes failure continuation and the corrected duplicate branch. Confirm that the simple approved edit proceeds and learning cases preserve their original behavior. Reports keep semantic review pending until a separate evidence-based review is recorded.
+
+## Existing learning and packaging catalog
+
+`cases.json` is the learning and packaging catalog. It contains 23 cases in five groups; the writable scenarios are defined separately in `run-alignment-evals.mjs`:
 
 - `explanation`: visual-first concept and incident explanations, technical and audience-ready output, source-grounded walkthroughs, and brownfield feature explanations;
 - `guided`: opening a lesson, misconceptions, partial answers, correct answers, uncertainty, changed representations, and quiz opt-out;

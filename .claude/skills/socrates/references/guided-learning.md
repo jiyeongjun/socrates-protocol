@@ -29,6 +29,8 @@ After a missed answer, redraw or isolate the misunderstood relationship, change 
 
 Ask for one learner response at a time. Do not follow a choice or prediction with a separate “Why?” question. If the reason is the evidence you need, combine it into one prompt, such as “Which option fits, and what feature makes it fit?” Ask it once and end the turn; do not restate the same demand below the question.
 
+Before asking for a prediction, check that the stated initial conditions and timeline determine the answer. Supply a missing condition when it matters. If identifying insufficient information is the learning objective, make that explicit and accept a justified “not enough information.”
+
 ## Diagnose before responding
 
 Classify the answer by the current objective, not by whether it contains expected keywords:

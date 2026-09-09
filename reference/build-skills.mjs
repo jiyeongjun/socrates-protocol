@@ -3,7 +3,6 @@ import path from "node:path";
 import {
   agentTargetPath,
   buildOpenAIYaml,
-  buildPlatformSkillBody,
   buildSkillDocument,
   codexAgentNames,
   codexAgentTargets,
@@ -12,7 +11,6 @@ import {
   readAgentPromptSource,
   readCodexAgentSource,
   readClaudeAgentSource,
-  readClaudeSkillAppendix,
   readSkillBody,
   readSkillReferenceSource,
   readSkillScriptSource,
@@ -30,13 +28,12 @@ async function writeTextFile(target, contents) {
 }
 
 const body = await readSkillBody();
-const claudeAppendix = await readClaudeSkillAppendix();
 const promptSource = await readAgentPromptSource();
 
-for (const [platform, target] of Object.entries(skillTargets)) {
+for (const target of Object.values(skillTargets)) {
   const output = buildSkillDocument({
     frontmatter: target.frontmatter,
-    body: buildPlatformSkillBody(platform, body, claudeAppendix),
+    body,
   });
   await mkdir(path.dirname(target.path), { recursive: true });
   await writeFile(target.path, output, "utf8");
@@ -49,14 +46,14 @@ await writeFile(
   "utf8"
 );
 
-for (const [platform, targets] of Object.entries(skillReferenceTargets)) {
+for (const targets of Object.values(skillReferenceTargets)) {
   for (const name of skillReferenceNames) {
     const contents = await readSkillReferenceSource(name);
     await writeTextFile(targets[name], contents);
   }
 }
 
-for (const [platform, targets] of Object.entries(skillScriptTargets)) {
+for (const targets of Object.values(skillScriptTargets)) {
   for (const name of skillScriptNames) {
     const contents = await readSkillScriptSource(name);
     await writeTextFile(targets[name], contents);

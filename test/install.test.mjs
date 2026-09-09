@@ -134,7 +134,7 @@ async function loadExdevSkillAsset(relativePath) {
     : contents;
 }
 
-test("parseArgs accepts the recommended install shape and v1 default", () => {
+test("parseArgs accepts the recommended install shape and current default", () => {
   const parsed = parseArgs([
     "--platform",
     "both",
@@ -147,7 +147,7 @@ test("parseArgs accepts the recommended install shape and v1 default", () => {
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
   assert.equal(parsed.version, DEFAULT_VERSION);
-  assert.equal(DEFAULT_VERSION, "v1.1.0");
+  assert.equal(DEFAULT_VERSION, "v2.0.0");
 });
 
 test("parseArgs and layout validation reject invalid input", () => {
@@ -470,7 +470,7 @@ test("repeated install is byte-idempotent and writes a complete v1 manifest", as
   const manifest = JSON.parse(second);
   assert.equal(second, first);
   assert.equal(manifest.protocol, "socrates");
-  assert.equal(manifest.protocol_version, "1.1.0");
+  assert.equal(manifest.protocol_version, "2.0.0");
   assert.match(manifest.source_ref, /^local:/u);
   assert.ok(manifest.assets.some((asset) => asset.target === "SKILL.md"));
   assert.ok(

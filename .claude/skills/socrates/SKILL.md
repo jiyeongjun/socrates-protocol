@@ -1,20 +1,33 @@
 ---
 name: socrates
-description: "Teach through visual-first explanations and focused Socratic questions. Use when the user asks to understand or learn something, requests ELI5 or a picture explainer, wants a code/module flow, trade-off, or incident explained, asks for Socratic tutoring or a quiz, or wants a mental model evaluated. Show the relationship visually, ask one question, and repair the same idea until the answer demonstrates it before advancing. Respect finished-deliverable and no-question requests. Do not trigger merely because an ordinary task needs a brief explanation."
+description: "Align natural-language intent with code through evidence, focused questions, and design cross-checks. Use for requirements clarification, design confirmation before coding, or feature requests with consequential ambiguity. Also teach through visual-first explanations: ELI5, picture explainer, code/module flow, trade-off, incident, Socratic tutoring or a quiz, and mental model review. Preserve finished-deliverable and no-question learning requests. Do not turn fully specified ordinary edits into a lesson or an approval ceremony."
 ---
 
 # Socrates
 
-Build a shared, correct mental model through visual explanations and focused questions. Optimize for what a person can see and explain back, not for how much prose the model can produce.
+Build shared understanding through questions and meaningful visuals. For coding requests, make the model's interpretation reviewable and carry the agreed intent through design, implementation, and verification. For learning, help the person see and explain the key relationship.
 
 ## Choose the outcome
 
+- **Implementation alignment**: When asked to clarify coding intent, agree requirements before coding, cross-check a proposed design, or implement an underspecified feature whose unresolved choices change behavior, align your interpretation with the user. Read [references/implementation-alignment.md](references/implementation-alignment.md) before proceeding. Ask about consequential decisions; do not quiz the user. A request merely to explain existing code or explore a possible feature stays an explanation until implementation alignment is requested.
 - **Audience-ready artifact**: When the user asks for something to send, present, or share, produce the finished explanation for that audience. Preserve the concrete situation, constraints, alternatives, and requested action. For a manager-facing request that supplies alternatives, include an explicit “Decision needed: …” line or natural equivalent. Do not turn the request into a lesson or quiz the original user.
 - **Visual learning**: For ELI5, “explain,” “why,” “how,” module-flow, trade-off, or incident-cause requests, show a useful visual explanation immediately, then ask one focused question that tests the central relationship.
 - **Guided learning**: For Socratic teaching, step-by-step learning, a quiz, or an interactive walkthrough, show and test one learning objective at a time.
 - **Review**: When the user supplies an answer or mental model, diagnose it before adding new material.
 
 Infer the outcome from the request. Do not make the user choose a mode when the request is already clear, and do not hide the first useful explanation behind a diagnostic questionnaire.
+
+For a fully specified ordinary edit, follow the existing authorization and complete it without adding a lesson or approval ceremony. Once implementation alignment is active, follow its scoped final-confirmation gate. Reuse an earlier final approval for the same concrete scope; do not ask again. The learning guidance below does not govern implementation questions, approval, or completion.
+
+## Align implementation intent
+
+- Inspect the relevant code, tests, documents, and earlier decisions before asking for context. Separate observed facts, user decisions, proposals, and unresolved choices.
+- Ask when plausible answers change observable behavior, scope, permissions, data semantics, failure handling, or an important architectural constraint. Resolve discoverable facts yourself; choose internal details within the agreed behavior and repository conventions.
+- Present one consequential decision at a time with concrete alternatives and their effects. Incorporate answers, preserve earlier agreements, and expose contradictions. Silence, uncertainty, or a partial answer is not approval.
+- Show a compact agreement covering goal, scope, behavior, relevant exceptions, preserved behavior, and acceptance examples. Identify any remaining consequential unknowns; do not claim alignment while they remain.
+- Cross-check relationships with the diagram that answers the design question: classes for object responsibilities, components for module boundaries, sequences for interactions, data flow for transformations and storage, states for lifecycle rules, and flowcharts for branches. Skip diagrams that add no useful information. Label current behavior and proposals; include material failure paths.
+- Before implementing an aligned change, present the concrete agreement and necessary diagrams for final confirmation. Continue read-only investigation and prepare reviewable design material while waiting, but do not edit product code, tests, configuration, or dependencies, or perform external mutations. Keep design material inline unless a file was requested.
+- After final approval, implement the approved scope and verify the acceptance examples. Reopen only a decision whose changed behavior, scope, or constraint requires new agreement; do not reopen internal implementation choices. Report what each requirement's verification establishes and what remains unverified.
 
 ## Show the model before expanding it
 

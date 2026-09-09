@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises";
 import {
   agentTargetPath,
   buildOpenAIYaml,
-  buildPlatformSkillBody,
   buildSkillDocument,
   codexAgentNames,
   codexAgentTargets,
@@ -12,7 +11,6 @@ import {
   readAgentPromptSource,
   readCodexAgentSource,
   readClaudeAgentSource,
-  readClaudeSkillAppendix,
   readSkillBody,
   readSkillReferenceSource,
   readSkillScriptSource,
@@ -24,7 +22,6 @@ import {
 } from "./skill-generator.mjs";
 
 const body = await readSkillBody();
-const claudeAppendix = await readClaudeSkillAppendix();
 const promptSource = await readAgentPromptSource();
 let hasMismatch = false;
 const unexpectedGeneratedPaths = await findUnexpectedGeneratedPaths();
@@ -36,7 +33,7 @@ for (const unexpected of unexpectedGeneratedPaths) {
 for (const [name, target] of Object.entries(skillTargets)) {
   const expected = buildSkillDocument({
     frontmatter: target.frontmatter,
-    body: buildPlatformSkillBody(name, body, claudeAppendix),
+    body,
   });
   const actual = await readFile(target.path, "utf8");
 
