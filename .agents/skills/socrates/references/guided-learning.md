@@ -12,6 +12,8 @@ Treat alignment as local and observable. For a correct answer, acknowledge the a
 
 ## Prepare one useful check
 
+Use this procedure for requested practice or an unfinished agreed learning objective. Correcting a supplied claim in an explanation-only review does not itself request another question. In that case, explain the corrected relationship and end at the last requested finding.
+
 1. Before drafting the explanation, identify the exact mistaken relationship.
 2. Prepare one candidate and compute two concrete predictions: the learner's model and the source-grounded model. If their relevant predictions agree, discard it. Choose the earliest condition where the two models diverge, rather than an end boundary they both reach. Treat each call's result as independent unless the premise links them; a limit constrains the number of steps, not their results. Supply missing outcomes so the question has one determinate answer.
 3. Compare the candidate with the original worked case. A new name, domain, or irrelevant intervening operation does not change its causal path. Choose a different condition and decide the minimum result and causal link demonstrating understanding.

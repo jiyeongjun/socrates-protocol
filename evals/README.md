@@ -111,3 +111,9 @@ The native reviewer audit requires actual completed findings linked to the launc
 The response-review brief belongs to a separate reviewer. A host without native delegation follows the ordinary author workflow; it must not simulate a reviewer or claim independent review. Native review completion, execution success, and semantic correctness are separate measurements. A full-bundle stress result is retained even when author-only or native runs improve.
 
 The [v2.2.0 report](reports/2026-10-26-v2.2.0.md) records frozen-source comparisons, failed experiments, repeated probes, research references, and remaining limitations. Research motivates hypotheses; it does not establish this skill’s accuracy.
+
+### Completed objectives and explanation endpoints (v2.2.1)
+
+`completion-boundary-cases.json` adds eight inverse controls: an explicitly requested next exercise, a next objective, an outcome without its causal reason, ownership of an invalid prior question, approved fixes, multiple requested findings, and a supplied external-effect guarantee. The short completion branch must not suppress these requested actions. Run them with `SOCRATES_NATIVE_CASE_FILE=evals/completion-boundary-cases.json`; keep criteria out of generation prompts.
+
+The [v2.2.1 report](reports/2026-10-26-v2.2.1.md) separates the final frozen candidate from rejected intermediate candidates, original judgments from secondary review, semantic results from execution audits, and source tests from installed-skill smoke tests. Large sanitized evidence belongs in the release attachment, not the source diff.

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "correct-answer-next-exercise",
+    "prompt": "Use Socrates. Complete code: function firstNegative(xs) { for (const x of xs) { if (x < 0) return x; } return null; } You asked what firstNegative([2,-3,-7]) returns and why. My answer: -3, because return exits at the first negative before reaching -7. Assess my answer briefly, then give me one new concrete practice question about the same stopping rule. Leave that question unanswered.",
+    "criteria": "Accept correct outcome and reason, and preserve the explicitly requested next exercise. Ask one determinate unanswered case; do not terminate after acknowledgment or add unrelated implementation advice.",
+    "reviewRequired": true
+  },
+  {
+    "id": "correct-answer-next-objective",
+    "prompt": "Use Socrates for these two requested learning objectives: the base case and then unwinding. Complete code: function total(n) { if (n === 0) return 0; return n + total(n - 1); } For your base-case question, I answer: total(0) returns 0 before making another recursive call. Briefly assess that answer, then explain how total(2) unwinds with a small diagram. I want the explanation directly, with no further quiz.",
+    "criteria": "Acknowledge completed base-case objective and fulfill already-requested unwinding objective. Show total(0)=0, total(1)=1, total(2)=3; no question, repair proposal or premature stop.",
+    "reviewRequired": true
+  },
+  {
+    "id": "outcome-without-cause",
+    "prompt": "Use Socrates. Complete code: function prefix(xs) { const result=[]; for (const x of xs) { if (x === null) return result; result.push(x); } return result; } Our one learning objective is explaining why processing stops. You asked what prefix([null,4]) returns and why. My entire answer is: 'An empty array.' Assess what I have demonstrated and help me supply the missing relationship.",
+    "criteria": "Accept the correct result but distinguish the missing cause. Explain or elicit that return exits before pushing null or visiting 4. Do not claim the whole causal objective is already demonstrated or introduce a new topic.",
+    "reviewRequired": true
+  },
+  {
+    "id": "invalid-question-completed",
+    "prompt": "Use Socrates. Whole code: function label(x) { if (x === null) return 'missing'; return String(x); } You asked why label(null) calls String(null). I replied: it does not; the first branch returns 'missing' before that call. This is our only objective. Briefly assess my correction.",
+    "criteria": "Own the incorrect question, acknowledge the correct outcome and causal early return, then finish. No another example, quiz, fix or defensive reinterpretation.",
+    "reviewRequired": false
+  },
+  {
+    "id": "changed-rule-approved-fix",
+    "prompt": "Use Socrates. Earlier function fee(n) { return n > 10 ? 2 : 4; } was changed to function fee(n) { return n >= 10 ? 2 : 4; }. The rule is still 'reduced fee only above ten'. Explain what changed at ten, then give the exact approved one-line correction inline. No files and no questions.",
+    "criteria": "At ten the old result is 4 and new is 2, violating supplied rule. Provide approved n > 10 correction inline; do not suppress fix, ask permission or reopen the policy.",
+    "reviewRequired": false
+  },
+  {
+    "id": "several-requested-findings",
+    "prompt": "Use Socrates for a code explanation, with no questions or proposed changes. Whole code: async function put(k) { if (cache.has(k)) return cache.get(k); const value = await fetchValue(k); cache.set(k,value); return value; } cache initially lacks k and persists; calls are sequential. The first fetchValue(k) rejects. A second put(k) then runs. Explain all three points: whether the first call returns a value, whether cache contains k afterward, and whether the second call reaches fetchValue. The remote function is not shown.",
+    "criteria": "Cover all three requested findings: first call rejects, no successful returned value; set skipped so k absent; second attempts fetchValue. Do not stop after first finding, assert second success, or propose caching/error-handling fixes.",
+    "reviewRequired": true
+  },
+  {
+    "id": "explicit-effect-completed",
+    "prompt": "Use Socrates to assess my answer briefly; this is our only objective. Source: async function send(k) { await store(k); await mark(k); }. The first store call permanently creates one object; mark then rejects. On retry store is called again. The service contract guarantees exactly one object per key forever and returns the original receipt for repeats. I answer: two store calls leave one object, because the service deduplicates by key even when mark failed. Is that reasoning correct?",
+    "criteria": "Accept two calls, one object, and the supplied deduplication cause. Do not hedge the explicit guarantee, suggest adding deduplication already supplied, or extend the completed lesson.",
+    "reviewRequired": false
+  },
+  {
+    "id": "correct-answer-plus-approved-edit",
+    "prompt": "Use Socrates. Whole code: function isEven(n) { return n % 2 === 1; }. I understand the bug: for nonnegative integers it returns true for odd numbers, because remainder 1 means odd. Briefly assess that explanation, and also supply the already-approved corrected function inline for nonnegative integers. Do not ask a question or modify files.",
+    "criteria": "Accept correct understanding and provide isEven(n) returning n % 2 === 0. Do not mistake understanding as completing the separately requested approved fix; preserve input domain and avoid extra policy questions.",
+    "reviewRequired": false
+  }
+]
