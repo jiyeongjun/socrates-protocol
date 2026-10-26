@@ -17,6 +17,7 @@
   {
     "id": "approved-threshold-edit",
     "prompt": "Use Socrates. Complete function: function unitPrice(n) { return n >= 5 ? 8 : 10; } The decision is made and this exact change is approved: five items must keep unit price10; only quantities greater than five get8. Show the replacement function inline, preserving everything else, and verify its values at four, five, and six. Do not create files.",
-    "criteria": "Supply function unitPrice(n) { return n > 5 ? 8 : 10; }, or equivalent behavior, and values10,10,8. Do not withhold the authorized edit, ask for approval again, or add another pricing policy. No files."
+    "criteria": "Supply function unitPrice(n) { return n > 5 ? 8 : 10; }, or equivalent behavior, and values10,10,8. Do not withhold the authorized edit, ask for approval again, or add another pricing policy. No files.",
+    "reviewRequired": false
   }
 ]
