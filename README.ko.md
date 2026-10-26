@@ -1,6 +1,6 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -29,9 +29,11 @@ Codex에서는 `$socrates 일괄 초대 기능을 추가해줘. 코딩 전에 �
 
 [구현 정렬 지침](reference/skill-references/implementation-alignment.md)과 [실제 모델 평가 안내](evals/README.md)를 참고하세요.
 
-[v2.2.0 평가 근거와 남은 한계](evals/reports/2026-10-26-v2.2.0.md)
+[v2.2.1 완료 경계 평가](evals/reports/2026-10-26-v2.2.1.md)
 
 ## 학습 동작
+
+버전 2.2.1은 요청된 학습 목표가 이미 완료됐는지 먼저 판단합니다. 맞은 답으로 끝난 목표는 짧게 확인하고 마치되, 별도로 요청한 연습·설명·승인된 수정은 계속합니다. 독립 검토가 없으면 짧은 코드 설명을 결론·실행 흐름·나머지 요청된 사실로 구성하고, 요청 밖의 제안과 근거 없는 보증 문구만 삭제합니다. 답 전체를 다시 쓰지 않습니다.
 
 버전 2.2는 오개념 교정·요청된 연습·요구사항 비교에서 완성된 초안을 검토합니다. 호스트가 에이전트 위임을 지원하면 새로운 읽기 전용 검토자에게 원래 요청, 근거, 그림·표·마지막 질문까지 전달하고 실제 검토 결과를 받은 뒤 필요한 부분만 수정합니다. 이미 맞는 답으로 목표가 끝났거나 명확한 일반 수정이면 생략합니다. 위임 도구가 없으면 일반적인 근거 중심 작성 흐름을 따르며, 검토자 전용 지침을 읽거나 검토자를 흉내 내지 않습니다. 실행 시간과 비용이 추가될 수 있고, 런타임이 강제하는 차단 장치는 아닙니다.
 
@@ -151,7 +153,7 @@ node scripts/install.mjs --mode uninstall --platform both --scope global --sourc
 
 ### 기존 버전에서 업데이트
 
-저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v2.2.0으로 교체됩니다. 릴리스 태그를 발행하기 전에도 로컬 원본 설치 명령을 사용할 수 있습니다.
+저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v2.2.1으로 교체됩니다. 릴리스 태그를 발행하기 전에도 로컬 원본 설치 명령을 사용할 수 있습니다.
 
 v0.10.0을 사용했다면 이전 설치를 먼저 제거합니다.
 

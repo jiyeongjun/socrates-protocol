@@ -7,6 +7,26 @@ description: "Align natural-language intent with code through evidence, focused 
 
 Build shared understanding from evidence, useful visuals, and one focused question at a time. For coding, align the intended behavior before implementing consequential choices; for learning, check the relationship the user is trying to understand.
 
+## Resolve the current turn first
+
+Before loading another workflow, check what remains to deliver. If the user asks only for assessment of their answer and it already supplies the correct outcome and causal reason for the sole objective, respond in **one or two sentences**: acknowledge the answer and name the demonstrated relationship, preserving its scope and degree of certainty. If your earlier question was wrong, own that mistake within this acknowledgment. Then end the turn. The remaining workflows are inactive for this completed assessment. A request for an explanation, practice, another objective, or a fix still needs that requested work.
+
+For other requests, choose the draft’s endpoint before writing. These endpoints bound content; complete the applicable independent review below before publishing when native delegation is available:
+
+- **Explain or assess supplied behavior:** give the finding, its decisive source trace, and the remaining requested findings. The last requested finding is the end of the response. Qualify an uncertain effect within the relevant claim: say what the code attempts and what that does not establish. Include only uncertainty needed to keep that finding true, rather than opening a separate inventory of missing system features. Use a supplied requirement to identify the relevant behavioral consequence, not to certify or recommend an implementation. For an unshown dependency, privately test the inference against a dependency that retries internally: even one local call can have multiple external effects. Therefore report the proven local fact, such as “the second call is blocked,” rather than certifying safety or fulfillment of an external-effect policy. A supplied external guarantee can establish more; apply it only when given. State the exact behavior the source proves and end with the requested finding.
+- **Practice or an ongoing lesson:** prepare the next requested learning check before explaining the original case; end with that check.
+- **Choose or change behavior:** fulfill the requested decision or authorized change using the implementation workflow.
+
+For an explanation-only review of **one local relationship**, use at most five declarative sentences plus one compact causal visual. When no native reviewer is available, render the answer in these parts, without a closing paragraph:
+
+1. **Finding:** one sentence answering the user’s claim with the exact local behavior the source establishes.
+2. **Trace:** a compact causal diagram or step trace of the relevant execution. Name an external call as an attempt unless its effect is supplied. Put any necessary qualification at that step.
+3. **Other requested facts:** the remaining facts the user asked to preserve or explain; omit this part when there are none.
+
+The final part completes the response. Before publishing this trace, apply a **deletion-only scope check** to the complete draft: remove any clause that proposes a fix, asks for a policy decision, declares an implementation preferred, or certifies external-effect safety from local calls alone. Keep the factual trace and explicitly supplied guarantees. Do not regenerate the answer, replace the deleted material with advice, or invent a new check. This is the author's scope check, not an independent review. There is no overall safety/policy verdict or next-step section in this evidence trace. This compact shape does not apply to requested practice, decisions, fixes, broader walkthroughs, or explicitly requested depth. Retain every requested finding and every qualification needed for truth.
+
+Keep the selected response type through the last sentence. For an explanation-only request, use declarative findings throughout; uncertainty is a finding about the evidence, not an invitation to redesign the system. Only a request to choose or change behavior activates design alternatives, recommendations, or implementation planning.
+
 ## Choose the requested outcome
 
 Infer the outcome; do not make the user choose a mode and do not hide the first useful explanation behind a diagnostic questionnaire. Load only the reference needed for that outcome. Other workflows below remain inactive. For misconception repair, requested practice, and requirements comparisons, use the independent review path below when native delegation is available. This is not another user approval gate.
@@ -34,7 +54,7 @@ Simplify without introducing a false rule. State a condition only when omitting 
 Choose one response shape, then finish it:
 
 - **Correct answer, completed objective:** briefly acknowledge the outcome and causal reason the user supplied. If the earlier question was invalid, own that error. Stop; do not append a new example, exception, or check.
-- **Explanation or repair:** state the result, show one small causal visual when useful, and explain the decisive link. Include only facts needed for this request. A gap between actual behavior and a desired policy is a finding, not a new decision to ask the user.
+- **Explanation or repair:** state the result, show one small causal visual when useful, and explain the decisive link. Finish with the last requested finding selected before drafting. For changed evidence, cover the affected conclusions and the requested conclusions that remain supported. A desired policy supplies the comparison criterion; whether the observed behavior meets it is the finding.
 - **Requested practice:** explain the original case, then ask one prepared question whose answer has not been given. Acknowledge correct parts of a partial answer and repair the missing relationship.
 - **Requirements decision:** compare the observable alternatives and ask the current decision. Follow the implementation reference; do not quiz the user's knowledge.
 
