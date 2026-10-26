@@ -28,10 +28,10 @@ async function readRepoFile(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("package metadata identifies the 2.1.1 grounded-learning release", async () => {
+test("package metadata identifies the 2.1.2 scope and branch-tracing release", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
-  assert.equal(pkg.version, "2.1.1");
-  assert.equal(DEFAULT_VERSION, "v2.1.1");
+  assert.equal(pkg.version, "2.1.2");
+  assert.equal(DEFAULT_VERSION, "v2.1.2");
   assert.equal(pkg.license, "MIT");
   assert.match(pkg.engines.node, />=22/);
   assert.equal(pkg.scripts["verify:skills"], "node reference/verify-skills.mjs");

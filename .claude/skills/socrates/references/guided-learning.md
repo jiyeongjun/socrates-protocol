@@ -1,94 +1,42 @@
-# Guided Learning
+# Guided learning
 
-Use this reference for Socratic dialogue, step-by-step tutoring, quizzes, answer diagnosis, or any lesson that spans several turns.
+Apply this reference only to teaching, answer review, or requested practice. It does not govern product decisions, implementation approval, or finished audience deliverables.
 
 ## Track one objective at a time
 
-Keep a lightweight internal state:
+Privately keep the objective, supporting source/premises, minimum outcome and cause, latest answer, and useful next support. Do not narrate a protocol or grading rubric.
 
-- the user's outcome;
-- the current learning objective;
-- the evidence that would demonstrate it;
-- the source or assumptions that make that evidence valid;
-- the current visual or representation;
-- the user's latest answer classification;
-- the next support level if the answer misses.
+Check the question before the learner: does the source establish its premise and expected answer? If not, own and repair the question. A user who supplies the correct outcome and cause has demonstrated that objective, including when correcting your mistake. Finish a completed objective without finding a different input that would rescue the old question.
 
-Do not expose this state as protocol narration unless the user asks for a learning plan.
+Treat alignment as local and observable. For a correct answer, acknowledge the actual evidence. For every other class, stay on the same objective. Equivalent wording is sufficient; terminology, incidental detail, and newly invented requirements are not extra acceptance conditions.
 
-## Fix a fair question before asking
+## Prepare one useful check
 
-Before seeing the answer, establish the minimum observable outcome or relationship and its essential causal reason. For a prediction, this is what happens and why; for other subjects, use the equivalent relationship the objective requires. Keep the criteria proportional to the visible question. Longer explanations, terminology, filenames, and incidental implementation details are not additional requirements. Accept equivalent language and clear implications; a material contradiction still needs repair. Do not adjust criteria to fit the user's confidence or preferred answer.
+1. Identify the exact mistaken relationship, if any.
+2. Choose a short scenario. Privately compute the answer under the mistaken model and the source-grounded model. If they agree, choose a different scenario; if intermediate outcomes are unspecified, supply them. Treat each call's result as independent unless the premise links them. Reaching the final allowed step can still end in success; a limit controls how many steps are allowed, not which result a step produces.
+3. Decide the minimum result and causal link that would demonstrate understanding.
+4. Explain the user's original case and the rule. Keep the chosen question's specific result out of the explanation and diagram.
+5. Ask once and stop. If a check would only repeat an already solved result in an explanation-only review, omit it without claiming verified understanding.
 
-Verify the premise and expected answer against available evidence. For code, distinguish observed behavior from intended policy, and inspect relevant callers, dependencies, or tests when the conclusion depends on them. Ask a neutral question with enough conditions to determine an answer; do not reveal the result in wording such as “Why does the retry stay safe?” If evidence cannot settle the question, investigate or make that uncertainty explicit rather than invent a key.
+For example, if a learner thinks sorting means reversing, an already descending list is a poor diagnostic because both models agree. A mixed-order list can distinguish them. The explanation can teach sorting without printing the answer to the selected list.
 
-Use the same evidence boundary in prose and visuals. Trace the relevant branch through its return, throw, or continuation; check a boundary counterexample before saying “only,” “always,” or “never.” State what the shown code establishes and stop at an unobserved dependency: a request or retry can be certain while the external effect is conditional. A diagram arrow must not turn that possibility into a guaranteed effect. If the dependency's behavior is explicitly supplied, use it rather than retaining unnecessary uncertainty.
+General rules are necessary teaching support, not answer leakage. A new scenario that requires applying the rule is valid. Deliberate recognition or a worked first step is also valid when the learner needs it; do not label supported repetition a transfer test. When a new application is explicitly requested, provide a coherent unanswered case.
 
-These are lightweight preparation notes, not a required rubric file, hidden exam protocol, or independent-agent call. Use them only when a learning question is appropriate, not for ordinary edits, audience-ready artifacts, or requirements decisions.
+## Adapt the support
 
-## Question ladder
+Use the highest useful level, moving down when the learner needs help: **Transfer**, **Causal explanation**, **Concrete application**, **Recognition**, **Worked first step**.
 
-Start at the highest level the user can reasonably answer, then move down only when needed:
+After a miss, redraw or isolate the misunderstood relationship, change the representation, or move one rung down. Preserve correct parts; do not add a different topic or repeat the same question unchanged.
 
-1. **Transfer**: predict a new case or compare two cases.
-2. **Causal explanation**: explain why or how the result occurs.
-3. **Concrete application**: work through a specific example.
-4. **Recognition**: choose between constrained alternatives and explain the choice.
-5. **Worked first step**: show the first move, then ask the user to finish it.
+- **Missing condition:** isolate the condition that changes the outcome.
+- **Reversed cause:** contrast two cases differing in that cause.
+- **Overgeneralization:** use a counterexample to the user's rule.
+- **No foothold:** work the first step and leave one small move to the learner.
 
-After a missed answer, redraw or isolate the misunderstood relationship, change the representation, or move one rung down. Do not simply repeat the original wording or add unrelated detail.
+For a recursion base case, “computers get tired” needs repair: computers do not decide to tire. Explain what the function must check before calling itself again. “It stops when a condition is true” still needs the causal link. “The base case returns without making another recursive call” demonstrates it; then advance to how calls unwind only if that next objective was requested.
 
-Ask for one learner response at a time. Do not follow a choice or prediction with a separate “Why?” question. If the reason is the evidence you need, combine it into one prompt, such as “Which option fits, and what feature makes it fit?” Ask it once and end the turn; do not restate the same demand below the question.
+## Preserve scope and autonomy
 
-Before asking for a prediction, check that the stated initial conditions and timeline determine the answer. Supply a missing condition when it matters. If identifying insufficient information is the learning objective, make that explicit and accept a justified “not enough information.”
+Reviewing actual behavior does not authorize a fix or policy choice. If code changes, refresh only affected conclusions; keep unrelated findings. Distinguish a dependency call from its unproven effect, and do not question a premise explicitly supplied for the scenario.
 
-When application is the objective, prepare the next question before drafting the explanation:
-
-- Choose one concrete case that changes a meaningful input, ordering, or boundary while testing the same relationship. State the new case on its own; do not splice incompatible events from the previous case into it.
-- Check that this case has a determinate outcome under the stated assumptions. Keep the outcome and essential cause as the minimum criteria.
-- Explain the learner's original case and the governing rule. Leave the new case's specific outcome out of the prose, worked examples, and diagram labels. Teaching a general rule is necessary support, not answer leakage; repeating an already solved condition-and-outcome pair is not a new application.
-
-Do not add another concept just to make the question harder, and do not require a second test once the current answer already demonstrates the objective. If the learner needs recognition or a worked first step, use that simpler support deliberately rather than presenting it as a transfer test. Avoid exhaustive tables of cases when one trace explains the misconception.
-
-## Diagnose before responding
-
-First check whether the question and expected answer are valid. A mismatch may expose a missing condition, incorrect source interpretation, or faulty teaching example rather than a learner misconception. Acknowledge and correct your own error, then ask one repaired question if learning is continuing. An objection does not itself prove or disprove understanding: count a valid explanation of the target relationship when it supplies the necessary evidence, but do not infer mastery from merely identifying a defective question. If the evidence remains insufficient, leave the conclusion unresolved.
-
-Classify the answer by the current objective, not by whether it contains expected keywords:
-
-- **Correct**: the governing relationship is present and applies to the question.
-- **Partly correct**: a relevant fact is correct, but the causal link, condition, or scope is missing.
-- **Misconception**: the answer relies on a false relationship or incompatible model.
-- **Uncertain/non-answer**: the user signals uncertainty, guesses without a reason, or does not address the objective.
-
-For a correct answer, give brief evidence-based acknowledgment and advance. For every other class, stay on the same objective. Treat alignment as local and observable: the learner must express or apply the governing relationship, but do not claim certainty about everything they know.
-
-Accurately predicting a bug demonstrates understanding of actual behavior; it does not establish that the behavior is desired, safe, or correct. Keep those conclusions separate. If the code, source, or assumptions later change, update the affected explanation and criteria and revisit only conclusions that depended on the change. Preserve unrelated understanding and respect a request to stop questions.
-
-Keep the correction within the demonstrated mechanism and stated conditions. Include an adjacent caveat only when it changes the answer or prevents a likely false inference; otherwise omit it. An accurate answer does not need another input-type lesson. Reviewing a misconception does not call for a fix menu or a new policy choice: explain the relevant risk and keep the already stated goal intact. Shift to implementation alignment only when the user requests that work.
-
-## Repair patterns
-
-- **Missing condition**: “That explains X. What still determines whether Y happens?”
-- **Reversed cause**: contrast two minimal cases where only the cause changes.
-- **Overgeneralization**: give one counterexample and ask the user to refine the rule.
-- **Vocabulary without model**: ask for a prediction or example that requires using the term.
-- **No foothold**: provide a concrete scenario or two choices, then ask why one fits.
-- **Visual mismatch**: zoom into one arrow, boundary, state change, or timeline step and ask what crosses or changes there.
-
-Name the issue gently and precisely. Never call a mistaken answer “exactly right” before correcting it.
-
-## Alignment gate example
-
-Current objective: understand that a recursion base case stops further self-calls.
-
-- User: “It stops when the computer gets tired.”
-  - Stay on the objective. Explain that computers do not decide to tire; contrast a call that reaches a stopping condition with one that never does, then ask what the function must check before calling itself again.
-- User: “It stops when a condition is true.”
-  - Treat as partial. Ask what must happen in that branch so no further recursive call is made.
-- User: “The base case returns without making another recursive call.”
-  - Identify that as the decisive relationship, then advance to how calls unwind.
-
-## Respect autonomy
-
-Guided learning is a service, not a gatekeeping ritual. If the user asks for the answer, gives a time constraint, or declines questions, explain directly. Offer a compact optional check only when useful. If frustration is visible, reduce interaction cost before increasing detail.
+If the user asks for the answer, declines questions, or gives a time constraint, explain directly. Finish when the requested scope is complete. Accuracy checks happen privately: publish an exception only when the current explanation would otherwise be false, not because another input or another task could make it relevant.

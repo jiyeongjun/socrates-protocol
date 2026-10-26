@@ -147,7 +147,7 @@ test("parseArgs accepts the recommended install shape and current default", () =
   assert.equal(parsed.scope, "repo");
   assert.equal(parsed.targetRepo, "/tmp/example");
   assert.equal(parsed.version, DEFAULT_VERSION);
-  assert.equal(DEFAULT_VERSION, "v2.1.1");
+  assert.equal(DEFAULT_VERSION, "v2.1.2");
 });
 
 test("parseArgs and layout validation reject invalid input", () => {
@@ -470,7 +470,7 @@ test("repeated install is byte-idempotent and writes a complete v1 manifest", as
   const manifest = JSON.parse(second);
   assert.equal(second, first);
   assert.equal(manifest.protocol, "socrates");
-  assert.equal(manifest.protocol_version, "2.1.1");
+  assert.equal(manifest.protocol_version, "2.1.2");
   assert.match(manifest.source_ref, /^local:/u);
   assert.ok(manifest.assets.some((asset) => asset.target === "SKILL.md"));
   assert.ok(

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "requested-input-boundaries",
+    "prompt": "Use Socrates. Explain this complete function briefly, without questions: function first(text) { if (text.length === 0) return null; return text[0]; } Explicitly cover first(''), first('cat'), and first(null), including why the last one behaves differently. Include a compact flow. I am asking about these three inputs, not a code change.",
+    "criteria": "Returns null for empty string, c for cat, throws while reading null.length before the condition can complete. All three requested cases must be included despite compactness guidance. No unsolicited fix or question."
+  },
+  {
+    "id": "requested-supported-practice",
+    "prompt": "Use Socrates for guided practice. function down(n) { if (n === 0) return; down(n - 1); } I am stuck on how down(2) reaches the base case. Show the first step down(2) -> down(1), then give me a simple two-choice question about the next argument in this same example. It is fine if your worked step helps me; do not switch to a harder new scenario or answer the choice for me.",
+    "criteria": "Show the requested first step, then one two-choice question about the next argument after down(1), including 0 as the correct option and a plausible alternative. Do not reveal which choice is correct, trace the remaining step, refuse supported practice, or impose a harder transfer check."
+  },
+    {
+    "id": "requested-policy-agenda",
+    "prompt": "Use Socrates for requirements alignment, not a lesson. For a duplicate job submission after the first job succeeded, compare returning the first result with returning a duplicate error. Also list the other consequential choices we must settle before implementing deduplication, leaving them unresolved. We have no evidence yet about why clients repeat requests. Ask only the current return-result-versus-error decision, and do not write code.",
+    "criteria": "Compare observable outcomes, explicitly retain other consequential unknowns because requested, and ask one current decision question. Any recommendation must be conditional on a stated priority, not invented frequency of retries. No quiz, implementation, hidden policy selection or additional question demands."
+  }
+]

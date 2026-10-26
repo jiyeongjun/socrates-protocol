@@ -1,7 +1,7 @@
 {
   "name": "socrates-protocol",
   "private": true,
-  "version": "2.1.1",
+  "version": "2.1.2",
   "license": "MIT",
   "engines": {
     "node": ">=22"
@@ -15,6 +15,7 @@
     "verify:skills": "node reference/verify-skills.mjs",
     "test": "node --test",
     "eval:alignment": "node evals/run-alignment-evals.mjs",
-    "eval:grounded": "node evals/run-grounded-evals.mjs"
+    "eval:grounded": "node evals/run-grounded-evals.mjs",
+    "eval:native": "node evals/run-native-response-evals.mjs"
   }
 }
