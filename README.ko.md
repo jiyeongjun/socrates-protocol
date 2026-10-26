@@ -1,6 +1,6 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -29,7 +29,11 @@ Codex에서는 `$socrates 일괄 초대 기능을 추가해줘. 코딩 전에 �
 
 [구현 정렬 지침](reference/skill-references/implementation-alignment.md)과 [실제 모델 평가 안내](evals/README.md)를 참고하세요.
 
+[v2.1 모델 검증 결과와 알려진 한계](evals/reports/2026-10-26-v2.1.0.md)
+
 ## 학습 동작
+
+v2.1에서는 [Sphinx](https://github.com/parthh01/sphinx)의 아이디어를 참고해 근거와 질문의 품질을 보완했습니다. 질문 전에 최소 결과·인과관계를 정하고, 사용자를 판단하기 전에 질문 자체를 검증하며, 적용 능력이 중요할 때 조건이 달라진 사례를 사용합니다. 같은 의미의 답을 인정하고 뒤늦게 합격 조건을 추가하지 않습니다. 잘못된 질문은 설명자의 오류로 수정하고, 버그를 이해하는 것과 승인하는 것을 구분합니다. 근거가 바뀌면 영향을 받은 결론만 재확인합니다. 이는 대화 규칙이며 Git 차단이나 완전한 이해의 보증이 아닙니다. 구현 정렬을 사용자 퀴즈로 바꾸지도 않습니다.
 
 답이 어긋나면 다음 내용으로 넘어가지 않습니다. 이해하지 못한 부분만 다른 그림·비유·사례로 다시 설명하고, 사용자의 답에서 핵심 관계가 정확히 드러날 때까지 같은 목표를 이어갑니다.
 
@@ -143,7 +147,7 @@ node scripts/install.mjs --mode uninstall --platform both --scope global --sourc
 
 ### 기존 버전에서 업데이트
 
-저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v2.0.0으로 교체됩니다. 릴리스 태그를 발행하기 전에도 로컬 원본 설치 명령을 사용할 수 있습니다.
+저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v2.1.0으로 교체됩니다. 릴리스 태그를 발행하기 전에도 로컬 원본 설치 명령을 사용할 수 있습니다.
 
 v0.10.0을 사용했다면 이전 설치를 먼저 제거합니다.
 

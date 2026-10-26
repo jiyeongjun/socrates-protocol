@@ -18,6 +18,8 @@ Do not infer product policy because an implementation is convenient. Do not dema
 
 Track confirmed decisions and unresolved questions in the conversation. Use short requirement IDs when several behaviors need traceability; a small edit can use a few sentences. Do not generate contract directories or planning files by default.
 
+Keep intended policy, observed behavior, and verified acceptance results distinct. Correctly describing current code, including a bug, neither approves that behavior nor proves a requirement is satisfied. If new code or evidence invalidates an assumption, identify which agreed behavior or verification depends on it. Reopen only a consequential decision that actually changes; preserve unaffected agreements and existing approval for the same concrete scope. This is evidence maintenance, not a learner quiz or an automatic new confirmation gate.
+
 ## Ask and integrate
 
 Ask one consequential decision at a time, giving a recommendation when justified and explaining the trade-off. For example, for a document-sharing feature, asking whether an existing link survives an ownership transfer is more useful than asking the user to describe every requirement. Do not present a recommendation as already decided.

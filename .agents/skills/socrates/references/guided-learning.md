@@ -9,11 +9,20 @@ Keep a lightweight internal state:
 - the user's outcome;
 - the current learning objective;
 - the evidence that would demonstrate it;
+- the source or assumptions that make that evidence valid;
 - the current visual or representation;
 - the user's latest answer classification;
 - the next support level if the answer misses.
 
 Do not expose this state as protocol narration unless the user asks for a learning plan.
+
+## Fix a fair question before asking
+
+Before seeing the answer, establish the minimum observable outcome or relationship and its essential causal reason. For a prediction, this is what happens and why; for other subjects, use the equivalent relationship the objective requires. Keep the criteria proportional to the visible question. Longer explanations, terminology, filenames, and incidental implementation details are not additional requirements. Accept equivalent language and clear implications; a material contradiction still needs repair. Do not adjust criteria to fit the user's confidence or preferred answer.
+
+Verify the premise and expected answer against available evidence. For code, distinguish observed behavior from intended policy, and inspect relevant callers, dependencies, or tests when the conclusion depends on them. Ask a neutral question with enough conditions to determine an answer; do not reveal the result in wording such as “Why does the retry stay safe?” If evidence cannot settle the question, investigate or make that uncertainty explicit rather than invent a key.
+
+These are lightweight preparation notes, not a required rubric file, hidden exam protocol, or independent-agent call. Use them only when a learning question is appropriate, not for ordinary edits, audience-ready artifacts, or requirements decisions.
 
 ## Question ladder
 
@@ -31,7 +40,11 @@ Ask for one learner response at a time. Do not follow a choice or prediction wit
 
 Before asking for a prediction, check that the stated initial conditions and timeline determine the answer. Supply a missing condition when it matters. If identifying insufficient information is the learning objective, make that explicit and accept a justified “not enough information.”
 
+When application is the objective, change one meaningful input, ordering, or boundary from the explained example and ask the learner to apply the same relationship. Choose that scenario before expanding the explanation, so a worked example, table, or visual does not already give its answer. Avoid mere paraphrase or copying the answer from the visual. Do not introduce an unrelated concept to make the question harder, and do not require a second test once the current answer already demonstrates the objective. Recognition and worked examples remain useful support when a transfer question is too difficult.
+
 ## Diagnose before responding
+
+First check whether the question and expected answer are valid. A mismatch may expose a missing condition, incorrect source interpretation, or faulty teaching example rather than a learner misconception. Acknowledge and correct your own error, then ask one repaired question if learning is continuing. An objection does not itself prove or disprove understanding: count a valid explanation of the target relationship when it supplies the necessary evidence, but do not infer mastery from merely identifying a defective question. If the evidence remains insufficient, leave the conclusion unresolved.
 
 Classify the answer by the current objective, not by whether it contains expected keywords:
 
@@ -41,6 +54,10 @@ Classify the answer by the current objective, not by whether it contains expecte
 - **Uncertain/non-answer**: the user signals uncertainty, guesses without a reason, or does not address the objective.
 
 For a correct answer, give brief evidence-based acknowledgment and advance. For every other class, stay on the same objective. Treat alignment as local and observable: the learner must express or apply the governing relationship, but do not claim certainty about everything they know.
+
+Accurately predicting a bug demonstrates understanding of actual behavior; it does not establish that the behavior is desired, safe, or correct. Keep those conclusions separate. If the code, source, or assumptions later change, update the affected explanation and criteria and revisit only conclusions that depended on the change. Preserve unrelated understanding and respect a request to stop questions.
+
+Keep the correction within the demonstrated mechanism and stated conditions. Extra advice about concurrency, other input types, external guarantees, or proposed fixes needs its own evidence and should appear only when it helps the current goal. Distinguish a repeated external call from a repeated external effect unless the latter is established. Do not use an explanation request to reopen a policy the user already settled.
 
 ## Repair patterns
 

@@ -81,6 +81,8 @@ export function parseTranscript(host, stdout) {
 
 export function buildAlignmentCommand({ host, model, workspace, prompt, sessionId, env = process.env }) {
   if (!Object.hasOwn(alignmentModels, host)) throw new Error(`Unknown host: ${host}`);
+  const effort = env.SOCRATES_ALIGNMENT_EFFORT ?? (host === "codex" ? "medium" : "high");
+  if (!["low", "medium", "high", "xhigh", "max"].includes(effort)) throw new Error("Unsupported alignment effort");
   const source = host === "codex" ? ".agents" : ".claude";
   const input = sessionId ? prompt : `Use the Socrates skill at ${source}/skills/socrates/SKILL.md for this request. Read its applicable references.\n${prompt}\nWork only in this temporary project. Do not access external services, install packages, or use other skills.`;
   const childEnv = { ...env, CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1", CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1" };
@@ -90,13 +92,13 @@ export function buildAlignmentCommand({ host, model, workspace, prompt, sessionI
     ? ["exec", ...(sessionId ? ["resume", sessionId] : ["--sandbox", "workspace-write"]),
       "--ignore-user-config", "--ignore-rules", "--skip-git-repo-check", "--json", "--model", model,
       "-c", 'approval_policy="never"', "-c", 'sandbox_mode="workspace-write"',
-      "-c", 'web_search="disabled"', "-c", 'model_reasoning_effort="medium"', input]
+      "-c", 'web_search="disabled"', "-c", `model_reasoning_effort="${effort}"`, "-"]
     : ["--print", "--setting-sources", "", "--settings", '{"disableAllHooks":true,"autoMemoryEnabled":false}',
       "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}', "--no-chrome", "--permission-mode", "acceptEdits",
-      "--tools", "Read,Grep,Glob,Edit,Write,Skill,Bash", "--allowedTools", "Read,Grep,Glob,Edit,Write,Skill,Bash(node *)",
-      "--output-format", "stream-json", "--verbose", "--model", model, "--effort", "high",
-      ...(sessionId ? ["--resume", sessionId] : []), input];
-  return { command: env[`SOCRATES_ALIGNMENT_${host.toUpperCase()}_BIN`] ?? host, args, cwd: workspace, env: childEnv };
+      "--tools", "Read,Grep,Glob,Edit,Write,Skill,Bash", "--allowedTools", "Bash(node *)",
+      "--output-format", "stream-json", "--verbose", "--model", model, "--effort", effort,
+      ...(sessionId ? ["--resume", sessionId] : [])];
+  return { command: env[`SOCRATES_ALIGNMENT_${host.toUpperCase()}_BIN`] ?? host, args, cwd: workspace, env: childEnv, input };
 }
 
 export async function snapshot(workspace, relative = "") {
@@ -133,7 +135,7 @@ export async function runAlignmentEvals(env = process.env) {
   const skillHashes = await snapshot(path.join(repo, sourceRoot, "skills/socrates"));
   const reportFile = path.join(output, `alignment-${host}-${Date.now()}.json`);
   const report = {
-    runAt: new Date().toISOString(), host, requestedModel: model, cliVersion: version.stdout.trim(), skillHashes, selectedCases: selected.map(s => s.id), status: "running",
+    runAt: new Date().toISOString(), host, requestedModel: model, effort: env.SOCRATES_ALIGNMENT_EFFORT ?? (host === "codex" ? "medium" : "high"), cliVersion: version.stdout.trim(), skillHashes, selectedCases: selected.map(s => s.id), status: "running",
     isolation: "Fresh temp workspaces; native account auth retained; Codex user config/rules ignored; Claude setting sources/hooks/MCP disabled. Global skill discovery may remain; explicit local skill path is used. CLI sessions are retained for multi-turn continuation.",
     evaluation: "File snapshots and independent acceptance tests are mechanical evidence. Review raw tool traces for attempted edits, requirement/diagram consistency, and question quality; no semantic pass is inferred from regex or absence of a diff.",
     cases: [],
@@ -156,7 +158,10 @@ export async function runAlignmentEvals(env = process.env) {
       let sessionId;
       for (const [index, turn] of scenario.turns.entries()) {
         const before = await snapshot(workspace);
-        const processResult = await runProcess(buildAlignmentCommand({ host, model, workspace, prompt: turn.prompt, sessionId, env }), 300000);
+        const invocation = buildAlignmentCommand({ host, model, workspace, prompt: turn.prompt, sessionId, env });
+        await writeFile(path.join(workspace, ".eval-prompt.txt"), invocation.input, { mode: 0o600 });
+        const processResult = await runProcess(invocation, 300000);
+        await rm(path.join(workspace, ".eval-prompt.txt"));
         const parsed = parseTranscript(host, processResult.stdout);
         const after = await snapshot(workspace);
         const changed = changedFiles(before, after);

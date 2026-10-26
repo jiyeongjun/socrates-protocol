@@ -51,3 +51,13 @@ Use this checklist for release-level forward testing. Static repository checks a
 - Inspect the rendered visual or artifact, not just the surrounding text.
 - Compare skill and control with the same host, model, prompt, fixture, and read-only controls.
 - Treat one model run and regex grading as advisory; inspect raw responses and repeat material cases.
+
+## Grounded understanding (v2.1)
+
+- Accept the minimum outcome and cause in equivalent language; do not add hidden requirements after the answer.
+- Validate a disputed premise against source before diagnosing the learner. A valid explanation of the target relationship can finish the objective even when it corrects the teacher.
+- Keep a transfer question's answer out of the preceding worked example, table, and visual.
+- Revisit only conclusions affected by changed evidence; preserve unaffected decisions and question opt-outs.
+- Keep repeated external calls distinct from repeated external effects unless evidence establishes both.
+- Separate observed behavior, desired policy, and verified correctness. Do not convert policy alignment into a comprehension test.
+- Record provider/model execution failures separately from behavioral failures; retain requested and resolved model evidence and effort.

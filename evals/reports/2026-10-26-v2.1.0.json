@@ -1,0 +1,1106 @@
+{
+  "release": "2.1.0",
+  "date": "2026-10-26",
+  "skillHashes": {
+    "reference/skill-body.md": "db58a3daed2d486ddc50644e8012d4877c3eecc0f59bba729bbdac418ab4696d",
+    "reference/skill-references/guided-learning.md": "e2a0100854cd6528bf219b37f8495dbdeb9d1c4629b2ee1cfc88df396fe8abe3",
+    "reference/skill-references/implementation-alignment.md": "037278d52fe1aa79137c11ec707a96127909dc9c2480c4bb6b60c06db7267e3d",
+    "reference/skill-references/visual-explanations.md": "f947f7b0b388652d88aa6164fb3f1138c3dc517de5207712ca6b37134b0bf00f",
+    "reference/skill-references/audience-calibration.md": "abcb43d30849d129246a91308a744401e9faa383ff01823718212bf787277c0c"
+  },
+  "assessment": "Advisory semantic review by a separate Claude Opus 5.5 high invocation, with primary-agent inspection. Verdicts are retained conservatively, not proof of universal correctness or a causal comparison. A completed process is not a semantic pass.",
+  "counts": {
+    "pass": 58,
+    "fail": 6,
+    "warn": 8
+  },
+  "limitations": [
+    "Claude: each case is a fresh CLI invocation with skill/references inline and tools disabled. GPT: one fresh desktop subagent per model/effort, six scenarios in the same context. Cross-host scores are not directly comparable.",
+    "Prior turns in learning cases are supplied vignettes. Separate writable tests use actual continuation and hidden acceptance assertions.",
+    "Codex CLI 0.143.0 rejected GPT-6 model IDs for this account. GPT-6 tests used the desktop agent route with the same requested models and efforts. No different model was silently substituted.",
+    "No baseline/control comparison or statistical repeat is claimed. Initial candidate runs informed a narrow instruction revision; these results cover the final skill.",
+    "Global discovery of the older installed skill may remain visible; local/inline skill selection was explicit. Desktop agent model/effort is recorded from invocation rather than a resolved-model event."
+  ],
+  "results": [
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "case": "minimum-equivalent",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "Correct. The commit and the ack are separate steps, so a crash between them leaves the broker thinking the job failed while the work is already applied. Redelivery then runs `commit` again because nothing in the handler can recognize the job as already done.",
+      "review": {
+        "id": "claude-claude-haiku-5-5-low-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the user's equivalent outcome and cause without demanding jargon. Closes the objective with no extra test.",
+        "evidenceQuote": "Correct. The commit and the ack are separate steps"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "case": "invalid-premise",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "You're right, and my question was wrong. `take([])` does not throw. The check `items.length === 0` runs first and returns `null`, so `items[0]` is never evaluated. The early return guards the index access, which is why the empty case is safe.",
+      "review": {
+        "id": "claude-claude-haiku-5-5-low-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise and credits the user's early-return evidence. Stays within scope.",
+        "evidenceQuote": "You're right, and my question was wrong."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "case": "transfer-repair",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "**Correction:** `run` is called **2 times**, not 3. The loop has three slots, but `return await run()` leaves the loop on the first success, so later slots never run.\n\n```\nScenario: run fails once, then succeeds\n\nattempt 0  ──► run() ──► THROWS ──► catch: attempt≠2, swallow, continue\nattempt 1  ──► run() ──► OK     ──► return value ──► EXIT\nattempt 2  (never reached)\n\nrun calls: 2\n```\n\n```\nWhere the throw actually happens\n\nattempt 0  run() fails  ─┐\nattempt 1  run() fails  ─┼─► both caught, loop continues\nattempt 2  run() fails  ─┴─► catch: attempt===2 ─► throw e  (send rejects)\n```\n\nThe stopping rule has two parts:\n- **Success** exits the loop immediately through `return`.\n- **Failure** on the last slot (`attempt === 2`) rethrows. Earlier failures are swallowed.\n\nThe third slot only matters when all three calls fail.\n\n**New question:** `run` fails on its first and second calls, then succeeds on its third call. How many times is `run` called, and what does `send` do?",
+      "review": {
+        "id": "claude-claude-haiku-5-5-low-transfer-repair",
+        "verdict": "fail",
+        "reason": "Incorrect claim: the third slot is used whenever the first two calls fail, including when the third call succeeds. The second diagram also already traces the first two failures continuing to attempt 2, which leaks part of the answer to the new question.",
+        "evidenceQuote": "The third slot only matters when all three calls fail."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "case": "question-opt-out",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "`allow` returns `true` only for the exact string `'admin'`. `'Admin'` fails because `===` compares strings case-sensitively, so the capital `A` makes it a different value.\n\n```\nallow('admin')  ->  'admin' === 'admin'  ->  true\nallow('Admin')  ->  'Admin' === 'admin'  ->  false  (A ≠ a)\nallow(anything else) -> false\n```\n\nYour earlier belief that `'Admin'` passed is incorrect. Only the lowercase `'admin'` matches. If you want case-insensitive matching, you would need to normalize the input first, for example `role.toLowerCase() === 'admin'`, but the current function does not do that.",
+      "review": {
+        "id": "claude-claude-haiku-5-5-low-question-opt-out",
+        "verdict": "pass",
+        "reason": "Correctly explains case-sensitive strict equality with a compact flow. Asks no questions.",
+        "evidenceQuote": "`'Admin'` fails because `===` compares strings case-sensitively"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "case": "intent-boundary",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "Before I recommend an option, I'm relying on your description of the code, since I can't inspect it in this turn. Both options prevent a second refund. They differ in what the repeated caller sees.\n\n**Option A: return the first result.** The repeated request gets the original refund's result, including its refund ID and timestamp. Clients that retry after a timeout can safely treat the response as success. The cost is that the server must store each completed refund's result under a key, such as an order ID or idempotency key, and the caller can't tell from the response alone that this was a repeat.\n\n**Option B: return an explicit duplicate error.** The repeated request is rejected with a clear code such as `REFUND_ALREADY_PROCESSED`, and the response may include the original refund ID. This is easy to reason about and makes duplicates visible in logs and metrics. The cost is that a client that lost the first response will see a failure for a refund that actually succeeded, so it must look up the status before it can show the user the right result.\n\nI recommend Option A. Retries are the most common source of repeats, and returning the first result makes a retry harmless without extra client logic. Option B fits better if your clients already check refund status before retrying, or if duplicate attempts are themselves a signal you want to alert on.\n\nWhich behavior should a repeated refund request get: the first refund's result (A), or an explicit duplicate error (B)?",
+      "review": {
+        "id": "claude-claude-haiku-5-5-low-intent-boundary",
+        "verdict": "pass",
+        "reason": "Treats the user as decision owner. Presents two observable alternatives with a labeled recommendation and asks one decision question. No quiz and no code.",
+        "evidenceQuote": "Which behavior should a repeated refund request get: the first refund's result (A), or an explicit duplicate error (B)?"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "case": "changed-evidence",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "Your conclusion doesn't hold for the new order. `seen` persists, but on a timeout the `seen.add` line is never reached, so the id is never recorded.\n\n```\nOld order (mark, then charge)          New order (charge, then mark)\n---------------------------------      ---------------------------------\nseen.add(id)        -> seen={id}       charge(id) sent\ncharge(id) sent                        service charges the card\n  timeout -> throws                      local await rejects (timeout)\n                                       seen.add skipped -> seen={}\n\nRequest 2 for id:                      Request 2 for id:\n  seen.has(id) = true                    seen.has(id) = false\n  -> return, no charge                   -> charge(id) again\n                                         -> DUPLICATE CHARGE\n```\n\nThe old order marked the id as attempted before the call, so a timeout left it blocked. The new order marks it only after confirmed success. A timeout is an unknown outcome, so the id stays unmarked even though the service may have charged it.\n\nYour empty-list conclusion still holds. With no items, the handler is never called.\n\nUnder the no-duplicates policy, should a timed-out charge count as attempted, so later requests for that id are blocked?",
+      "review": {
+        "id": "claude-claude-haiku-5-5-low-changed-evidence",
+        "verdict": "fail",
+        "reason": "States a definite duplicate external charge. The code only shows a second charge call, and nothing establishes whether the service deduplicates.",
+        "evidenceQuote": "-> DUPLICATE CHARGE"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "high",
+      "case": "minimum-equivalent",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "Correct. You identified the link that matters: `commit` has already taken effect, the missing `ack` makes the broker treat the job as unfinished, and the handler records nothing that would stop `commit` from running again on redelivery. Your answer also covers why the window exists: `commit` and `ack` are separate steps, so a crash between them leaves the broker and the handler disagreeing about whether the job is done.",
+      "review": {
+        "id": "claude-claude-haiku-5-5-high-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the equivalent answer briefly and ends the objective without a redundant test.",
+        "evidenceQuote": "Correct. You identified the link that matters"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "high",
+      "case": "invalid-premise",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "You're right, and my question was wrong. `take([])` doesn't throw. The `items.length === 0` check is true, so the function returns `null` before `items[0]` is evaluated.\n\nThe guard only covers empty arrays. Calling `take(undefined)` or `take(null)` would still throw a `TypeError` at `items.length`, because the check runs before the array is known to exist.",
+      "review": {
+        "id": "claude-claude-haiku-5-5-high-invalid-premise",
+        "verdict": "warn",
+        "reason": "Repairs the premise correctly but adds null/undefined input cases beyond the requested early-return scope.",
+        "evidenceQuote": "Calling `take(undefined)` or `take(null)` would still throw a `TypeError` at `items.length`"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "high",
+      "case": "transfer-repair",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "Your model had the right structure: there are three attempt slots. The mistake was assuming the loop keeps going after a success. `return await run()` exits `send` as soon as `run` resolves, so the loop advances only when `run` throws.\n\n```\nrun fails once, then succeeds\n\nattempt 0   run() throws ──► catch: 0 ≠ 2, continue\nattempt 1   run() resolves ──► return value ──► send EXITS\nattempt 2   (never reached)\n\nrun calls: 2\n```\n\nThe loop stops in two ways: a success returns immediately, or the third failure rethrows at `attempt === 2`.\n\nIf `run` fails on its first two calls and succeeds on the third, how many times is `run` called, and which line makes the loop stop?",
+      "review": {
+        "id": "claude-claude-haiku-5-5-high-transfer-repair",
+        "verdict": "pass",
+        "reason": "Corrects the misconception with a compact flow. The new scenario is determinate and is not traced in advance.",
+        "evidenceQuote": "If `run` fails on its first two calls and succeeds on the third, how many times is `run` called, and which line makes the loop stop?"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "high",
+      "case": "intent-boundary",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "This is a policy decision, so I haven't written any code. I also can't inspect the refund code in this turn, so the current-behavior details below are unverified.\n\n**Agreed so far**\n- A repeated refund request must not refund twice.\n- A first successful refund behaves exactly as it does today.\n\n**Decision: what should a repeated request receive?**\n\n```\nRequest 1 ──> refund issued ──> success (unchanged)\n\nRequest 2 (same refund)\n  A: ──> return the original successful result (same refund ID, amount, time)\n  B: ──> reject with duplicate error (e.g. 409), citing the existing refund ID\n```\n\n- **A. Return the first result.** The repeat gets the same success response, and nothing new happens. Retries and double-clicks need no special handling by callers. The cost is that a caller can't tell \"I triggered this\" from \"this was a retry,\" and the system must store the first result reliably.\n- **B. Return an explicit duplicate error.** The repeat is rejected and points to the existing refund. Callers learn that a refund already exists. The cost is that callers must treat this error as \"already done,\" not as a failure, or users will see errors for refunds that succeeded.\n\nMy recommendation is **A** for refunds, because it makes retries safe by default and avoids surfacing harmless duplicates as errors. **B** fits better if your support or finance workflows need to know that a second attempt was made.\n\n**Which behavior should a repeated refund request receive: the original successful result (A), or an explicit duplicate error that cites the existing refund (B)?**",
+      "review": {
+        "id": "claude-claude-haiku-5-5-high-intent-boundary",
+        "verdict": "pass",
+        "reason": "Lists agreed constraints, shows two labeled options with a recommendation, and asks one decision question. No implementation.",
+        "evidenceQuote": "Which behavior should a repeated refund request receive: the original successful result (A), or an explicit duplicate error that cites the existing refund (B)?"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "high",
+      "case": "question-opt-out",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "`allow('Admin')` returns `false`. Your earlier belief was wrong.\n\n```\nallow('Admin')\n  -> 'Admin' === 'admin'   (strict, case-sensitive comparison)\n  -> false\n  -> returns false\n\nallow('admin')\n  -> 'admin' === 'admin'\n  -> true\n  -> returns true\n```\n\nThe cause is the `===` operator. It compares both type and value exactly, and string comparison is case-sensitive, so `'A'` and `'a'` are different characters. The function also does no coercion or normalization, so only the exact string `'admin'` passes. Other non-matching inputs, such as `'ADMIN'`, `' admin'`, or an array `['admin']`, also return `false`.",
+      "review": {
+        "id": "claude-claude-haiku-5-5-high-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives a direct, correct explanation and flow. Asks no questions.",
+        "evidenceQuote": "`allow('Admin')` returns `false`."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-haiku-5-5",
+      "effort": "high",
+      "case": "changed-evidence",
+      "resolvedModel": [
+        "claude-haiku-5-5"
+      ],
+      "response": "Your conclusion does not hold after a timeout. The earlier version recorded the attempt before the `await`. This version records only a successful charge, so a rejected `await` leaves `seen` without the id, even when the remote charge completed.\n\n```\nOld order (seen.add before await)\n  seen = {id}  -> charge(id) completes remotely -> local await rejects on timeout\n  retry(id)    -> seen.has(id) true -> return          (1 charge)\n\nNew order (seen.add after await)\n  seen = {}    -> charge(id) completes remotely -> local await rejects on timeout\n                  seen.add skipped\n  retry(id)    -> seen.has(id) false -> charge(id)     (2 charges)\n```\n\n- `seen` still exists, but it only blocks ids that were added, and this id never was.\n- Sequential requests don't prevent this. The gap is between the remote completion and the local bookkeeping.\n- If `seen` is persisted, a crash between a successful charge and `seen.add` has the same effect.\n- The empty-list case is unchanged. The reorder is inside `handle`, so an empty input still makes zero handler calls.\n\nThis violates \"no duplicate charges\" whenever a timed-out charge completed remotely and the same id is submitted again. The local set cannot know the remote outcome, so it cannot prevent that.\n\nDecision needed: when a charge's outcome is unknown, which should prevail?\n\n1. **Restore attempt-before-await.** Retries never double-charge, but an id whose charge truly never happened stays blocked until someone clears it.\n2. **Keep the order and send the id as an idempotency key to the external service**, if it supports one. Retries are then safe even after a timeout or crash, and the service, not the local set, enforces uniqueness.\n3. **Keep the order and query the service for the charge status before any retry.** This needs a status API and handles the unknown outcome explicitly.\n\nI lean toward option 2 if the service supports idempotency keys, since it is the only one that stays safe across crashes. Otherwise I'd choose option 1. Which should we use? Nothing has been implemented.",
+      "review": {
+        "id": "claude-claude-haiku-5-5-high-changed-evidence",
+        "verdict": "fail",
+        "reason": "Asserts two actual charges and a definite policy violation, though only a second call is established. It also turns the review into an unrequested implementation-option decision.",
+        "evidenceQuote": "This violates \"no duplicate charges\" whenever a timed-out charge completed remotely and the same id is submitted again."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "case": "minimum-equivalent",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "Your answer is correct. It has both parts of the relationship:\n\n- **Cause:** the crash happens after `commit` but before `ack`, so the broker never gets confirmation and redelivers the job.\n- **Why it repeats:** with no deduplication, `deliver` has no way to recognize that this job was already applied, so `commit(job)` runs again.\n\n```\ndeliver(job)\n  commit(job)  ✔ applied\n  ── crash ──   ✘ ack never sent\nbroker: no ack → redelivers job\ndeliver(job)\n  commit(job)  ✔ applied again (nothing detects the repeat)\n  ack(job)     ✔\n```\n\nOne precision point: your answer establishes that the handler can run `commit` again. Whether that is harmful depends on what `commit` does. A second application of a non-idempotent effect (say, a charge) is a duplicate, while an idempotent one would be harmless. That distinction is outside today's objective, so we can leave it here.\n\nThat meets today's objective, so I'll stop here.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-low-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the answer and keeps the idempotency caveat explicitly outside the objective. Closes without a test.",
+        "evidenceQuote": "That meets today's objective, so I'll stop here."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "case": "invalid-premise",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "You're right, and the error was in my question. `take([])` doesn't throw. Your answer names both parts of the relationship: the `items.length === 0` check runs first, and its `return null` exits the function before `items[0]` is evaluated.\n\n```\ntake(items)\n   │\n   ▼\nitems.length === 0 ?\n   ├─ yes (take([])) ──► return null     (function exits; items[0] never runs)\n   └─ no  (take([7,8])) ─► return items[0]  (→ 7)\n```\n\nI'll add one point about the code itself. Without the guard, `[][0]` would evaluate to `undefined` rather than throw, because JavaScript doesn't raise an error for an out-of-range array index. So the early return doesn't prevent an exception. It makes the empty case return an explicit `null` instead of `undefined`.\n\nYour answer shows you understand this early return, so I'm stopping here rather than inventing another objective.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-low-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the error, credits the user's causal answer, and makes an accurate point about undefined versus null. Stops cleanly.",
+        "evidenceQuote": "You're right, and the error was in my question."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "case": "transfer-repair",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "Your model has one wrong link: the loop's three slots are a maximum, not a quota. The loop stops at the first success.\n\n**Your scenario: `run` fails once, then succeeds**\n\n```\nattempt 0                attempt 1                attempt 2\n┌──────────────┐         ┌──────────────┐         ┌──────────────┐\n│ call run #1  │         │ call run #2  │         │   (never     │\n│   throws     │         │  resolves    │         │   reached)   │\n└──────┬───────┘         └──────┬───────┘         └──────────────┘\n       │ catch                  │\n       │ attempt===2? no        │ `return await run()`\n       │ so loop continues      ▼\n       └──────────────▶   send returns the value\n                          (the loop ends here)\n```\n\n**What decides each step**\n\n| Event in an attempt | What happens next |\n|---|---|\n| `run()` resolves | `return` leaves the function. No further attempts. |\n| `run()` throws, `attempt` is 0 or 1 | `catch` swallows the error and the loop moves to the next slot. |\n| `run()` throws, `attempt === 2` | `catch` rethrows. This is the only place `send` gives up. |\n\nSo in your scenario `run` is called **2 times**, not 3. Slot 3 would only be used if the first two calls both failed.\n\n**New application question**\n\nSuppose `run` throws on its 1st and 2nd calls and succeeds on its 3rd. How many times is `run` called, and does `send` return a value or throw? Tell me which rule in the table decides the outcome.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-low-transfer-repair",
+        "verdict": "warn",
+        "reason": "The correction is right, but the text just before the transfer question nearly states its answer.",
+        "evidenceQuote": "Slot 3 would only be used if the first two calls both failed."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "case": "changed-evidence",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "Your model is half right: `seen` does still exist after the timeout, but whether it contains `id` is what decides the outcome, and the reorder changes that.\n\n**Where the earlier conclusion still holds**\n\nIf `charge` resolves, `seen.add(id)` runs and a second sequential request returns early. That part is unchanged.\n\n**Where it breaks: the timeout case, with the new order**\n\n```\nRequest 1 (new code)                        External service\n────────────────────                        ────────────────\nseen.has(id)?  no\nawait charge(id) ───────────────────────►   charge completes ✔ (money taken)\n        ◄──── local timeout, await REJECTS\nseen.add(id)   ← never runs (the throw skips it)\n\nseen = { }      ← still exists, but id is not in it\n\nRequest 2 (same id, sequential)\n────────────────────────────────\nseen.has(id)?  no   ← nothing recorded\nawait charge(id) ───────────────────────►   charge again ✖ duplicate\n```\n\n**Old order, same timeout (for contrast)**\n\n```\nseen.add(id)      ← runs first, so id is recorded\nawait charge(id)  ← rejects on timeout\nRequest 2: seen.has(id) → true → return   (no second charge)\n```\n\n`seen` persisting does not help, because the guard only protects ids that were added. With the new order, `add` sits after the `await`, so a rejection means the id is never recorded. The service has already charged, so the next request charges again. Against your stated policy of no duplicate charges, the reorder breaks that guarantee in exactly this timeout case.\n\nTwo things I'm treating as observed rather than assumed: the rejection skips the `add` line, since there is no `try/finally` in the code you showed, and the service may complete the charge before the timeout, as you stated. The empty-input-list point (zero handler calls, caller unchanged) isn't affected by any of this.\n\nHere is one question on the same idea. A request for `id = 7` hits the timeout above, and the same `id = 7` then arrives sequentially. In the new code, what does `seen.has(7)` return, and what does `handle` do next?",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-low-changed-evidence",
+        "verdict": "fail",
+        "reason": "Claims a definite duplicate charge rather than a second call. Its check question is also already answered in its own Request 2 diagram.",
+        "evidenceQuote": "In the new code, what does `seen.has(7)` return, and what does `handle` do next?"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "case": "intent-boundary",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "I'll treat the current behavior as established: no deduplication, so repeats refund again. The unresolved policy is what the second request should return once it's recognized as a repeat.\n\n```\nRequest #1 ──► refund executes ──► result R1 (unchanged from today)\n\nRequest #2 (repeat)\n   ├─ Option A: return first result ──► R1 again, no new refund\n   └─ Option B: duplicate error ──────► explicit \"duplicate\" error, no new refund\n```\n\nNeither option issues a second refund. They differ in what the caller sees.\n\n| | A: Return first result | B: Explicit duplicate error |\n|---|---|---|\n| Caller sees | The same success response as the first call | A distinct failure they must handle |\n| Retry after a timeout | Safe. The caller can't tell if the first call landed, retries, and gets R1. | The retry looks like a failure even though the refund happened. The caller must treat \"duplicate\" as \"probably already done\". |\n| Visibility of the repeat | Hidden from the caller | Surfaced, so accidental double submits are noticeable |\n| Callers and clients | Need no new error handling | Need to add handling for the new error |\n| Monitoring | Repeats need separate logging to be visible | Repeats show up as errors |\n\n**Recommendation: A, return the first result.** Repeated requests most often come from retries, and A makes them harmless without changing how callers behave. If you want repeats surfaced, I'd log them rather than return an error. B is the better choice only if callers need to know that a request was a repeat, for example to alert on double submits.\n\n**Decision needed:** should a repeated refund request return the first result (A) or an explicit duplicate error (B)?\n\nI'm leaving one related question open until you answer this: what counts as the \"same\" request (a client-supplied key, or the same order and amount). That choice determines whether a legitimate second partial refund is blocked, so I'll raise it next. Nothing is implemented, and the first-refund path stays unchanged.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-low-intent-boundary",
+        "verdict": "pass",
+        "reason": "Presents two observable policies and one decision question. Defers the related identity question and implements nothing.",
+        "evidenceQuote": "**Decision needed:** should a repeated refund request return the first result (A) or an explicit duplicate error (B)?"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "low",
+      "case": "question-opt-out",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "**`'Admin'` does not pass.** `allow('Admin')` returns `false`; only the exact string `'admin'` returns `true`.\n\n```\nallow(role)\n    │\n    ▼\nrole === 'admin' ?\n    │\n    ├── role is 'admin'  ──► true   (same type, same characters)\n    ├── role is 'Admin'  ──► false  (capital 'A' is a different character)\n    ├── role is 'ADMIN'  ──► false\n    ├── role is ' admin' ──► false  (leading space counts)\n    └── role is anything else ──► false\n```\n\n**Cause:** `===` is strict equality. For two strings, it returns `true` only if they have the same type and exactly the same sequence of characters. JavaScript string comparison is case-sensitive, so `'A'` and `'a'` are different characters. The function does no normalization, such as lowercasing or trimming, before comparing, so nothing makes `'Admin'` match.\n\n**If you want `'Admin'` to pass:** you would have to normalize the input first, for example `role.toLowerCase() === 'admin'`. That is a change in behavior, and the function as written does not do it. It would also throw a `TypeError` if `role` were not a string (e.g. `undefined`), whereas the current version safely returns `false`.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-low-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives a correct case-sensitivity explanation and flow. Asks no questions.",
+        "evidenceQuote": "`allow('Admin')` returns `false`; only the exact string `'admin'` returns `true`."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "case": "minimum-equivalent",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "Your answer is correct. It covers both parts of the mechanism:\n\n- **Why redelivery happens:** the crash came after `commit(job)` but before `ack(job)`, so the broker never got confirmation and treats the job as unacknowledged.\n- **Why the work repeats:** with no deduplication and no check inside the handler, `deliver` runs `commit(job)` again as if the job were new.\n\nThe sequence is therefore `commit` (applied), crash, no `ack`, redelivery, `commit` again. This is at-least-once delivery: the job is guaranteed to be handled, but not guaranteed to be handled only once.\n\nOne scope note: this holds for the code as shown. If `commit` were idempotent, the second call would be harmless. Nothing in the source says it is, so the repeated effect is the expected behavior here.\n\nThat completes today's objective, so I'll stop here.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-high-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the equivalent answer and closes the objective. Extra terminology is not demanded of the user.",
+        "evidenceQuote": "That completes today's objective, so I'll stop here."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "case": "invalid-premise",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "You're right, and the mistake was in my question. `take([])` doesn't throw. My question assumed an exception that the code never produces.\n\nYour answer shows the relationship that matters: the guard runs first, so the empty case returns before `items[0]` is evaluated.\n\n```\ntake(items)\n   │\n   ▼\nitems.length === 0 ?\n   ├─ yes (take([])) ──► return null      (indexing never runs)\n   └─ no  (take([7,8])) ─► return items[0] → 7\n```\n\nOne detail on what this guard does: in JavaScript, `[][0]` evaluates to `undefined` rather than throwing. So the early return doesn't prevent a crash here. It makes the empty result an explicit `null` instead of `undefined`.\n\nThat completes the objective for this early return, so I'm stopping here rather than adding another concept.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-high-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise, recognizes the user's evidence, and stops.",
+        "evidenceQuote": "You're right, and the mistake was in my question."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "case": "transfer-repair",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "**Correction:** the three loop slots are a maximum, not a quota. In your scenario `run` is called **twice**, because a successful `return await run()` leaves the whole function immediately and the loop never reaches `attempt = 2`.\n\n## Your scenario: fails once, then succeeds\n\n```\nattempt 0                attempt 1                attempt 2\n┌──────────────┐         ┌──────────────┐         ┌──────────────┐\n│ run() call #1│         │ run() call #2│         │  never       │\n│   throws     │         │  succeeds    │         │  starts      │\n└──────┬───────┘         └──────┬───────┘         └──────────────┘\n       ▼                        ▼\n  catch: attempt === 2?    return await → send exits\n  no → swallow error,      (the for loop is abandoned)\n  loop continues\n       │\n       └──────────► next slot\n```\n\n## The stopping rule: two exits from the loop\n\n```\n            ┌─────────────────────────────┐\n  start ──► │ try { return await run() }  │\n            └───────┬─────────────┬───────┘\n                succeeds        throws\n                    │             │\n                    ▼             ▼\n           EXIT 1: return    catch (e): is attempt === 2?\n           the value                 │\n           (any attempt)      no ────┴──── yes\n                              │            │\n                         swallow,     EXIT 2: rethrow e\n                         try again    (only when the last\n                                       allowed call fails)\n```\n\n- **Exit 1:** a successful call returns right away, so unused slots are skipped.\n- **Exit 2:** the error is only rethrown when the call on `attempt === 2` fails. Earlier failures are swallowed.\n\n## Application question\n\nChange one thing from the example: `run` **fails on its first two calls and succeeds on its third**. How many times is `send` calling `run`, and does `send` return a value or throw? Name the line or exit in the diagram that decides it.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-high-transfer-repair",
+        "verdict": "pass",
+        "reason": "Clear visual correction. The new scenario is determinate and is not pre-traced.",
+        "evidenceQuote": "`run` **fails on its first two calls and succeeds on its third**"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "case": "question-opt-out",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "**`'Admin'` does not pass. `allow('Admin')` returns `false`.**\n\n```js\nfunction allow(role) { return role === 'admin'; }\n```\n\n```\nallow(role)\n   │\n   ▼\nrole === 'admin' ?   (strict equality: same type AND same characters, case-sensitive)\n   │\n   ├── 'admin'  ──► characters match exactly ──► true\n   ├── 'Admin'  ──► 'A' ≠ 'a'                ──► false\n   ├── 'ADMIN'  ──► 'A' ≠ 'a'                ──► false\n   └── 'admin ' ──► trailing space differs   ──► false\n```\n\n**Cause:** `===` compares strings character by character, using exact character codes. Uppercase `'A'` (65) and lowercase `'a'` (97) are different characters, so the strings are not equal. JavaScript has no built-in case folding in `===`, so nothing treats `'Admin'` as `'admin'`.\n\n**What the function does not do:**\n- It does not lowercase or trim the input.\n- It does not accept anything except the exact string `'admin'`. Strict equality also means a non-string, such as an object that stringifies to `'admin'`, returns `false` too.\n\n**If you want `'Admin'` to pass,** the function would need to normalize the input before comparing, for example `role.toLowerCase() === 'admin'`. That would be a behavior change, not what the function does now.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-high-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives an accurate direct explanation with a flow. No questions.",
+        "evidenceQuote": "**`'Admin'` does not pass. `allow('Admin')` returns `false`.**"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "case": "intent-boundary",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "## Decision: what should a repeated refund request return?\n\n**Current behavior (as you described it):** every request issues a refund, so a repeat refunds twice.\n**Fixed in either option:** a first successful refund behaves exactly as it does today, and a repeat never moves money a second time.\n\nBoth options below are proposals:\n\n```mermaid\nsequenceDiagram\n    participant C as Caller\n    participant R as Refund\n    Note over C,R: Request 1 (first success, unchanged)\n    C->>R: refund(X)\n    R-->>C: success, refund details\n    Note over C,R: Request 2 (repeat of X)\n    C->>R: refund(X)\n    alt A: Return first result\n        R-->>C: same success, same refund details (no new money moved)\n    else B: Explicit duplicate error\n        R-->>C: error \"already refunded\" (no new money moved)\n    end\n```\n\n| | **A. Return the first result** | **B. Explicit duplicate error** |\n|---|---|---|\n| Caller sees on repeat | Success, identical to the first response | A distinct failure |\n| Retry after a lost response or timeout | Caller gets the confirmation it missed and can treat it as done | Caller sees an error for a refund that actually succeeded, so it must learn to read \"duplicate\" as \"already done\" |\n| Accidental double-submit (double click) | Absorbed silently | Surfaced, so the caller knows a second request was made |\n| Effect on existing callers | None. A repeat looks like a normal success. | Callers must handle a new error case |\n\n**Recommendation: A.** Repeats usually come from retries, where the caller doesn't know whether the first attempt landed. Returning the original result gives it the answer it needs without new error handling. Choose B if callers need to know that a request was a duplicate, for example to flag a possible user or integration mistake.\n\n**Which should a repeated refund request do: A (return the first result) or B (explicit duplicate error)?**\n\nOnce that's settled, I'll raise the next policy questions one at a time. These are what counts as \"the same request\" and what a repeat should return if the first attempt failed. I'll then show the full agreement and acceptance examples for your confirmation before any code is written.",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-high-intent-boundary",
+        "verdict": "pass",
+        "reason": "Labels both options as proposals and asks one decision question. Defers the other policy questions and does not implement.",
+        "evidenceQuote": "Both options below are proposals:"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-sonnet-5-5",
+      "effort": "high",
+      "case": "changed-evidence",
+      "resolvedModel": [
+        "claude-sonnet-5-5"
+      ],
+      "response": "Your earlier conclusion does not carry over. `seen` still exists after the timeout, but under the new order the id was never written to it.\n\n**Old order** (`add` before `charge`)\n\n```\nrequest 1:  has? no → add(id) ✔ → await charge ──► service charges ──► timeout, await rejects\n                         │\n                  seen = {id}   (already written)\nrequest 2:  has? YES → return                          charge not called\n```\n\n**New order** (`charge` before `add`)\n\n```\nrequest 1:  has? no → await charge ──► service charges ──► timeout, await rejects\n                                                              │\n                                      exception leaves the function here;\n                                      add(id) never runs\n                  seen = {}   (id never written)\nrequest 2:  has? no → await charge again                charge called a second time\n```\n\n**What the swap changed**\n\n- `seen.add(id)` now runs only if `charge` resolves.\n- The timeout is a rejection, so it skips the `add`, even though the service completed the charge.\n- Your premise that `seen` persists is true, but it only helps if the id was recorded. Here the id was never recorded.\n- The earlier agreement was about the old order. It said the early `add` blocks a second sequential request. That reasoning depended on the `add` happening before the `await`, so it doesn't transfer.\n- Under the stated conditions (sequential requests, the service charged, the local await timed out), the new code can call `charge` twice for one id. That conflicts with the \"no duplicate charges\" policy.\n\n**Unchanged**\n\n- The empty-list caller still makes zero handler calls, so it doesn't affect this analysis.\n\n**Not decided here**\n\n- The old order has its own cost: if `charge` fails without charging, the id stays in `seen` and is never retried. That is a separate policy question, and I'm not reopening it now.\n\nOne question to check the relationship: in the new code, what must happen to the first request for the second request to skip `charge`, and which line decides that?",
+      "review": {
+        "id": "claude-claude-sonnet-5-5-high-changed-evidence",
+        "verdict": "fail",
+        "reason": "The final check question is answered verbatim by its own preceding bullet, making it a redundant quiz.",
+        "evidenceQuote": "`seen.add(id)` now runs only if `charge` resolves."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "low",
+      "case": "minimum-equivalent",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "**Correct.** Your answer covers both halves of the relationship:\n\n1. **Why redelivery happens:** the ack never reached the broker, so the broker still treats the job as unfinished.\n2. **Why the work repeats:** `deliver` has no check for a job that was already committed, so it runs `commit(job)` again.\n\n```\ncommit(job) ✓ ──► crash ✗ ──► ack never sent\n                                   │\n                    broker: \"unacknowledged\" → redeliver\n                                   │\n                    deliver(job) → commit(job) again  (nothing detects the repeat)\n```\n\nThis is at-least-once delivery. One precise point: what we know is that `commit` is *called* a second time. Whether that causes a visible duplicate effect depends on what `commit` does, and that isn't shown here. Your wording, \"the work can happen again,\" is accurate.\n\nThat covers today's objective.",
+      "review": {
+        "id": "claude-claude-opus-5-5-low-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the answer, separates the call from the effect, and closes the objective.",
+        "evidenceQuote": "That covers today's objective."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "low",
+      "case": "invalid-premise",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "You're right, and my question was wrong. `take([])` doesn't throw. I built the question on a false premise.\n\nYour answer also shows the key idea of this early return: the empty check runs **before** `items[0]` is ever reached, so that path ends with `null`.\n\n```\ntake(items)\n   │\n   ▼\nitems.length === 0 ?\n   ├── yes ──► return null        ← function exits here; items[0] never runs\n   │\n   └── no ───► return items[0]    ← only reached when at least one element exists\n```\n\nOne detail confirms there was no exception to explain. In JavaScript, `[][0]` evaluates to `undefined`; it doesn't throw. So even without the guard, `take([])` would return `undefined`, not crash. The early return changes the empty-case result from `undefined` to an explicit `null`. It doesn't prevent an error.\n\nYour answer covers what this lesson set out to teach, so we're done here.",
+      "review": {
+        "id": "claude-claude-opus-5-5-low-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise, credits the user's evidence, and finishes.",
+        "evidenceQuote": "You're right, and my question was wrong."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "low",
+      "case": "transfer-repair",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "## Your model: the loop is a fixed schedule of 3 calls\n\nThat's the part to repair. The loop is a **maximum** of 3 attempts, not a promise of 3. The `return` inside `try` exits the whole `send` function immediately, so the remaining iterations never run.\n\n```\nYour scenario: run fails once, then succeeds\n\nattempt=0 ──► run() ✗ throws\n               └─► catch: attempt===2? no ──► keep looping\n                                                   │\nattempt=1 ──► run() ✓ resolves ◄───────────────────┘\n               └─► return await run()  ══►  EXIT send()  (returns the value)\n\nattempt=2 ──► ░░ never reached ░░\n\nrun() calls: 2\n```\n\nThere are two ways out of the loop, and both leave the function:\n\n| Exit | Trigger | Result |\n|---|---|---|\n| `return await run()` | any attempt **succeeds** | `send` resolves with that value; no more calls |\n| `throw e` | attempt index 2 **fails** | `send` rejects with the last error |\n| (loop ends normally) | never, with this code | each iteration either returns or throws by attempt 2 |\n\nSo \"3\" is the ceiling on failures before giving up, not the number of calls. Only the first success stops the loop early.\n\n---\n\n**Your turn:** Suppose `run` fails on its 1st, 2nd, and 3rd calls, and *would* succeed on a 4th call. How many times is `run` called, and which line decides what `send` does at the end?",
+      "review": {
+        "id": "claude-claude-opus-5-5-low-transfer-repair",
+        "verdict": "warn",
+        "reason": "The correction is right, but the exits table already states the all-fail outcome that the new question asks for.",
+        "evidenceQuote": "`send` rejects with the last error"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "low",
+      "case": "changed-evidence",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "# Your model: “`seen` still exists, so the conclusion holds”\n\nThat doesn't hold anymore. The earlier conclusion depended on **when** `seen.add(id)` runs, not on whether `seen` exists. In the new order, the timeout rejection skips the `add` entirely.\n\n## The two orders, same timeout\n\n```\nEARLIER:  has? ─no─▶ seen.add(id) ─▶ await charge(id) ──✗ timeout rejects\n                     ▲ id recorded BEFORE the risky await\n          Request 2: has? ─yes─▶ return          (no second charge call)\n\nNOW:      has? ─no─▶ await charge(id) ──✗ timeout rejects ─┐\n                                                            │ throw exits handle()\n                     seen.add(id)   ◀── never reached ──────┘\n          Request 2: has? ─no─▶ await charge(id)  (second external call)\n```\n\nA rejected `await` throws at that line. Nothing after it in `handle` runs, so `id` never enters `seen`. Because `seen` persists, the next sequential request with the same `id` finds it absent and calls `charge` again.\n\n## What this means\n\n- **Your earlier conclusion was correct for the earlier code.** Adding `id` before the await meant even a failed charge was recorded.\n- **It is no longer true for the new code.** After a timeout, a second request makes a **second call to `charge`**.\n- **External call vs. external effect:** The service already completed the first charge. Whether the second call creates a *second charge* depends on the service, for example whether it deduplicates by `id` or an idempotency key. Nothing here shows that it does. Under that gap, the agreed policy of no duplicate charges is **at risk**, not guaranteed.\n- **Unaffected:** The empty-input conclusion still holds. The caller is unchanged and never calls `handle`, so the reorder doesn't matter there.\n\nI've made no changes, as requested.\n\n**Check:** Suppose `charge(id)` *succeeds* in the new code, and then the same `id` arrives in a later sequential request. Does that request call `charge` again, and which line in the diagram decides it?",
+      "review": {
+        "id": "claude-claude-opus-5-5-low-changed-evidence",
+        "verdict": "pass",
+        "reason": "Correctly shows that the add is skipped. Distinguishes a second call from a second charge, preserves the empty-list conclusion, and asks one relevant check that is not pre-answered.",
+        "evidenceQuote": "Whether the second call creates a *second charge* depends on the service"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "low",
+      "case": "question-opt-out",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "`allow` returns `true` only for the exact string `'admin'`. `'Admin'` returns `false`.\n\n```\nrole ──► role === 'admin' ? ──┬─ yes (same type AND identical characters) ──► true\n                              └─ no  (anything else)                       ──► false\n\n'admin'  ──► === 'admin' ──► true\n'Admin'  ──► === 'admin' ──► false   ('A' ≠ 'a')\n'ADMIN'  ──► === 'admin' ──► false\n' admin' ──► === 'admin' ──► false   (leading space)\n```\n\n**Why `'Admin'` fails:** `===` compares strings character by character, using exact code units. It does no case folding or trimming. Uppercase `'A'` (U+0041) and lowercase `'a'` (U+0061) are different characters, so the strings differ at the first position and the comparison is `false`.\n\n**Also note:** `===` never converts types, so a non-string value such as a `String` object (`new String('admin')`) also returns `false`.\n\nIf you want case-insensitive matching, normalize the input first, for example `role.toLowerCase() === 'admin'`. Only do this if that is the policy you want, and check that `role` is a string before calling `toLowerCase()`.",
+      "review": {
+        "id": "claude-claude-opus-5-5-low-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives an accurate explanation and flow. No questions.",
+        "evidenceQuote": "`allow` returns `true` only for the exact string `'admin'`. `'Admin'` returns `false`."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "low",
+      "case": "intent-boundary",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "## Decision: what a repeated refund request returns\n\n**Already settled (your decisions)**\n- Current behavior: no deduplication, so a repeated request can refund twice. This is not wanted.\n- A successful first refund must behave exactly as it does today.\n- No code changes yet.\n\n**Not inspected:** I haven't read the refund code in this session. The options below describe externally visible behavior and don't depend on its internals.\n\n### The two options\n\n```\nClient ──refund(R)──▶ Service ──charge reversal──▶ Payment provider\n       ◀── 200 {refund_id: F1, status: succeeded} ──   (unchanged first path)\n\nClient ──refund(R) again──▶ Service: \"R already refunded as F1\"\n   Option A ◀── 200 {refund_id: F1, status: succeeded}   (replay first result)\n   Option B ◀── 409 {error: duplicate_refund, refund_id: F1}\n                         ✗ no second reversal in either option\n```\n\n| | **A. Return the first result** (idempotent replay) | **B. Explicit duplicate error** |\n|---|---|---|\n| Client retry after a timeout | Safe. The retry gets the original success. | The client must treat 409 as \"already done.\" Naive clients may log or alert it as a failure. |\n| Visibility of accidental double-submits | Hidden unless you log or flag it. | Obvious to the caller. |\n| First refund still in progress when the repeat arrives | Return the in-progress or pending result. | Return a duplicate error, possibly before the client knows the outcome. |\n| First refund *failed* | Replays the failure, so the client needs a new request to retry. | Same question applies. This is a separate decision. |\n| Fit with common payment APIs (e.g., Stripe idempotency keys) | Matches. | Less common for retries. |\n\n**Recommendation: A**, if repeats mostly come from retries such as network timeouts or double clicks. In that case the caller wants the outcome, not an error. **B** is the better choice if a repeat usually means a caller bug that you want surfaced loudly. You can still get some of that visibility under A by logging or flagging replays.\n\nBoth options block the second money movement, so the double-refund bug is fixed either way. This choice only decides what the caller sees.\n\n### Still open (decide after this one)\n- What identifies a \"repeated\" request: a client-supplied idempotency key, or the same order and amount?\n- What happens to a repeat after the first attempt failed?\n\n**Which should a repeated request return: A (the first result) or B (an explicit duplicate error)?**",
+      "review": {
+        "id": "claude-claude-opus-5-5-low-intent-boundary",
+        "verdict": "warn",
+        "reason": "The decision framing is correct, but the table silently assigns failure-replay semantics to option A while calling that a separate decision elsewhere.",
+        "evidenceQuote": "Replays the failure, so the client needs a new request to retry."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "case": "minimum-equivalent",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "**Correct. That's the objective for today.**\n\nYour answer covers both links:\n\n1. **Why redelivery happens:** the crash came before `ack`, so the broker never got confirmation and treats the job as unfinished.\n2. **Why it can be applied twice:** with no deduplication, nothing in `deliver` can tell that this job's `commit` already succeeded. It simply runs `commit(job)` again.\n\n```\ncommit(job) ✓ ──► 💥 crash ──► (no ack) ──► broker redelivers ──► commit(job) runs again\n```\n\nYour wording (\"the work *can* happen again\") is also accurate. The code guarantees a second `commit` call. Whether that causes a second *effect* depends on whether `commit` itself is idempotent, which this source doesn't show.",
+      "review": {
+        "id": "claude-claude-opus-5-5-high-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Brief acceptance that closes the objective and correctly separates the call from the effect.",
+        "evidenceQuote": "**Correct. That's the objective for today.**"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "case": "invalid-premise",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "You're right. My question was wrong, not your understanding. `take([])` doesn't throw; it returns `null`.\n\nYour answer also covers the key relationship of this lesson. The `length === 0` check runs first, and its `return` exits the function, so `items[0]` is never reached for an empty array:\n\n```\ntake(items)\n   │\n   ▼\nitems.length === 0 ?\n   ├── yes ──► return null      ← function exits here; nothing below runs\n   └── no  ──► return items[0]\n```\n\nThere's one correction to my earlier framing. Even without the guard, `[][0]` in JavaScript evaluates to `undefined` rather than throwing. So this early return doesn't prevent a crash. It chooses the result for an empty array: `null` instead of `undefined`.\n\nYou've shown the objective, so the lesson on this early return is complete.",
+      "review": {
+        "id": "claude-claude-opus-5-5-high-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the error, recognizes the user's evidence, and closes.",
+        "evidenceQuote": "My question was wrong, not your understanding."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "case": "transfer-repair",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "# Correcting the \"three slots\" model\n\nYour model treats the loop's `3` as a **quota**: three slots that always get used. In this code it's a **ceiling**. `return` exits the whole function as soon as `run()` succeeds, and any remaining slots are never reached.\n\n### What you predicted vs. what actually happens (fail once, then succeed)\n\n```\nYOUR MODEL (quota)                 ACTUAL BEHAVIOR (ceiling)\n─────────────────                  ─────────────────────────\nslot 0: run() ✗                    attempt 0: run() ✗ throws\nslot 1: run() ✓                       └─ catch: attempt===2? no → loop continues\nslot 2: run() ?  ← still runs      attempt 1: run() ✓ resolves\n                                      └─ return value ──► EXIT send()  ⟵ stops here\nrun called: 3 times                attempt 2: ░░░ never reached ░░░\n\n                                   run called: 2 times\n```\n\n### The two exits, side by side\n\n```\n            ┌──────────── for attempt = 0, 1, 2 ────────────┐\n            │                                               │\n            │   await run()                                 │\n            │      │                                        │\n            │      ├── succeeds ──► return ──────────────────┼──► leaves send() immediately\n            │      │                                        │    (loop is abandoned)\n            │      └── throws ──► catch                     │\n            │                       │                       │\n            │                       ├── attempt === 2 ──► throw e ──► leaves send() with error\n            │                       │                       │\n            │                       └── otherwise ──► next attempt\n            └───────────────────────────────────────────────┘\n```\n\nThe only way to get to a third call is to go through `catch` twice without exiting. A success at any point takes the `return` exit, so there's no third call.\n\n**Where the \"three slots\" idea is partly right:** `3` does cap the maximum number of calls. You only see all three when the first two calls throw.\n\n---\n\n### Your turn: a new case\n\nSuppose the function is changed to allow more attempts:\n\n```js\nasync function send(run) {\n  for (let attempt = 0; attempt < 5; attempt++) {\n    try { return await run(); }\n    catch (e) { if (attempt === 4) throw e; }\n  }\n}\n```\n\n`run` throws on its first two calls and succeeds on its third. **How many times is `run` called, and which line in the code decides when it stops?**",
+      "review": {
+        "id": "claude-claude-opus-5-5-high-transfer-repair",
+        "verdict": "pass",
+        "reason": "Strong visual repair. The transfer case uses a varied limit and is not pre-answered.",
+        "evidenceQuote": "`run` throws on its first two calls and succeeds on its third. **How many times is `run` called, and which line in the code decides when it stops?**"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "case": "question-opt-out",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "`allow` returns `true` only when `role` is exactly the string `'admin'`. `'Admin'` returns `false`.\n\n```\nrole ──► role === 'admin' ?\n              │\n              ├─ same type AND same characters ──► true\n              │\n              └─ anything else ──────────────────► false\n```\n\n| `role` | Result | Why |\n|---|---|---|\n| `'admin'` | `true` | Exact match |\n| `'Admin'` | `false` | `'A'` ≠ `'a'` |\n| `'ADMIN'` | `false` | Different case |\n| `' admin'` | `false` | Extra leading space |\n| `undefined`, `null`, `1` | `false` | Not the string `'admin'` |\n\n**Why `'Admin'` fails:** For two strings, `===` compares them character by character. It does no case-folding, trimming, or normalization. `'A'` (U+0041) and `'a'` (U+0061) are different characters, so the comparison fails at the first position. If case-insensitive matching were intended, the code would have to normalize explicitly, for example `role?.toLowerCase() === 'admin'`. The current function does not do that.",
+      "review": {
+        "id": "claude-claude-opus-5-5-high-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives a correct explanation, flow and table. No questions.",
+        "evidenceQuote": "`'Admin'` returns `false`."
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "case": "intent-boundary",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "# Decision: what a repeated refund request returns\n\nBoth options stop the second refund. The difference is what the caller receives on the repeat, and therefore what every client must handle.\n\n**Already agreed:**\n- A repeated request must not refund twice.\n- The behavior of a successful first refund stays unchanged.\n\n## The case that separates the two options\n\n```\nClient                    Refund service                 Payment provider\n  │── refund(R1) ────────────▶│── issue refund ────────────────▶│\n  │                           │◀── refunded ✔ ──────────────────│\n  │   ✖ response lost         │   (refund recorded)\n  │     (timeout)             │\n  │── refund(R1) retry ──────▶│  recognizes R1 as a repeat\n  │                           │\n  │◀── Option A: 200 + original refund result (same ID and amount)\n  │◀── Option B: 409 DUPLICATE_REFUND (+ ref to original?)\n```\n\nAfter a timeout, the client can't tell whether the first attempt succeeded. That is the main reason clients send repeat requests.\n\n| | **A: Return the first result** | **B: Explicit duplicate error** |\n|---|---|---|\n| Caller sees on repeat | The same success response as the first call | A distinct error code |\n| Client retry logic | Retrying is always safe, with no special handling | Clients must treat \"duplicate\" as \"already refunded,\" then usually look up the original |\n| Visibility of accidental repeats (double-click, bug) | Silent, unless you log or count replays | Surfaced directly to the caller |\n| Risk | A repeat with *different* parameters could be masked if not checked separately | Naive clients may show a failure for a refund that actually succeeded |\n| Precedent | Standard idempotency-key behavior (e.g., Stripe) | Common in strict \"create once\" APIs |\n\n**Recommendation: A (return the first result).** It makes the timeout-retry case correct by default, and the caller ends up in the same state whether or not their first response arrived. You can still get B's visibility by logging or counting replays. B is the better choice if your callers are mostly humans or UIs, where a repeat usually means a mistake you want to show them.\n\n## Separate decisions I'm not assuming\n\nYour answer here won't settle these. I'll raise them one at a time afterward:\n\n1. **What makes a request \"the same\":** a client-supplied idempotency key, or matching order/payment plus amount. I haven't inspected the refund code, so I don't yet know what identifiers exist.\n2. **Same key with different parameters** (e.g., a different amount): this could be an error even under A.\n3. **First attempt failed:** replay the failure, or allow a fresh attempt.\n4. **Concurrent in-flight repeats:** what the second caller gets while the first is still processing.\n\n## Acceptance examples, pending your choice\n\n- **Unchanged:** first `refund(R1)` succeeds and returns the same response as today.\n- **A:** a repeat of `refund(R1)` returns the original refund's ID, amount, and status, and no new provider refund is issued.\n- **B:** a repeat of `refund(R1)` returns a duplicate error (code TBD), and no new provider refund is issued.\n\n**Which should a repeated refund request do: return the first result (A) or return an explicit duplicate error (B)?**",
+      "review": {
+        "id": "claude-claude-opus-5-5-high-intent-boundary",
+        "verdict": "pass",
+        "reason": "Keeps the user as decision owner and lists other decisions without assuming them. Acceptance examples are pending, and there is one decision question.",
+        "evidenceQuote": "**Which should a repeated refund request do: return the first result (A) or return an explicit duplicate error (B)?**"
+      }
+    },
+    {
+      "host": "claude-code-cli",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "case": "changed-evidence",
+      "resolvedModel": [
+        "claude-opus-5-5"
+      ],
+      "response": "# Review: does the earlier conclusion survive the reorder?\n\n**Not in the timeout case.** `seen` still exists, but the id never gets into it. The question is not whether the set persists. It is whether `seen.add(id)` runs before request 2 checks `seen.has(id)`.\n\n### What the new order does on a timeout\n\n```\nNEW ORDER — request 1 times out locally\n─────────────────────────────────────────────────────────────────\nRequest 1 (id = 42)\n  seen.has(42)?  → false → continue\n  await charge(42) ───────────────► external service\n                                     charge COMPLETES ✔\n                  ◄── timeout ✖      (local await rejects)\n  seen.add(42)   ⟵ NEVER RUNS: the rejection exits handle here\n\n  seen = { }      ← the set persists, but it is empty for 42\n\nRequest 2 (id = 42, sequential)\n  seen.has(42)?  → false → continue\n  await charge(42) ───────────────► external service called AGAIN\n```\n\nThe reorder puts `seen.add(id)` behind the `await`. It now runs only if `charge` **resolves**. A rejection propagates out of `handle` before the line is reached. That holds even when the remote charge actually happened.\n\n### Where your model needs repair\n\n- ✔ **Correct part:** `seen` persists across sequential requests.\n- ✖ **Mismatch:** a persistent set protects only ids that were actually added. After a timeout, 42 was never added, so request 2 passes the guard.\n\n### What the new code establishes, and what it doesn't\n\n- **Established:** after a local timeout, a second sequential request for the same id **calls** `charge` again.\n- **Not established:** whether that second call causes a **second charge**. That depends on the external service, for example whether it deduplicates by id or idempotency key. Nothing here shows that it does.\n- **Against your policy:** with \"no duplicate charges\" as the goal, this path is a real risk unless the service guarantees deduplication. I'm noting this, not changing anything.\n- **Success path unchanged:** if `charge` resolves, `seen.add` runs before the next sequential request, so request 2 returns early.\n- **Empty-list conclusion still holds:** the caller is unchanged and `handle` is never invoked, so the reorder doesn't affect it.\n\n---\n\n**Check:** Go back to the *earlier* code (`seen.add` before `await charge`) and give request 1 the same timeout. Does request 2 reach `charge`, and which line's position decides that?",
+      "review": {
+        "id": "claude-claude-opus-5-5-high-changed-evidence",
+        "verdict": "warn",
+        "reason": "The analysis and the call-versus-effect distinction are correct. However, the check question re-tests the old-order behavior the user already agreed to, not the repaired new-order misconception.",
+        "evidenceQuote": "Go back to the *earlier* code (`seen.add` before `await charge`) and give request 1 the same timeout."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "case": "minimum-equivalent",
+      "resolvedModel": null,
+      "response": "Correct. You connected the missing acknowledgment to redelivery and the lack of deduplication to applying the work again, even though the first commit succeeded. That demonstrates today's objective.",
+      "review": {
+        "id": "gpt-6-astra-high-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the equivalent causal answer and closes the objective.",
+        "evidenceQuote": "That demonstrates today's objective."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "case": "invalid-premise",
+      "resolvedModel": null,
+      "response": "You're right; my question had a false premise. For `take([])`, `items.length === 0` is true, so `return null` exits the function before `return items[0]` can run. Your explanation demonstrates the early-return behavior; no further check is needed.",
+      "review": {
+        "id": "gpt-6-astra-high-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise and confirms the early-return cause without demanding more.",
+        "evidenceQuote": "Your explanation demonstrates the early-return behavior; no further check is needed."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "case": "transfer-repair",
+      "resolvedModel": null,
+      "response": "The loop permits up to three calls; a successful `return` exits the entire `send` function immediately.\n\n```text\nCall 1 (attempt = 0): run rejects\n          ↓ catch does not throw; loop continues\nCall 2 (attempt = 1): run resolves\n          ↓ return the resolved value; exit send\n        Finished — no third call\n```\n\nThe three loop slots are a limit, not a requirement to use every slot.\n\nIf `run` resolves to `'ok'` on its first call, how many calls occur, and which statement determines that count?",
+      "review": {
+        "id": "gpt-6-astra-high-transfer-repair",
+        "verdict": "pass",
+        "reason": "The flow corrects the misconception. The first-call-success question is different, has one answer, and its count is not stated beforehand.",
+        "evidenceQuote": "If `run` resolves to `'ok'` on its first call, how many calls occur, and which statement determines that count?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "case": "changed-evidence",
+      "resolvedModel": null,
+      "response": "The earlier conclusion no longer holds after this timeout: `seen` persists, but the new order can leave this ID absent from it.\n\n```text\nEarlier order:\nID absent → seen.add(id) → charge → local timeout\n            ID recorded             record remains\n\nCurrent order:\nID absent → charge → external charge completes\n                         ↓ local await rejects\n                    handle exits with an error\n                         ↓\n                    seen.add(id) never runs\n                         ↓\nNext sequential request: ID still absent → calls charge again\n```\n\nA repeated call can therefore produce a duplicate charge; whether the external service prevents that duplicate effect is not established here. Sequential requests and a persistent set do not guarantee protection when the record was never added.\n\nThe desired policy remains no duplicate charges. The unchanged empty-list caller still makes zero handler calls; that conclusion is unaffected.\n\nIf `charge` instead resolves successfully on the first request, what happens to a second sequential request for the same ID, and which completed step controls that outcome?",
+      "review": {
+        "id": "gpt-6-astra-high-changed-evidence",
+        "verdict": "pass",
+        "reason": "Correct timing comparison that hedges the external effect, keeps the empty-list conclusion, and separates actual behavior from policy. Its one question is not answered beforehand.",
+        "evidenceQuote": "whether the external service prevents that duplicate effect is not established here."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "case": "intent-boundary",
+      "resolvedModel": null,
+      "response": "The agreed behavior is to prevent a repeated refund request from issuing another refund while preserving successful first refunds. The unresolved policy is what the caller receives on a repeat of an already successful request.\n\n| Choice | Observable result | Caller consequence |\n| --- | --- | --- |\n| Return the first result | The repeat receives the original refund result; no new refund occurs. | A retry can be handled as the same successful operation. |\n| Explicit duplicate error | The repeat receives a duplicate error; no new refund occurs. | The caller must handle the duplicate as an error, even though the first refund succeeded. |\n\nWhich response should a repeated request receive?",
+      "review": {
+        "id": "gpt-6-astra-high-intent-boundary",
+        "verdict": "pass",
+        "reason": "An observable-consequence table and one decision question. No quiz and no policy choice.",
+        "evidenceQuote": "Which response should a repeated request receive?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "case": "question-opt-out",
+      "resolvedModel": null,
+      "response": "`allow` returns `true` only for the exact string `'admin'`.\n\n```text\nrole → exactly equal to 'admin'? → yes → true\n                                → no  → false\n```\n\nJavaScript's `===` compares strings case-sensitively, so `'Admin'` returns `false`. The function does not convert uppercase letters to lowercase.",
+      "review": {
+        "id": "gpt-6-astra-high-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives a correct case-sensitivity explanation and a flow with no questions.",
+        "evidenceQuote": "JavaScript's `===` compares strings case-sensitively, so `'Admin'` returns `false`."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "low",
+      "case": "minimum-equivalent",
+      "resolvedModel": null,
+      "response": "Your answer identifies both parts correctly: missing acknowledgment lets the broker redeliver the job, and missing deduplication lets the handler apply the work again. That demonstrates the relationship we set out to learn today.",
+      "review": {
+        "id": "gpt-6-astra-low-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Credits both parts of the user's answer and finishes the objective.",
+        "evidenceQuote": "That demonstrates the relationship we set out to learn today."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "low",
+      "case": "invalid-premise",
+      "resolvedModel": null,
+      "response": "You’re right; my question had a false premise. Your explanation identifies the early return correctly:\n\n```text\ntake([]) → length === 0 → return null → function ends\n                                      items[0] is never reached\n```\n\nThe empty-array branch returns `null` without throwing. Your answer already demonstrates this stopping rule.",
+      "review": {
+        "id": "gpt-6-astra-low-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise, gives a useful flow, and recognizes the user's evidence.",
+        "evidenceQuote": "You’re right; my question had a false premise."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "low",
+      "case": "transfer-repair",
+      "resolvedModel": null,
+      "response": "The loop permits up to three attempts; a successful `return` exits the whole function immediately.\n\n```text\nCall 1 fails → catch at attempt 0 → continue\nCall 2 succeeds → return its result → function ends\n                                     no call 3\n```\n\nThe remaining loop slots are unused once `run()` succeeds. If all three calls fail, the catch on attempt 2 throws instead.\n\nIf `run()` fails on its first two calls and succeeds on its third, how does `send()` finish, and which statement determines that outcome?",
+      "review": {
+        "id": "gpt-6-astra-low-transfer-repair",
+        "verdict": "pass",
+        "reason": "Corrects the model. The new third-call-success question is different and has one answer, and the earlier note about all calls failing does not answer it.",
+        "evidenceQuote": "If `run()` fails on its first two calls and succeeds on its third, how does `send()` finish, and which statement determines that outcome?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "low",
+      "case": "changed-evidence",
+      "resolvedModel": null,
+      "response": "The earlier conclusion no longer holds for a timeout: the set persists, but this request’s ID has not been added to it.\n\n```text\nBefore: check seen → add ID → charge → timeout\n                        ID remains → next request skips charge\n\nNow:    check seen → charge completes externally\n                       → local await rejects on timeout\n                       → seen.add(id) is never reached\nNext request: ID absent → calls charge again\n```\n\nThe changed order permits another external call even though the first charge may already have completed. Whether that second call produces a second charge depends on the external service’s duplicate handling; the shown code does not establish the desired no-duplicate-charge guarantee.\n\nThe unchanged caller still makes zero handler calls for an empty input list. That conclusion is unaffected, and the desired policy remains no duplicate charges.\n\nIf the first `charge` instead resolves successfully before the next sequential request for the same ID, will that next request call `charge`, and what determines its path?",
+      "review": {
+        "id": "gpt-6-astra-low-changed-evidence",
+        "verdict": "pass",
+        "reason": "Correct before/after timing. Properly separates a repeated call from a repeated external charge, keeps the empty-list conclusion, and asks one question not answered beforehand.",
+        "evidenceQuote": "Whether that second call produces a second charge depends on the external service’s duplicate handling"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "low",
+      "case": "intent-boundary",
+      "resolvedModel": null,
+      "response": "We’re deciding the repeated request’s response; successful first refunds stay unchanged, and a repeat must not issue another refund.\n\n| Choice | Observable behavior | Trade-off |\n| --- | --- | --- |\n| Return the first result | A repeat receives the original successful refund result | Makes retries after a lost response straightforward |\n| Explicit duplicate error | A repeat receives a distinct duplicate error | Makes duplication visible, but clients must distinguish it from a failed refund |\n\nI recommend returning the first result for a retry of the same refund request, since a lost response should not make a completed refund appear unsuccessful.\n\nFor repeated requests, should we return the first result or return an explicit duplicate error?",
+      "review": {
+        "id": "gpt-6-astra-low-intent-boundary",
+        "verdict": "pass",
+        "reason": "Gives an observable-behavior table with an explicit, labeled recommendation. It still leaves the decision to the user with one question and does not select silently.",
+        "evidenceQuote": "For repeated requests, should we return the first result or return an explicit duplicate error?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-astra",
+      "effort": "low",
+      "case": "question-opt-out",
+      "resolvedModel": null,
+      "response": "`allow` returns `true` only for the exact string `'admin'`. Strict string equality is case-sensitive.\n\n```text\nrole → exactly 'admin'? ─ yes → true\n                       └ no  → false\n```\n\n`'Admin'` has an uppercase `A`, so it does not match `'admin'` and returns `false`.",
+      "review": {
+        "id": "gpt-6-astra-low-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives a correct explanation and a compact flow with no questions.",
+        "evidenceQuote": "`'Admin'` has an uppercase `A`, so it does not match `'admin'` and returns `false`."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "case": "minimum-equivalent",
+      "resolvedModel": null,
+      "response": "Your answer is correct: if `commit(job)` succeeds but `ack(job)` does not, the broker may redeliver the job, and with no deduplication the handler has no way to recognize the committed work and may do it again. That completes today’s learning objective.",
+      "review": {
+        "id": "gpt-6-luna-high-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the equivalent answer and closes the objective.",
+        "evidenceQuote": "That completes today’s learning objective."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "case": "invalid-premise",
+      "resolvedModel": null,
+      "response": "You’re right: my earlier question had a false premise. `take([])` returns `null` at the empty-array check, so it never evaluates `items[0]`. Your correction identifies both the early return and why indexing does not happen; there’s nothing more needed for this objective.",
+      "review": {
+        "id": "gpt-6-luna-high-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise and recognizes the user's correction as complete.",
+        "evidenceQuote": "You’re right: my earlier question had a false premise."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "case": "transfer-repair",
+      "resolvedModel": null,
+      "response": "The first successful call returns from `send` immediately, so the remaining loop slots are never used:\n\n```text\nattempt 0: run() rejects → continue\nattempt 1: run() succeeds → return result\nattempt 2: not reached\n```\n\nIf `run` fails on its first call and succeeds on its second, how many calls happen when it instead fails on all three attempts?",
+      "review": {
+        "id": "gpt-6-luna-high-transfer-repair",
+        "verdict": "fail",
+        "reason": "The transfer question contradicts itself: it combines fail-then-succeed with all three attempts failing, so it has no single determinate scenario.",
+        "evidenceQuote": "If `run` fails on its first call and succeeds on its second, how many calls happen when it instead fails on all three attempts?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "case": "changed-evidence",
+      "resolvedModel": null,
+      "response": "The order change moves the deduplication mark until after the external charge succeeds locally:\n\n```text\nBefore: check seen → mark seen → charge\nNow:    check seen → charge → mark seen\n```\n\nIf the service completes the charge but the local `await` rejects on timeout, the new version never reaches `seen.add(id)`. Since `seen` persists but still lacks this ID, the next sequential request can call `charge` again. That means the earlier conclusion no longer holds after this failure; the unchanged empty-list caller still makes zero handler calls. The desired no-duplicate policy is separate from what this ordering currently guarantees. After a timeout, what does the next request find in `seen`, and what can it do?",
+      "review": {
+        "id": "gpt-6-luna-high-changed-evidence",
+        "verdict": "warn",
+        "reason": "The timing analysis and preserved conclusions are correct. The closing question asks exactly what the preceding paragraph already answered.",
+        "evidenceQuote": "After a timeout, what does the next request find in `seen`, and what can it do?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "case": "intent-boundary",
+      "resolvedModel": null,
+      "response": "For a repeated refund request, which behavior should the API expose?\n\n- **Return the first result:** retries look like the original successful refund to the caller.\n- **Return an explicit duplicate error:** the caller can distinguish a repeated request, but must handle that error separately.\n\nEither choice can preserve successful first refunds unchanged. Which policy do you want?",
+      "review": {
+        "id": "gpt-6-luna-high-intent-boundary",
+        "verdict": "pass",
+        "reason": "Gives two observable policy alternatives with consequences and asks for the user's decision without choosing.",
+        "evidenceQuote": "Which policy do you want?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "high",
+      "case": "question-opt-out",
+      "resolvedModel": null,
+      "response": "Only the exact string `admin` passes:\n\n```text\nrole === admin?\n├─ yes → true\n└─ no  → false\n```\n\n`Admin` has a capital `A`, so strict equality returns `false`; the comparison does not ignore case.",
+      "review": {
+        "id": "gpt-6-luna-high-question-opt-out",
+        "verdict": "pass",
+        "reason": "Explains case-sensitive strict equality correctly with a compact flow and no questions.",
+        "evidenceQuote": "`Admin` has a capital `A`, so strict equality returns `false`; the comparison does not ignore case."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "case": "minimum-equivalent",
+      "resolvedModel": null,
+      "response": "Your answer is correct: after `commit(job)` succeeds but before `ack(job)`, the broker has no acknowledgment, so it can redeliver the job. Since the handler has no deduplication record, it can perform the work again. That addresses today’s only learning objective.",
+      "review": {
+        "id": "gpt-6-luna-low-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the equivalent answer and finishes the objective without a redundant test.",
+        "evidenceQuote": "That addresses today’s only learning objective."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "case": "invalid-premise",
+      "resolvedModel": null,
+      "response": "You correctly caught my faulty premise: `take([])` returns `null` at the first branch, so it never reaches `items[0]`. The early return both determines the result and prevents the indexing step. You’ve shown the key relationship, so we can stop here.",
+      "review": {
+        "id": "gpt-6-luna-low-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the faulty premise, credits the user's early-return evidence, and stops.",
+        "evidenceQuote": "You correctly caught my faulty premise"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "case": "transfer-repair",
+      "resolvedModel": null,
+      "response": "The loop stops as soon as `run()` succeeds, because `return` exits the function immediately:\n\n```text\nattempt 0: run() fails  ──catch──> continue\nattempt 1: run() succeeds ──return──> function ends\nattempt 2: never reached\n```\n\nSo a failure followed by success on the second call means `run()` is called twice. The three slots are a maximum, not a fixed number of calls.\n\nIf the first two calls fail and the third succeeds, how many times is `run()` called, and what stops the loop?",
+      "review": {
+        "id": "gpt-6-luna-low-transfer-repair",
+        "verdict": "pass",
+        "reason": "The flow corrects the misconception. The new fail-fail-succeed question is different and not answered beforehand.",
+        "evidenceQuote": "If the first two calls fail and the third succeeds, how many times is `run()` called, and what stops the loop?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "case": "changed-evidence",
+      "resolvedModel": null,
+      "response": "The reordered steps change what a timeout leaves behind:\n\n```text\nEarlier: check seen → mark seen → charge\nNow:     check seen → charge → mark seen\n                           │\n                    timeout rejects\n                           ↓\n                  mark seen is skipped\n```\n\nWith the new code, if the service completes a charge but the local `await` rejects on timeout, `seen.add(id)` does not run. Because `seen` persists, the next sequential request still finds the id absent and calls `charge` again. The earlier conclusion depended on marking the id before the charge; it no longer holds after this failure. The unchanged empty-list caller still makes zero handler calls. The desired no-duplicate-charge policy is a goal, but this code does not guarantee it in the timeout case.",
+      "review": {
+        "id": "gpt-6-luna-low-changed-evidence",
+        "verdict": "pass",
+        "reason": "Correctly revisits the timing and keeps the empty-list conclusion. It separates actual behavior from the policy goal, claims a repeated call rather than a certain duplicate charge, and asks no question.",
+        "evidenceQuote": "The desired no-duplicate-charge policy is a goal, but this code does not guarantee it in the timeout case."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "case": "intent-boundary",
+      "resolvedModel": null,
+      "response": "One policy decision remains before implementation: when a refund request repeats, should the API return the result of the first refund, or return an explicit duplicate error? Either choice can preserve the existing response for a successful first refund. Which behavior do you want for the repeated request?",
+      "review": {
+        "id": "gpt-6-luna-low-intent-boundary",
+        "verdict": "pass",
+        "reason": "Concise, but it presents both alternatives and asks one decision question without quizzing or choosing.",
+        "evidenceQuote": "Which behavior do you want for the repeated request?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "case": "question-opt-out",
+      "resolvedModel": null,
+      "response": "`allow` returns `true` only when `role` is exactly the string `'admin'`. JavaScript’s `===` compares both value and type without converting case, so `'Admin'` is different and returns `false`.\n\n```text\nrole === 'admin'?\n  yes → true\n  no  → false\n```",
+      "review": {
+        "id": "gpt-6-luna-low-question-opt-out",
+        "verdict": "pass",
+        "reason": "Explains correctly that 'Admin' fails because there is no case conversion. It includes a flow and asks no questions.",
+        "evidenceQuote": "so `'Admin'` is different and returns `false`."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "case": "minimum-equivalent",
+      "resolvedModel": null,
+      "response": "Yes. You identified both the outcome and the cause: commit can succeed, but without an ack the broker redelivers the job, and this handler has no deduplication check before calling commit again. That completes today’s objective.",
+      "review": {
+        "id": "gpt-6-sol-high-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the user's equivalent outcome and cause without demanding jargon, and closes the objective. It makes no claim that the code is correct.",
+        "evidenceQuote": "That completes today’s objective."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "case": "invalid-premise",
+      "resolvedModel": null,
+      "response": "You’re right; my question had a false premise. For `take([])`, the empty-array check returns `null` before `items[0]` is reached. Your explanation captures what the early return does, so there’s nothing further to check here.",
+      "review": {
+        "id": "gpt-6-sol-high-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise, confirms the early-return cause the user gave, and stops without a redundant check.",
+        "evidenceQuote": "You’re right; my question had a false premise."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "case": "transfer-repair",
+      "resolvedModel": null,
+      "response": "The loop allows **up to** three calls. A successful call returns from `send` immediately:\n\n`call 1 fails → catch → call 2 succeeds → return from send`\n`                                      ↳ call 3 is never reached`\n\nIf `run` succeeds on its first call, even though it would fail on a hypothetical second call, how many times is `run` actually called, and what stops the loop?",
+      "review": {
+        "id": "gpt-6-sol-high-transfer-repair",
+        "verdict": "pass",
+        "reason": "The flow corrects the model using the successful return. The new first-call-success scenario is different, has one answer, and is not answered beforehand.",
+        "evidenceQuote": "If `run` succeeds on its first call, even though it would fail on a hypothetical second call, how many times is `run` actually called, and what stops the loop?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "case": "changed-evidence",
+      "resolvedModel": null,
+      "response": "The order change moves the “seen” marker *after* the external charge:\n\n`not seen → charge completes externally → local await times out → seen.add is skipped`\n`next sequential request → still not seen → charge is called again`\n\nSo the earlier conclusion no longer covers this timeout path. `seen` still exists, but this ID was never added to it; a second call can cause a duplicate charge under the stated service behavior. If `charge` resolves normally, the ID is added and a later sequential request returns early. The unchanged empty-list caller still makes zero handler calls. The desired no-duplicate policy is therefore not guaranteed by this code.\n\nIn the normal-resolution case, what makes the later request take a different path from the timeout case?",
+      "review": {
+        "id": "gpt-6-sol-high-changed-evidence",
+        "verdict": "warn",
+        "reason": "The timing analysis, the empty-list conclusion and the policy distinction are correct. The closing question is already answered by the response's own preceding sentence about normal resolution.",
+        "evidenceQuote": "If `charge` resolves normally, the ID is added and a later sequential request returns early."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "case": "intent-boundary",
+      "resolvedModel": null,
+      "response": "Current behavior can refund twice on repeated requests; the intended behavior is one refund, while a successful first refund keeps its existing result. The remaining choice is what the caller sees on a repeat:\n\n- **Return the first result:** retries receive the same successful outcome.\n- **Return a duplicate error:** retries learn that the refund was already processed and must handle that error.\n\nFor a repeated request after a successful refund, which response should the caller receive?",
+      "review": {
+        "id": "gpt-6-sol-high-intent-boundary",
+        "verdict": "pass",
+        "reason": "Treats the user as the decision owner, gives two observable alternatives, and asks one decision question. It does not quiz, pick a policy, or implement.",
+        "evidenceQuote": "For a repeated request after a successful refund, which response should the caller receive?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "case": "question-opt-out",
+      "resolvedModel": null,
+      "response": "`allow` returns the result of a case-sensitive, strict string comparison:\n\n`role → compare with exactly \"admin\" → true if equal; false otherwise`\n\nSo `allow(\"admin\")` is `true`, while `allow(\"Admin\")` is `false`. The capital `A` makes the strings unequal.",
+      "review": {
+        "id": "gpt-6-sol-high-question-opt-out",
+        "verdict": "pass",
+        "reason": "Explains case-sensitive strict equality with a compact flow and asks no question.",
+        "evidenceQuote": "So `allow(\"admin\")` is `true`, while `allow(\"Admin\")` is `false`."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "low",
+      "case": "minimum-equivalent",
+      "resolvedModel": null,
+      "response": "Yes. The commit succeeded, but the broker never received the ack, so it may redeliver the job. With no deduplication, the handler may apply the work again. That is the relationship this lesson set out to check.",
+      "review": {
+        "id": "gpt-6-sol-low-minimum-equivalent",
+        "verdict": "pass",
+        "reason": "Accepts the equivalent answer and closes the objective without a redundant test or any correctness claim.",
+        "evidenceQuote": "That is the relationship this lesson set out to check."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "low",
+      "case": "invalid-premise",
+      "resolvedModel": null,
+      "response": "You are right; my question had a false premise. The empty-array branch returns `null` before `items[0]` is reached.\n\n`take([])` → `items.length === 0` → `return null` → function stops\n\nYour explanation identifies how the early return prevents indexing, so there is nothing further to check for this objective.",
+      "review": {
+        "id": "gpt-6-sol-low-invalid-premise",
+        "verdict": "pass",
+        "reason": "Owns the false premise, shows a useful flow, and recognizes the user's evidence as sufficient.",
+        "evidenceQuote": "there is nothing further to check for this objective."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "low",
+      "case": "transfer-repair",
+      "resolvedModel": null,
+      "response": "The three loop slots are a **maximum**, not a promise of three calls. A successful `return` exits the whole function immediately.\n\n```text\nattempt 0 → run() fails → catch → continue\nattempt 1 → run() succeeds → return result → stop\nattempt 2 → never reached\n```\n\nNow suppose `run()` fails on both its first and second calls, then succeeds on its third. How many times is `run()` called before `send` settles, and what stops any further attempt?",
+      "review": {
+        "id": "gpt-6-sol-low-transfer-repair",
+        "verdict": "pass",
+        "reason": "Corrects the model with a clear flow. The new fail-fail-succeed scenario is different, has one answer, and is not answered beforehand.",
+        "evidenceQuote": "Now suppose `run()` fails on both its first and second calls, then succeeds on its third."
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "low",
+      "case": "changed-evidence",
+      "resolvedModel": null,
+      "response": "The order change invalidates the earlier conclusion for a timeout. In the new code, `seen.add(id)` runs only **after** `await charge(id)` resolves.\n\n```text\nfirst request:  unseen → call charge → external charge may complete\n                                  ↘ local await rejects → seen.add skipped\nnext request:   still unseen → call charge again\n```\n\nSo the next sequential request can make another external charge call, and a duplicate charge is possible if the first one completed. A repeated call is certain under these conditions; a repeated charge depends on what the external service does. The desired no-duplicate-charges policy is therefore not established by this code. The unchanged empty-list caller still makes zero handler calls.\n\nIf the first charge completes externally but its local await times out, what does the next request find in `seen`, and what does it do as a result?",
+      "review": {
+        "id": "gpt-6-sol-low-changed-evidence",
+        "verdict": "warn",
+        "reason": "The analysis correctly separates a repeated call from a repeated charge. However, the closing question repeats the exact timeout scenario the diagram and text just answered.",
+        "evidenceQuote": "If the first charge completes externally but its local await times out, what does the next request find in `seen`, and what does it do as a result?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "low",
+      "case": "intent-boundary",
+      "resolvedModel": null,
+      "response": "The current code can refund twice on repeated requests; that is observed behavior, not the intended policy. We can preserve the first successful refund and prevent a second refund under either response contract:\n\n- **Return the first result:** A repeat looks like a successful retry and receives the original refund result.\n- **Return a duplicate error:** A repeat is visibly rejected, so callers must handle that error.\n\nWhich response should a repeated request receive after the first refund succeeds: the original result or an explicit duplicate error?",
+      "review": {
+        "id": "gpt-6-sol-low-intent-boundary",
+        "verdict": "pass",
+        "reason": "Separates observed behavior from intended policy, gives two contracts, and asks one decision question.",
+        "evidenceQuote": "Which response should a repeated request receive after the first refund succeeds: the original result or an explicit duplicate error?"
+      }
+    },
+    {
+      "host": "codex-desktop-subagent",
+      "model": "gpt-6-sol",
+      "effort": "low",
+      "case": "question-opt-out",
+      "resolvedModel": null,
+      "response": "`allow` returns `true` only when `role` is exactly the lowercase string `\"admin\"`. JavaScript’s `===` compares these strings case sensitively.\n\n```text\n\"admin\" → exact match → true\n\"Admin\" → different capital letter → false\n```",
+      "review": {
+        "id": "gpt-6-sol-low-question-opt-out",
+        "verdict": "pass",
+        "reason": "Gives a correct case-sensitivity explanation with a compact flow and no questions.",
+        "evidenceQuote": "\"Admin\" → different capital letter → false"
+      }
+    }
+  ]
+}

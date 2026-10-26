@@ -65,3 +65,19 @@ Useful options:
 - `SOCRATES_LIVE_EVAL_CASES=all`: deliberately run every live-capable case.
 
 Reports preserve raw output, parsed response, process state, timing, exact stream byte counts, available host telemetry, machine rubric results, and paired deltas only when both outcomes are genuinely comparable. Regex-based live graders are fast signals, not semantic proof; the question-count proxy ignores code and quoted examples but remains a punctuation heuristic. The guided live cases intentionally use cache freshness rather than the recursion example embedded in the skill reference. Final releases should also use independent forward tests with fresh model context and inspect visual quality directly, especially for the alignment gate.
+
+## Grounded learning matrix (v2.1)
+
+```bash
+SOCRATES_LIVE_EVAL=1 npm run eval:grounded
+# Run just one supported host, or one explicit model/effort:
+SOCRATES_LIVE_EVAL=1 SOCRATES_GROUNDED_HOST=claude npm run eval:grounded
+SOCRATES_LIVE_EVAL=1 SOCRATES_GROUNDED_HOST=claude \
+  SOCRATES_GROUNDED_MODEL=claude-sonnet-5-5 SOCRATES_GROUNDED_EFFORT=high npm run eval:grounded
+```
+
+The explicit matrix is GPT-6 Luna/Sol/Astra and Claude 5.5 Haiku/Sonnet/Opus, each at low and high effort. Availability depends on the installed CLI and account; there is no model fallback. `SOCRATES_GROUNDED_CONCURRENCY` accepts 1–4 (default 3); `SOCRATES_GROUNDED_CASES` selects comma-separated IDs; `SOCRATES_GROUNDED_OUTPUT` sets a private report directory. `SOCRATES_GROUNDED_CODEX_BIN` and `SOCRATES_GROUNDED_CLAUDE_BIN` select executable paths. Model access failures stop subsequent cases for that configuration; already running cases may finish. Each invocation has a five-minute timeout.
+
+Six scenarios exercise equivalent minimum answers, a defective question, transfer after misconception repair, changed code evidence, implementation-versus-learning boundaries, and question opt-out. Every scenario is a fresh process with supplied prior-turn vignettes, not a real multi-turn continuation. Full skill references are supplied inline; prompts omit the evaluation criteria. This isolates response behavior from tool retrieval. Native authentication remains available. Claude tools/hooks/MCP are disabled; Codex still has filesystem read access and may discover global skills, so tool use invalidates the response-only sample. This is not a perfectly isolated skill/control experiment. Run before global installation and record the exact skill hashes.
+
+Reports preserve prompts, raw streams, process status, session IDs when available, resolved Claude model IDs, and responses. Codex streams do not consistently expose resolved model IDs; the explicit requested model is recorded without inventing confirmation. A successful execution is **not** a semantic pass. Review actual responses against the criteria in `grounded-learning-cases.json`, including whether a table already disclosed a new question's answer or an unnecessary question extended a completed objective. Preserve failures and review evidence rather than treating regex scores as proof. The writable `eval:alignment` suite remains responsible for real implementation/approval behavior; `SOCRATES_ALIGNMENT_EFFORT` now selects an explicit effort for either host and is recorded in its report. Prompts are sent through stdin.
