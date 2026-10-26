@@ -81,3 +81,19 @@ The explicit matrix is GPT-6 Luna/Sol/Astra and Claude 5.5 Haiku/Sonnet/Opus, ea
 Six scenarios exercise equivalent minimum answers, a defective question, transfer after misconception repair, changed code evidence, implementation-versus-learning boundaries, and question opt-out. Every scenario is a fresh process with supplied prior-turn vignettes, not a real multi-turn continuation. Full skill references are supplied inline; prompts omit the evaluation criteria. This isolates response behavior from tool retrieval. Native authentication remains available. Claude tools/hooks/MCP are disabled; Codex still has filesystem read access and may discover global skills, so tool use invalidates the response-only sample. This is not a perfectly isolated skill/control experiment. Run before global installation and record the exact skill hashes.
 
 Reports preserve prompts, raw streams, process status, session IDs when available, resolved Claude model IDs, and responses. Codex streams do not consistently expose resolved model IDs; the explicit requested model is recorded without inventing confirmation. A successful execution is **not** a semantic pass. Review actual responses against the criteria in `grounded-learning-cases.json`, including whether a table already disclosed a new question's answer or an unnecessary question extended a completed objective. Preserve failures and review evidence rather than treating regex scores as proof. The writable `eval:alignment` suite remains responsible for real implementation/approval behavior; `SOCRATES_ALIGNMENT_EFFORT` now selects an explicit effort for either host and is recorded in its report. Prompts are sent through stdin.
+
+## Native file-loading response evaluation
+
+```bash
+SOCRATES_LIVE_EVAL=1 npm run eval:native
+SOCRATES_LIVE_EVAL=1 SOCRATES_NATIVE_MODEL=claude-haiku-5-5 \
+  SOCRATES_NATIVE_EFFORT=low npm run eval:native
+```
+
+This complements the full-bundle grounded matrix with a fresh Claude CLI context and temporary workspace for each case. The prompt selects the copied `SKILL.md`; the model chooses which routed references to read. Only `Read` is available. This tests explicit skill loading, not automatic discovery. The six Claude 5.5 model/effort combinations are the default; no model is substituted. GPT-6 response tests can use explicitly selected desktop agents when the installed Codex CLI does not support those IDs, but that is a different host and must be reported separately.
+
+`SOCRATES_NATIVE_CASES` selects original grounded case IDs, `SOCRATES_NATIVE_CONCURRENCY` accepts 1–4, `SOCRATES_NATIVE_OUTPUT` selects a private output directory, and `SOCRATES_NATIVE_SOURCE_ROOT` selects a checkout for baseline comparisons. The runner snapshots the skill bundle before launching cases, records its hashes, and audits tool results against the snapshot. A missing, failed, incomplete initial skill read, unrelated file read, permission denial, unexpected tool, or model mismatch fails execution. The model never receives the case criteria. Raw prompts, tool traces, session IDs, responses, and audit details remain in the ignored output directory; publish sanitized evidence separately.
+
+Native authentication and host history remain available as in the grounded suite. A valid file-loading trace does not prove a correct response. Apply the frozen semantic rubric separately, preserve failed pilots, and report full-bundle and native-loading results as separate cohorts. Repeated samples and judging variation must not be presented as reliable model rankings or pass-rate estimates.
+
+The v2.1.2 report separates the five existing holdouts from `branch-outcome-regressions.json`, a targeted regression designed after observing a last-step outcome error. Neither forward prompt includes the grading criteria. See [release evidence](reports/2026-10-26-v2.1.2.md) for all cohorts, evaluator repairs, judgments, and remaining warnings.

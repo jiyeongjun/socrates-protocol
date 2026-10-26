@@ -1,0 +1,7 @@
+[
+  {
+    "id": "last-step-success",
+    "prompt": "Use Socrates to correct my explanation, with a small flow diagram and no questions. Whole code: async function ready(probe) { for (let n=0; n<2; n++) { const state=await probe(); if (state === 'ready') return true; } return false; } The first probe resolves 'pending' and the second resolves 'ready'. I say ready(probe) must return false because it used the maximum two probes. Do not change the code.",
+    "criteria": "Exactly two calls and returns true: the second ready result executes return true before the final return false. Reaching the last allowed probe does not determine its result. Do not ask questions, propose fixes, or invent rejection."
+  }
+]

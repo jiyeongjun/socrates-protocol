@@ -1,6 +1,6 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-2.1.1-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.1.2-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -29,11 +29,11 @@ Codex에서는 `$socrates 일괄 초대 기능을 추가해줘. 코딩 전에 �
 
 [구현 정렬 지침](reference/skill-references/implementation-alignment.md)과 [실제 모델 평가 안내](evals/README.md)를 참고하세요.
 
-[v2.1.1 비교 검증과 남은 한계](evals/reports/2026-10-26-v2.1.1.md)
+[v2.1.2 비교 검증과 남은 한계](evals/reports/2026-10-26-v2.1.2.md)
 
 ## 학습 동작
 
-v2.1.1은 도표에서도 호출과 외부 효과를 구분하고, 오해를 구별할 수 있는 일관된 질문을 먼저 준비하며, 학습 검토가 요청하지 않은 정책 선택으로 번지지 않게 보완합니다. 동일 기준 비교에서 통과 45·주의 23·실패 4가 통과 57·주의 15·실패 0으로 개선됐습니다. 기존 v2.1.0 점수와 남은 주의 사항은 보고서에 함께 보존했습니다.
+v2.1.2는 본문과 학습 지침을 합쳐 약 절반으로 줄이고, 정답 확인·요청된 연습·요구사항 결정의 종료 조건과 참조 로딩을 분리합니다. 모델·버전을 가리고 같은 기준으로 평가한 결과, 기존 v2.1.1 응답은 통과 42·주의 30·실패 0, 후보는 통과 60·주의 12·실패 0이었습니다. 과거 점수, 명시한 심각도 조정 2건, 남은 주의, 실제 파일 로딩 검증, 이전에 거절된 후보도 보고서에 보존했습니다. 소수 표본이므로 모델 순위나 정확성 보장을 뜻하지 않습니다.
 
 v2.1에서는 [Sphinx](https://github.com/parthh01/sphinx)의 아이디어를 참고해 근거와 질문의 품질을 보완했습니다. 질문 전에 최소 결과·인과관계를 정하고, 사용자를 판단하기 전에 질문 자체를 검증하며, 적용 능력이 중요할 때 조건이 달라진 사례를 사용합니다. 같은 의미의 답을 인정하고 뒤늦게 합격 조건을 추가하지 않습니다. 잘못된 질문은 설명자의 오류로 수정하고, 버그를 이해하는 것과 승인하는 것을 구분합니다. 근거가 바뀌면 영향을 받은 결론만 재확인합니다. 이는 대화 규칙이며 Git 차단이나 완전한 이해의 보증이 아닙니다. 구현 정렬을 사용자 퀴즈로 바꾸지도 않습니다.
 
@@ -149,7 +149,7 @@ node scripts/install.mjs --mode uninstall --platform both --scope global --sourc
 
 ### 기존 버전에서 업데이트
 
-저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v2.1.1으로 교체됩니다. 릴리스 태그를 발행하기 전에도 로컬 원본 설치 명령을 사용할 수 있습니다.
+저장소를 최신 상태로 받은 뒤 설치 명령을 다시 실행하면 관리 중인 스킬이 v2.1.2으로 교체됩니다. 릴리스 태그를 발행하기 전에도 로컬 원본 설치 명령을 사용할 수 있습니다.
 
 v0.10.0을 사용했다면 이전 설치를 먼저 제거합니다.
 

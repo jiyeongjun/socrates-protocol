@@ -1,6 +1,6 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-2.1.1-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.1.2-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -29,11 +29,11 @@ Learning and implementation have different completion criteria: the learner demo
 
 See [the implementation workflow](reference/skill-references/implementation-alignment.md) and [behavioral evaluation instructions](evals/README.md).
 
-[v2.1.1 comparison and remaining limitations](evals/reports/2026-10-26-v2.1.1.md)
+[v2.1.2 comparison and remaining limitations](evals/reports/2026-10-26-v2.1.2.md)
 
 ## Learning behavior
 
-Version 2.1.1 tightens evidence boundaries in diagrams, prepares coherent questions that distinguish a misconception, and keeps learning reviews out of unrequested policy choices. The same-rubric comparison improved from 45 pass / 23 warning / 4 fail to 57 / 15 / 0; the report retains all remaining warnings and the original v2.1.0 grades.
+Version 2.1.2 reduces the main and guided-learning instructions by about half, separates completed answer review from requested practice, and loads references by the requested outcome. In the blinded same-rubric response comparison, the unchanged v2.1.1 responses received 42 pass / 30 warning / 0 fail and the candidate received 60 / 12 / 0. Historical grades, two explicit severity adjudications, remaining warnings, native file-loading checks, and earlier rejected candidates are preserved in the report. These small samples do not establish reliable model rankings or guarantee correctness.
 
 Version 2.1 adds fair, evidence-grounded learning checks inspired by [Sphinx](https://github.com/parthh01/sphinx): establish the minimum outcome and causal reason before asking, validate the question before diagnosing the learner, and use a changed scenario when application matters. Accept equivalent explanations without adding hidden requirements. Correct an invalid question as a teaching error; describing a bug accurately does not approve the bug. Revisit only conclusions affected by changed evidence. These are conversational rules, not a Git gate or a guarantee of mastery, and never turn implementation alignment into a quiz.
 
@@ -149,7 +149,7 @@ When a custom `CODEX_HOME` exists or already contains a Codex skill copy, the in
 
 ### Update an existing installation
 
-Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.1.1. The local source command works before a release tag is published.
+Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.1.2. The local source command works before a release tag is published.
 
 For a v0.10.0 installation, remove the old product first:
 
