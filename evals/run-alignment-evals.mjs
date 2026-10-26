@@ -64,7 +64,7 @@ export function parseTranscript(host, stdout) {
     return {
       response: parseHostOutput(host, stdout).response,
       sessionId: events.find(e => e.type === "thread.started")?.thread_id,
-      failed: events.some(e => e.type === "turn.failed" || e.type === "error"),
+      failed: !events.some(e => e.type === "turn.completed") || events.some(e => e.type === "turn.failed" || e.type === "error"),
       tools: events.filter(e => e.type === "item.completed" && e.item?.type !== "agent_message").map(e => e.item),
       modelEvidence: [], // CLI event stream does not always expose resolved model identity.
     };

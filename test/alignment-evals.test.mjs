@@ -26,9 +26,13 @@ test("transcripts retain actual tool calls and session identity and flag API err
     { type: "thread.started", thread_id: "session-a" },
     { type: "item.completed", item: { type: "file_change", changes: [{ path: "x" }] } },
     { type: "item.completed", item: { type: "agent_message", text: "Done" } },
+    { type: "turn.completed" },
   ].map(JSON.stringify).join("\n"));
   assert.equal(codex.sessionId, "session-a");
   assert.equal(codex.response, "Done");
+  assert.equal(codex.failed, false);
+  assert.equal(parseTranscript("codex", "partial unstructured output").failed, true);
+  assert.equal(parseTranscript("codex", '{"type":"thread.started","thread_id":"partial"}').failed, true);
   assert.equal(codex.tools[0].type, "file_change");
   assert.equal(parseTranscript("codex", '{"type":"turn.failed"}').failed, true);
   const claude = parseTranscript("claude", [
