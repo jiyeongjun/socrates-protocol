@@ -26,6 +26,8 @@ Ask one consequential decision at a time, giving a recommendation when justified
 
 An answer confirms only the point it actually addresses. When explaining alternatives, separate their necessary consequences from additional policy choices; keep independent decisions unresolved until they are answered or explicitly delegated. Apply explicit corrections to earlier decisions and update dependent examples or diagrams. When two requirements cannot both hold and the user has not clearly replaced one, name the conflict and ask which outcome should prevail. Do not silently choose one or ask already settled questions again.
 
+Apply this distinction inside comparison tables and diagrams too. If an option settles the successful case but does not determine failure or in-progress behavior, omit those rows or mark them unresolved for both options. Do not silently bundle an extra policy into one option and later call that same policy undecided. Recommendations may explain a trade-off without expanding the decision being asked.
+
 If the user is unsure, use a smaller scenario or concrete comparison. Do not test their technical understanding. Use the host's question tool when suitable; otherwise ask in ordinary language and yield. Continue independent investigation while an answer is pending, but never treat elapsed time as consent.
 
 ## Make the agreement reviewable

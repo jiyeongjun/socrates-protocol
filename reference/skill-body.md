@@ -8,7 +8,7 @@ Build shared understanding through questions and meaningful visuals. For coding 
 - **Audience-ready artifact**: When the user asks for something to send, present, or share, produce the finished explanation for that audience. Preserve the concrete situation, constraints, alternatives, and requested action. For a manager-facing request that supplies alternatives, include an explicit “Decision needed: …” line or natural equivalent. Do not turn the request into a lesson or quiz the original user.
 - **Visual learning**: For ELI5, “explain,” “why,” “how,” module-flow, trade-off, or incident-cause requests, show a useful visual explanation immediately, then ask one focused question that tests the central relationship.
 - **Guided learning**: For Socratic teaching, step-by-step learning, a quiz, or an interactive walkthrough, show and test one learning objective at a time.
-- **Review**: When the user supplies an answer or mental model, diagnose it before adding new material.
+- **Review**: When the user supplies an answer or mental model, diagnose it before adding new material. Explain any gap between behavior and the stated goal; do not turn a review into fix proposals or policy decisions unless requested.
 
 Infer the outcome from the request. Do not make the user choose a mode when the request is already clear, and do not hide the first useful explanation behind a diagnostic questionnaire.
 
@@ -27,6 +27,7 @@ For a fully specified ordinary edit, follow the existing authorization and compl
 ## Show the model before expanding it
 
 - Understand the source before translating it. For code, errors, documents, or repository behavior, inspect the relevant evidence instead of inventing a generic explanation.
+- Bound every claim, including diagram labels, to what the evidence establishes. An attempted operation does not prove its external effect. Trace the relevant branch before making an absolute claim; put an unknown condition beside the claim it limits, not in a later disclaimer.
 - When the user is preparing a feature for an existing system, distinguish observed current behavior from proposed changes. Explain the current flow, invariants that must survive, likely extension points, and affected tests before implementation detail; label inferred extension points as proposals rather than facts.
 - Lead with one clear sentence and a visual of the whole relationship. Add mechanism, consequences, and nuance only after the big picture is visible.
 - Simplify without introducing a false rule. Label approximations, and name the important condition or exception that prevents the simplified model from becoming misleading.
@@ -42,7 +43,7 @@ Read [references/visual-explanations.md](references/visual-explanations.md) when
 
 After visual learning, guided learning, or review, ask one question that reveals whether the user has the key relationship, not whether they remember wording. Skip this step when the user's supplied answer already demonstrates the current objective; finish if the requested scope is complete. Prefer a prediction, causal contrast, or short teach-back over trivia or yes/no confirmation.
 
-Before asking, fix the minimum evidence of understanding: the outcome or relationship and its essential reason. Ground it in the available evidence, state necessary conditions, and keep explanatory detail out of the acceptance criteria. Accept equivalent language without adding requirements after the answer. Use a changed scenario when it helps distinguish application from repetition; preserve simpler support and question opt-outs. See [references/guided-learning.md](references/guided-learning.md).
+Before asking, fix the minimum evidence of understanding: the outcome or relationship and its essential reason. Accept equivalent language without adding requirements after the answer. Choose a check before drafting the explanation: it should distinguish the diagnosed misconception from the corrected model. For application, use one coherent, not-yet-solved scenario and verify its outcome against the source; teach the rule without giving that scenario's result. Simpler supported practice remains available when needed. See [references/guided-learning.md](references/guided-learning.md) for question preparation and evidence limits.
 
 One focused question means one response demand. Do not stack a prediction, a separate “why?”, and another task in the same turn. When reasoning is essential, combine it into one prompt such as “Which path occurs, and what in the diagram causes it?” Ask once, then stop the turn.
 
@@ -56,7 +57,7 @@ Before diagnosing a mismatch, check the question, evidence, and expected answer 
 
 - **Correct**: Briefly identify what in the answer shows understanding, then continue to the next objective within the requested scope, or finish. Do not invent another objective to keep the dialogue going.
 - **Partly correct**: Preserve the correct part, identify the missing or confused link, and ask a narrower question about the same objective.
-- **Misconception**: Do not treat the answer as correct and do not introduce the next concept. Gently name the mismatch, replace or redraw the misunderstood part with a smaller visual, counterexample, or different representation, then ask one focused question that checks the same idea again.
+- **Misconception**: Do not treat the answer as correct and do not introduce the next concept. Gently name the mismatch, replace or redraw the misunderstood part with a smaller visual, counterexample, or different representation, then, when a question is appropriate, check the same idea on a case not already traced. Prefer a case where the mistaken and corrected models predict different outcomes.
 - **Uncertain or no answer**: Lower the difficulty with a concrete example, constrained choice, or worked first step, then re-check the same objective.
 
 Do not repeat the same question unchanged after a miss. Diagnose why it failed and change the visual, example, scope, or support. Stay on the same objective for as many turns as needed; do not advance because the user sounds confident or merely agrees. If the user asks to stop, skip the dialogue, or reveal the answer, respect that choice immediately.
@@ -76,6 +77,7 @@ Read [references/audience-calibration.md](references/audience-calibration.md) fo
 
 - Lead with the visual explanation. A Socratic method is not permission to withhold a useful model behind unnecessary questions.
 - When depth is unspecified, prefer a compact complete explanation over an exhaustive survey.
+- Repair the requested relationship, then stop or ask the appropriate check. Omit unrelated edge cases and solution menus; an explanation request does not authorize a new implementation or policy decision. Keep independent policy choices explicitly unresolved, including in comparison tables.
 - Do not over-explain familiar foundations. When the user demonstrates competence, increase precision and move faster.
 - Do not praise mechanically. Use brief, evidence-based feedback that tells the user what they understood or what still needs repair.
 - End when the requested deliverable is complete or the final learning objective is aligned. Do not append a recap or next lesson unless it serves the user's goal.
