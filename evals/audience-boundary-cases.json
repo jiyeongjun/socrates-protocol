@@ -1,0 +1,23 @@
+[
+  {
+    "id": "manager-information-only",
+    "prompt": "Use Socrates to write a short explanation for my manager. Complete code: function unitPrice(n) { return n >= 5 ? 8 : 10; } We require a unit price of 10 at exactly five items, and a discount only above five. I thought the current code follows that rule. Explain what it actually does at five and why, with a small flow. This is an informational update about the current implementation.",
+    "criteria": "Produce the manager-facing explanation: five satisfies >=5, so price8, contrary to the supplied rule requiring10. Include a useful small flow. Do not ask which pricing policy to choose, propose fixes, implement, or quiz the original requester. The policy is already supplied; the request is information."
+  },
+  {
+    "id": "manager-decision-brief",
+    "prompt": "Use Socrates to draft a brief for my manager to make one decision. We have not chosen whether five items should qualify for the discount: option A gives unit price8 at five or more; option B gives unit price8 only above five. Otherwise unit price is10. Compare those two observable alternatives, state the decision needed, and leave the choice to the manager. Do not implement anything.",
+    "criteria": "Write a finished manager-facing decision brief comparing the price at five (8vs10) and shared behavior below/above. Explicitly state the actual decision and leave it open. Do not silently select, invent extra features/priorities, or quiz the requester. Preserve the requested decision sentence."
+  },
+  {
+    "id": "team-recovery-explanation",
+    "prompt": "Use Socrates to explain this to my team in plain language with a small causal flow. Complete code: async function deliverAll(xs) { for (const x of xs) await send(x); } Source facts: send(A) resolves and its effect is permanent; send(B) rejects before any effect; C would be next. There is no rollback or compensation. Our requirement is that a failed batch should leave no effects. I thought the rejection proves that requirement is met. Explain whether that understanding matches the current code.",
+    "criteria": "Explain directly to the team that A's effect remains, B has none, C is not attempted; rejection stops later work but does not undo A. Identify mismatch with the already-supplied policy without turning it into a rollback/compensation proposal or a policy decision. No unsolicited learner question."
+  },
+  {
+    "id": "approved-threshold-edit",
+    "prompt": "Use Socrates. Complete function: function unitPrice(n) { return n >= 5 ? 8 : 10; } The decision is made and this exact change is approved: five items must keep unit price10; only quantities greater than five get8. Show the replacement function inline, preserving everything else, and verify its values at four, five, and six. Do not create files.",
+    "criteria": "Supply function unitPrice(n) { return n > 5 ? 8 : 10; }, or equivalent behavior, and values10,10,8. Do not withhold the authorized edit, ask for approval again, or add another pricing policy. No files.",
+    "reviewRequired": false
+  }
+]

@@ -21,7 +21,7 @@ An explicit user preference beats a category default. When a category is all you
 | Student | Match stated course level | Connections, derivation, practice, transfer | Assuming the syllabus or grading standard |
 | Practitioner | Normal domain terminology | Mechanism, debugging cues, trade-offs | Re-teaching basics already demonstrated |
 | Expert | Precise compact language | Assumptions, edge cases, alternatives, evidence | Decorative analogies and generic summaries |
-| Manager or director | Plain professional language | Outcome, options, risk, cost, timing, decision | Code detail that does not alter the decision |
+| Manager or director | Plain professional language | Outcome, impact, risk, cost, timing; options and decision for a requested decision brief | Code detail that does not alter the decision |
 | Designer | Product language | User mental model, interaction, accessibility, failure states | Treating design as merely visual styling |
 | Mixed audience | Shared plain-language core | Separate layers for decisions and implementation | A compromise level that serves nobody |
 
@@ -34,10 +34,10 @@ For an audience with mixed or uncertain background, use optional layers:
 - **Core**: one or two sentences everyone needs.
 - **Working model**: example, causal flow, or comparison.
 - **Technical layer**: terminology, implementation, equations, or edge cases.
-- **Decision layer**: implications and next choices.
+- **Decision layer**, only for a requested decision brief: the supplied options and decision. An informational explanation can end at its outcome.
 
 The layers should agree with each other. Do not make the simple layer memorable by making it false.
 
 ## Audience-ready deliverables
 
-When the request is “explain this to my manager/child/team,” write the actual deliverable in the appropriate voice. Preserve concrete facts, constraints, alternatives, and requested actions from the source request. For a decision-maker, explicitly state the decision when alternatives were supplied; that deliverable is not finished without the decision sentence. Recommend only when the evidence supports a choice. Use placeholders or conservative wording for nonessential unknowns. Put any optional refinement offer after the usable text and make it a non-interrogative invitation, not a second question. Do not address the original user as a student, announce the calibration process, or append an unsolicited quiz. Include a caveat only when omitting it would materially mislead the audience.
+When the request is “explain this to my manager/child/team,” write the actual deliverable in the appropriate voice. Preserve concrete facts, constraints, alternatives, and requested actions from the source request. For a requested decision brief, explicitly state the supplied decision and alternatives; use “Decision needed: …” or a natural equivalent. A role such as manager, a stated desired policy, or a comparison of old and new behavior does not by itself request a decision. For an informational explanation, report what the evidence means and finish. Recommend only when a recommendation is requested and the evidence supports a choice. Use placeholders or conservative wording for nonessential unknowns. Put any optional refinement offer after the usable text and make it a non-interrogative invitation, not a second question. Do not address the original user as a student, announce the calibration process, or append an unsolicited quiz. Include a caveat only when omitting it would materially mislead the audience.

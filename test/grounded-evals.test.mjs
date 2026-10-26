@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildGroundedCommand, modelMatrix, runGroundedEvals } from '../evals/run-grounded-evals.mjs';
+import { readFile } from 'node:fs/promises';
+import { buildGroundedCommand, loadGroundedSkillBundle, modelMatrix, runGroundedEvals } from '../evals/run-grounded-evals.mjs';
 import { buildAlignmentCommand } from '../evals/run-alignment-evals.mjs';
 import { runProcess } from '../evals/run-live-evals.mjs';
 
@@ -18,6 +19,24 @@ test('grounded matrix pins six models and two efforts without fallback or permis
       assert.equal(c.args[c.args.indexOf('--tools') + 1], '');
     } else assert.ok(c.args.includes(`model_reasoning_effort="${config.effort}"`));
   }
+});
+
+test('current full bundle includes the exact canonical reviewer policy', async () => {
+  const policy = await readFile(new URL('../reference/skill-references/response-review.md', import.meta.url), 'utf8');
+  const { sources, bundle } = await loadGroundedSkillBundle();
+  assert.equal(sources.length, 6);
+  assert.equal(sources.find(source => source.path === 'reference/skill-references/response-review.md')?.text, policy);
+  assert.ok(bundle.includes(`--- reference/skill-references/response-review.md ---\n${policy}`));
+});
+
+test('author bundle separates reviewer-only instructions while preserving the legacy all-role stress mode', async () => {
+  const all = await loadGroundedSkillBundle();
+  const author = await loadGroundedSkillBundle(undefined, 'author');
+  assert.equal(author.sources.length, 5);
+  assert.deepEqual(author.sources, all.sources.filter(s => !s.path.endsWith('/response-review.md')));
+  assert.ok(!author.bundle.includes('# Review a Socrates response'));
+  assert.ok(all.bundle.includes('# Review a Socrates response'));
+  await assert.rejects(loadGroundedSkillBundle(undefined, 'invalid'), /Unknown bundle mode/);
 });
 
 test('native process stdin preserves literal prompts without shell evaluation', async () => {

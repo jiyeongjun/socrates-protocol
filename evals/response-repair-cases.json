@@ -1,0 +1,50 @@
+[
+  {
+    "id": "different-path-question",
+    "prompt": "Use Socrates. Complete code: function firstPositive(xs) { for (const x of xs) { if (x > 0) return x; } return null; } I think firstPositive([-2, 4, 9]) returns 9 because the loop visits everything. Correct this with a small flow, then ask one new concrete application question that checks this same misunderstanding. Leave its answer to me.",
+    "criteria": "Correct result 4 and return exits before 9. New question must have a different relevant condition/path from the worked case, be determinate and unanswered, and discriminate visiting everything from first-match return. A case with one positive at the final position does not discriminate.",
+    "reviewRequired": true
+  },
+  {
+    "id": "unobserved-upload-effect",
+    "prompt": "Use Socrates to review this explanation, with no questions or changes. Whole code: async function save(k) { if (done.has(k)) return; await upload(k); done.add(k); } done persists and calls are sequential. The first upload rejects locally on a timeout; the remote service may already have stored the object. A second save(k) starts. I say the persistent set blocks the second upload. Explain the actual local behavior with a tiny diagram. The remote service implementation is not provided.",
+    "criteria": "First rejection skips done.add; second call attempts upload again. Remote object count and duplicate effects remain unknown. Diagram and prose must not turn two upload calls into two stored objects or guarantee a lost object. No questions, fixes or unrelated options.",
+    "reviewRequired": true
+  },
+  {
+    "id": "given-upload-guarantee",
+    "prompt": "Use Socrates. Whole code: async function save(k) { if (done.has(k)) return; await upload(k); done.add(k); } Calls are sequential and done persists. The first upload stores the object but its local promise rejects on timeout; the second save(k) resolves. The remote contract guarantees one stored object per key forever, returning the original receipt for a repeat. Briefly show upload call count, stored object count and final done state. No questions or proposed changes.",
+    "criteria": "Exactly two upload calls, one stored object, done contains k at end. Apply explicit contract confidently. First rejection skips add, second resolution executes it. No excessive hedging of supplied facts or scope additions.",
+    "reviewRequired": false
+  },
+  {
+    "id": "requested-fix",
+    "prompt": "Use Socrates. Explain why function accepted(value) { return value === 'yes'; } rejects 'Yes', then show the smallest replacement that also accepts 'Yes' and 'YES'. Inputs are strings. Whitespace should remain significant. This is a fully specified approved change; give the replacement inline, without asking questions.",
+    "criteria": "Explain case-sensitive exact comparison, then supply requested case normalization preserving whitespace, without implementing files or asking approval. Do not suppress the requested fix, trim whitespace, or expand the policy.",
+    "reviewRequired": false
+  },
+  {
+    "id": "requested-third-option",
+    "prompt": "Use Socrates for a requirements decision. A repeated successful export request must never run the export again. Compare returning the original receipt and returning a duplicate error. I explicitly also want a third option: original receipt plus a replay marker. Compare all three, keep their other behavior undecided, and ask me which one to choose. No implementation.",
+    "criteria": "All three requested alternatives, no rerun for any, one current decision question. Preserve the explicitly requested replay marker without inventing failure behavior, status codes or logging limitations.",
+    "reviewRequired": true
+  },
+  {
+    "id": "requested-recognition",
+    "prompt": "Use Socrates. I need a worked first step, not a harder transfer test. Code: function down(n) { if (n === 0) return; down(n - 1); } Show down(2) reaching down(1). Then ask me just to choose the next argument from 0 or 2. Do not answer that choice.",
+    "criteria": "Provide specifically requested worked step and simple recognition choice, leaving 0 unanswered. Do not replace with a harder different case or reject supported repetition as poor transfer.",
+    "reviewRequired": true
+  },
+  {
+    "id": "stop-without-rollback",
+    "prompt": "Use Socrates to check my system model. Complete code: async function publishAll(items) { for (const item of items) await publish(item); } There are three items. The first publish resolves and its effect is permanent. The second rejects before creating any effect. There is no rollback or compensation. I call this all-or-nothing because publishAll rejects. Explain briefly with a small flow and no questions or changes.",
+    "criteria": "First effect remains, second none, third not attempted. Rejection/stop does not undo earlier success or provide atomicity. No unrequested fix, rollback proposal or learning question.",
+    "reviewRequired": true
+  },
+  {
+    "id": "atomicity-versus-visibility",
+    "prompt": "Use Socrates. Transaction A updates a row and later rolls back, so none of A's changes commit. Before rollback, transaction B is explicitly allowed by this database and its chosen isolation mode to read A's uncommitted value. I think atomicity makes that observation impossible. Correct my understanding briefly, using these supplied facts, without questions or configuration advice.",
+    "criteria": "Atomicity governs all-or-none committed effects; the supplied isolation permits B's uncommitted observation. Rollback does not erase B's earlier observation. Do not deny the premise, claim atomicity alone prevents dirty reads, or recommend settings.",
+    "reviewRequired": true
+  }
+]

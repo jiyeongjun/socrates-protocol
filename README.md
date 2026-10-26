@@ -1,6 +1,6 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-2.1.2-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -29,11 +29,13 @@ Learning and implementation have different completion criteria: the learner demo
 
 See [the implementation workflow](reference/skill-references/implementation-alignment.md) and [behavioral evaluation instructions](evals/README.md).
 
-[v2.1.2 comparison and remaining limitations](evals/reports/2026-10-26-v2.1.2.md)
+[v2.2.0 evaluation evidence and remaining limitations](evals/reports/2026-10-26-v2.2.0.md)
 
 ## Learning behavior
 
-Version 2.1.2 reduces the main and guided-learning instructions by about half, separates completed answer review from requested practice, and loads references by the requested outcome. In the blinded same-rubric response comparison, the unchanged v2.1.1 responses received 42 pass / 30 warning / 0 fail and the candidate received 60 / 12 / 0. Historical grades, two explicit severity adjudications, remaining warnings, native file-loading checks, and earlier rejected candidates are preserved in the report. These small samples do not establish reliable model rankings or guarantee correctness.
+Version 2.2 adds review of the complete draft for misconception repair, requested practice, and requirements comparisons. With native delegation available, a fresh read-only reviewer checks the original request, evidence, diagrams, tables, and final question before the author applies minimal repairs. Already-correct completed objectives and fully specified ordinary edits skip this step. Without native delegation, the author follows the ordinary evidence-grounded workflow and does not load or simulate the reviewer-only role. This adds work and latency; it is an instruction workflow, not an enforced runtime gate.
+
+Application questions are prepared before the explanation and checked against both the mistaken and correct model. External calls remain separate from uncertain effects, failure is separate from rollback, and atomicity is separate from visibility. The review preserves explicitly requested fixes, additional options, and simple recognition. See the report for paired tests, skipped reviews, failed pilot calls, and remaining defects. Historical [v2.1.2 results](evals/reports/2026-10-26-v2.1.2.md) remain unchanged.
 
 Version 2.1 adds fair, evidence-grounded learning checks inspired by [Sphinx](https://github.com/parthh01/sphinx): establish the minimum outcome and causal reason before asking, validate the question before diagnosing the learner, and use a changed scenario when application matters. Accept equivalent explanations without adding hidden requirements. Correct an invalid question as a teaching error; describing a bug accurately does not approve the bug. Revisit only conclusions affected by changed evidence. These are conversational rules, not a Git gate or a guarantee of mastery, and never turn implementation alignment into a quiz.
 
@@ -96,9 +98,9 @@ Simple facts do not get decorative diagrams. Every arrow, color, boundary, and l
 
 ## Actual response tests
 
-The writable suite runs five scenarios on Astra and Fable 5.1: a four-turn implementation agreement, conflicting requirements, an already approved edit, learning repair, and learning opt-out. It records tool traces and file changes and runs independent acceptance checks after implementation. See [evaluation instructions](evals/README.md) for commands, model selection, isolation limits, and semantic review requirements.
+The writable suite provides six scenarios: a four-turn implementation agreement, conflicting requirements, an already approved edit, learning repair, guided continuation, and learning opt-out. It records tool traces and file changes and runs independent acceptance checks after implementation. See [evaluation instructions](evals/README.md) for commands, model selection, isolation limits, and semantic review requirements.
 
-The 2026-09-09 runs passed the implementation and regression checks after two focused refinements and affected-case reruns. The [verification report](evals/reports/2026-09-09.md) records the evidence, changes, and limits.
+The current candidate was checked with Sonnet 5.5 at high effort. The historical 2026-09-09 Astra/Fable 5.1 runs passed the implementation and regression checks after two focused refinements and affected-case reruns. The [verification report](evals/reports/2026-09-09.md) records the evidence, changes, and limits.
 
 The earlier v1.1.0 learning evaluation was run on 2026-08-24 with Codex. It is historical evidence, not a result for the current models or implementation workflow.
 
@@ -149,7 +151,7 @@ When a custom `CODEX_HOME` exists or already contains a Codex skill copy, the in
 
 ### Update an existing installation
 
-Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.1.2. The local source command works before a release tag is published.
+Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.2.0. The local source command works before a release tag is published.
 
 For a v0.10.0 installation, remove the old product first:
 

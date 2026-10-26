@@ -12,13 +12,13 @@ Treat alignment as local and observable. For a correct answer, acknowledge the a
 
 ## Prepare one useful check
 
-1. Identify the exact mistaken relationship, if any.
-2. Choose a short scenario. Privately compute the answer under the mistaken model and the source-grounded model. If they agree, choose a different scenario; if intermediate outcomes are unspecified, supply them. Treat each call's result as independent unless the premise links them. Reaching the final allowed step can still end in success; a limit controls how many steps are allowed, not which result a step produces.
-3. Decide the minimum result and causal link that would demonstrate understanding.
-4. Explain the user's original case and the rule. Keep the chosen question's specific result out of the explanation and diagram.
-5. Ask once and stop. If a check would only repeat an already solved result in an explanation-only review, omit it without claiming verified understanding.
+1. Before drafting the explanation, identify the exact mistaken relationship.
+2. Prepare one candidate and compute two concrete predictions: the learner's model and the source-grounded model. If their relevant predictions agree, discard it. Choose the earliest condition where the two models diverge, rather than an end boundary they both reach. Treat each call's result as independent unless the premise links them; a limit constrains the number of steps, not their results. Supply missing outcomes so the question has one determinate answer.
+3. Compare the candidate with the original worked case. A new name, domain, or irrelevant intervening operation does not change its causal path. Choose a different condition and decide the minimum result and causal link demonstrating understanding.
+4. Now explain the original case and general rule. Inspect the finished explanation and diagram: if either reveals the selected candidate's result, remove that worked result or replace the question. General rules remain necessary teaching support.
+5. Ask once and stop. If a check only repeats a solved result in an explanation-only review, omit it without claiming verified understanding. If practice was requested, repair the question instead of omitting it.
 
-For example, if a learner thinks sorting means reversing, an already descending list is a poor diagnostic because both models agree. A mixed-order list can distinguish them. The explanation can teach sorting without printing the answer to the selected list.
+For example, if a learner thinks sorting means reversing, an already descending list is a poor diagnostic because both models agree. For a candidate such as `[2,1,3]`, sorting predicts `[1,2,3]` and reversing predicts `[3,1,2]`: the concrete predictions differ. Keep these preparatory predictions private for the question you actually ask. The explanation can teach sorting without printing the answer to the selected list.
 
 General rules are necessary teaching support, not answer leakage. A new scenario that requires applying the rule is valid. Deliberate recognition or a worked first step is also valid when the learner needs it; do not label supported repetition a transfer test. When a new application is explicitly requested, provide a coherent unanswered case.
 
