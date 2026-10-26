@@ -10838,12 +10838,12 @@
     "unitTests": {
       "passed": 83,
       "failed": 0,
-      "status": "recorded pass before report writing"
+      "status": "83 passed after restoring candidate2 and writing reports"
     },
     "staticCatalog": {
       "passed": 45,
       "failed": 0,
-      "status": "recorded pass before report writing"
+      "status": "45 passed after restoring candidate2 and writing reports"
     },
     "isolatedInstallParity": {
       "files": 13,
@@ -10859,6 +10859,14 @@
       "manifestsVerified": 2,
       "filesByteIdenticalToReleasedTag": 11,
       "status": "Read-only verification; unchanged."
+    },
+    "ci": {
+      "testedCommit": "826eedc",
+      "nodeVersions": [
+        22,
+        24
+      ],
+      "pushAndPullRequestChecks": "all passed"
     }
   },
   "privacy": {
@@ -10867,5 +10875,44 @@
     "privateAbsolutePathsPublished": false,
     "credentialsPublished": false,
     "traceStorage": "Raw host traces and original producer outputs remain in private local evaluation storage."
+  },
+  "postPrSmoke": {
+    "pullRequest": 6,
+    "testedCommit": "826eedc",
+    "model": "claude-haiku-5-5",
+    "effort": "low",
+    "nativeReviewerModel": "claude-opus-5-5",
+    "nativeReviewerEffort": "unavailable",
+    "runId": "native-response-2Fx6KL",
+    "sourceBundleHashes": {
+      "SKILL.md": "29d1ca52b95549f5a0aed3cf6451a20ad6b4482291f75728c3227a2a1105abe9",
+      "references/guided-learning.md": "5ef099f9610589596e97630342b56f5c8884db9852d561e8bbbd11d0c4549949",
+      "references/implementation-alignment.md": "28d2571eeeae8cb6e53dc0c33f2ae73342a35c4e22d6fe58bbbdc40ead479f54",
+      "references/visual-explanations.md": "f947f7b0b388652d88aa6164fb3f1138c3dc517de5207712ca6b37134b0bf00f",
+      "references/audience-calibration.md": "abcb43d30849d129246a91308a744401e9faa383ff01823718212bf787277c0c",
+      "references/response-review.md": "bc1a69d43eb31058bcf77b4d817ccab2d4df6c31f67d5a9b9bfaa241226a5d50"
+    },
+    "executionPass": 2,
+    "executionFail": 0,
+    "results": [
+      {
+        "caseId": "question-opt-out",
+        "executionOk": true,
+        "reviewRequired": true,
+        "reviewPerformed": false,
+        "requiredReviewMet": false,
+        "response": "`allow('Admin')` returns `false`. Your earlier belief was wrong: the string `'Admin'` does not pass.\n\nFlow: `allow('Admin')` → `'Admin' === 'admin'` → **false** → returns `false`.\n\nCause: `===` is a strict comparison. It checks both type and value exactly, and string comparison is case-sensitive, so `'A'` and `'a'` are different characters. Only the exact string `'admin'` returns `true`."
+      },
+      {
+        "caseId": "changed-evidence",
+        "executionOk": true,
+        "reviewRequired": true,
+        "reviewPerformed": true,
+        "requiredReviewMet": true,
+        "response": "Your conclusion does not hold after a timeout. `seen` persists, but in the new order `seen.add(id)` runs only after `await charge(id)` resolves. If that await rejects, the add is skipped, so `seen` still lacks `id` after that request.\n\nTrace a timeout where the service completed the charge:\n\n- **Request 1:** `seen.has(id)` is false, so `charge(id)` runs. The service charges, the local await rejects, and the add is skipped.\n- **Request 2 (same id, sequential):** `seen.has(id)` is still false, so `charge(id)` is called a second time. Whether the service charges again depends on whether it deduplicates calls, which the code does not show.\n\nIn the old order, `seen.add(id)` ran before the await, so the rejection left `id` recorded and request 2 returned early without calling `charge`. The reorder removes that protection, which is why the no-duplicate policy is no longer guaranteed.\n\nThe empty-list conclusion is unaffected. The caller is unchanged, so zero handler calls still holds."
+      }
+    ],
+    "manualInspection": "Changed-evidence preserves the local control flow and empty-input conclusion, makes the second external effect uncertain, and asks no policy decision. Opt-out explains exact string comparison with no question. This smoke was not added to blinded scores; the broad no-longer-guaranteed policy phrasing is not a proof of the old external guarantee. Opt-out skipped independent review despite the tool being available.",
+    "releaseDecisionChanged": false
   }
 }
