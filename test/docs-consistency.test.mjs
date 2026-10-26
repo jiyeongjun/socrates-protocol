@@ -28,10 +28,10 @@ async function readRepoFile(relativePath) {
   return readFile(path.join(repoRoot, relativePath), "utf8");
 }
 
-test("package metadata identifies the 2.1.2 scope and branch-tracing release", async () => {
+test("package metadata identifies the 2.2.0 independent response-review release", async () => {
   const pkg = JSON.parse(await readRepoFile("package.json"));
-  assert.equal(pkg.version, "2.1.2");
-  assert.equal(DEFAULT_VERSION, "v2.1.2");
+  assert.equal(pkg.version, "2.2.0");
+  assert.equal(DEFAULT_VERSION, "v2.2.0");
   assert.equal(pkg.license, "MIT");
   assert.match(pkg.engines.node, />=22/);
   assert.equal(pkg.scripts["verify:skills"], "node reference/verify-skills.mjs");
@@ -99,8 +99,8 @@ test("canonical runtime leads with a visual and enforces the alignment gate", as
   assert.match(body, /show a useful visual explanation immediately, then ask one focused question/i);
   assert.match(body, /Do not ask a learner question when.*finished audience-ready artifact.*no questions.*opts out/is);
   assert.match(body, /Preserve the concrete situation, constraints, alternatives/i);
-  assert.match(body, /Decision needed:/i);
-  assert.match(body, /the deliverable is incomplete until it names that decision/i);
+  assert.match(body, /requested decision brief must name the decision/i);
+  assert.match(body, /explanation for an audience is complete without inventing a decision/i);
   assert.match(body, /Advance only when the user's answer demonstrates the current learning objective's key relationship/i);
   assert.match(body, /observable alignment on the current objective/i);
   assert.match(body, /Partly correct.*same objective/is);
@@ -157,7 +157,8 @@ test("audience reference calibrates by evidence instead of demographics", async 
   assert.match(audience, /Use facts supplied by the user, not stereotypes/i);
   assert.match(audience, /Do not make the simple layer memorable by making it false/i);
   assert.match(audience, /write the actual deliverable in the appropriate voice/i);
-  assert.match(audience, /explicitly state the decision when alternatives were supplied/i);
+  assert.match(audience, /For a requested decision brief, explicitly state the supplied decision and alternatives/i);
+  assert.match(audience, /For an informational explanation, report what the evidence means and finish/i);
 });
 
 test("Codex and Claude packages are generated from one shared runtime", async () => {

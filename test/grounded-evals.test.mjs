@@ -29,6 +29,16 @@ test('current full bundle includes the exact canonical reviewer policy', async (
   assert.ok(bundle.includes(`--- reference/skill-references/response-review.md ---\n${policy}`));
 });
 
+test('author bundle separates reviewer-only instructions while preserving the legacy all-role stress mode', async () => {
+  const all = await loadGroundedSkillBundle();
+  const author = await loadGroundedSkillBundle(undefined, 'author');
+  assert.equal(author.sources.length, 5);
+  assert.deepEqual(author.sources, all.sources.filter(s => !s.path.endsWith('/response-review.md')));
+  assert.ok(!author.bundle.includes('# Review a Socrates response'));
+  assert.ok(all.bundle.includes('# Review a Socrates response'));
+  await assert.rejects(loadGroundedSkillBundle(undefined, 'invalid'), /Unknown bundle mode/);
+});
+
 test('native process stdin preserves literal prompts without shell evaluation', async () => {
   const input = '$HOME `touch unexpected` $(echo no)\n한국어';
   const result = await runProcess({ command: process.execPath, args: ['-e', 'process.stdin.pipe(process.stdout)'], cwd: process.cwd(), input }, 5000);

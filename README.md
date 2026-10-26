@@ -1,6 +1,6 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-2.1.2-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -29,13 +29,11 @@ Learning and implementation have different completion criteria: the learner demo
 
 See [the implementation workflow](reference/skill-references/implementation-alignment.md) and [behavioral evaluation instructions](evals/README.md).
 
-[Unreleased comparison and release blocker](evals/reports/2026-10-26-response-review-candidate.md)
-
-**Release status:** this branch is an unmerged candidate. Native review improved in the sampled runs, but a new fallback scope failure remains. It is not approved for release or global installation; v2.1.2 remains the installed release.
+[v2.2.0 evaluation evidence and remaining limitations](evals/reports/2026-10-26-v2.2.0.md)
 
 ## Learning behavior
 
-The unreleased response-review candidate adds review of the complete draft for misconception repair, requested practice, and requirements comparisons. With native delegation available, a fresh read-only reviewer checks the original request, evidence, diagrams, tables, and final question before the author applies minimal repairs. Already-correct completed objectives and fully specified ordinary edits skip this step. Without native delegation, the model checks locally and does not claim independent review. This adds work and latency; it is an instruction workflow, not an enforced runtime gate.
+Version 2.2 adds review of the complete draft for misconception repair, requested practice, and requirements comparisons. With native delegation available, a fresh read-only reviewer checks the original request, evidence, diagrams, tables, and final question before the author applies minimal repairs. Already-correct completed objectives and fully specified ordinary edits skip this step. Without native delegation, the author follows the ordinary evidence-grounded workflow and does not load or simulate the reviewer-only role. This adds work and latency; it is an instruction workflow, not an enforced runtime gate.
 
 Application questions are prepared before the explanation and checked against both the mistaken and correct model. External calls remain separate from uncertain effects, failure is separate from rollback, and atomicity is separate from visibility. The review preserves explicitly requested fixes, additional options, and simple recognition. See the report for paired tests, skipped reviews, failed pilot calls, and remaining defects. Historical [v2.1.2 results](evals/reports/2026-10-26-v2.1.2.md) remain unchanged.
 
@@ -153,7 +151,7 @@ When a custom `CODEX_HOME` exists or already contains a Codex skill copy, the in
 
 ### Update an existing installation
 
-Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.1.2. The local source command works before a release tag is published.
+Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.2.0. The local source command works before a release tag is published.
 
 For a v0.10.0 installation, remove the old product first:
 

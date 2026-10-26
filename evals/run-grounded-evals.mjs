@@ -27,14 +27,18 @@ export function buildGroundedCommand({ host, model, effort, cwd, input, env = pr
   return { command: env[`SOCRATES_GROUNDED_${host.toUpperCase()}_BIN`] ?? host, args, cwd, env: childEnv, input };
 }
 
-export async function loadGroundedSkillBundle(sourceRoot = root) {
+export async function loadGroundedSkillBundle(sourceRoot = root, mode = 'all') {
+  if (!['all', 'author'].includes(mode)) throw new Error('Unknown bundle mode');
   const skillPaths = ['reference/skill-body.md', ...['guided-learning', 'implementation-alignment', 'visual-explanations', 'audience-calibration', 'response-review'].map(n => `reference/skill-references/${n}.md`)];
-  const sources = await Promise.all(skillPaths.map(async p => ({ path: p, text: await readFile(path.join(sourceRoot, p), 'utf8') })));
+  const selectedPaths = mode === 'author' ? skillPaths.filter(p => !p.endsWith('/response-review.md')) : skillPaths;
+  const sources = await Promise.all(selectedPaths.map(async p => ({ path: p, text: await readFile(path.join(sourceRoot, p), 'utf8') })));
   return { sources, bundle: sources.map(s => `--- ${s.path} ---\n${s.text}`).join('\n\n') };
 }
 
 export async function runGroundedEvals(env = process.env) {
   if (env.SOCRATES_LIVE_EVAL !== '1') throw new Error('Set SOCRATES_LIVE_EVAL=1 to authorize model calls');
+  const bundleMode = env.SOCRATES_GROUNDED_BUNDLE ?? 'all';
+  if (!['all', 'author'].includes(bundleMode)) throw new Error('Unknown bundle mode');
   const cases = JSON.parse(await readFile(path.join(root, 'evals/grounded-learning-cases.json'), 'utf8'));
   const selectedIds = env.SOCRATES_GROUNDED_CASES?.split(',').map(s => s.trim());
   const selected = selectedIds ? cases.filter(c => selectedIds.includes(c.id)) : cases;
@@ -50,7 +54,7 @@ export async function runGroundedEvals(env = process.env) {
   const output = path.resolve(env.SOCRATES_GROUNDED_OUTPUT ?? path.join(root, '.socrates-eval-results'));
   await ensureSafeOutputDirectory(output);
   const runDir = await mkdtemp(path.join(output, 'grounded-'));
-  const { sources, bundle } = await loadGroundedSkillBundle();
+  const { sources, bundle } = await loadGroundedSkillBundle(root, bundleMode);
   const versions = {};
   for (const host of new Set(configs.map(c => c.host))) {
     const version = await runProcess({ command: env[`SOCRATES_GROUNDED_${host.toUpperCase()}_BIN`] ?? host, args: ['--version'], cwd: root, env }, 10000);
@@ -58,7 +62,7 @@ export async function runGroundedEvals(env = process.env) {
     versions[host] = version.stdout.trim();
   }
   const report = {
-    runAt: new Date().toISOString(), versions, configs,
+    runAt: new Date().toISOString(), versions, configs, bundleMode,
     skillHashes: Object.fromEntries(sources.map(s => [s.path, createHash('sha256').update(s.text).digest('hex')])),
     methodology: 'Each case uses a fresh native CLI invocation and empty temporary workspace. Skill and references are supplied inline; grader criteria are omitted from prompts. Prior lesson turns are supplied as a vignette, not an actual resumed session. Native account authentication is retained. Claude tools/hooks/MCP are disabled; Codex is read-only with user config ignored, but read access and global skill discovery remain possible. Tool use invalidates a response-only case. This measures response behavior under explicit skill instructions, not discovery, durable state, or a causal skill/control advantage. A completed execution is not a semantic pass.',
     semanticReview: 'pending', status: 'running', results: [],
