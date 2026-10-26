@@ -1,6 +1,6 @@
 # Socrates
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue)](./package.json)
 [![CI](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml/badge.svg)](https://github.com/jiyeongjun/socrates-protocol/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
@@ -29,7 +29,11 @@ Learning and implementation have different completion criteria: the learner demo
 
 See [the implementation workflow](reference/skill-references/implementation-alignment.md) and [behavioral evaluation instructions](evals/README.md).
 
+[v2.1 model evaluation and known limitations](evals/reports/2026-10-26-v2.1.0.md)
+
 ## Learning behavior
+
+Version 2.1 adds fair, evidence-grounded learning checks inspired by [Sphinx](https://github.com/parthh01/sphinx): establish the minimum outcome and causal reason before asking, validate the question before diagnosing the learner, and use a changed scenario when application matters. Accept equivalent explanations without adding hidden requirements. Correct an invalid question as a teaching error; describing a bug accurately does not approve the bug. Revisit only conclusions affected by changed evidence. These are conversational rules, not a Git gate or a guarantee of mastery, and never turn implementation alignment into a quiz.
 
 When an answer is wrong or incomplete, Socrates does not move on. It redraws only the misunderstood relationship with a different visual, analogy, or example and stays on the same objective until the learner's answer shows the key relationship.
 
@@ -143,7 +147,7 @@ When a custom `CODEX_HOME` exists or already contains a Codex skill copy, the in
 
 ### Update an existing installation
 
-Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.0.0. The local source command works before a release tag is published.
+Pull the latest repository state and run the install command again. Managed skill copies are replaced with v2.1.0. The local source command works before a release tag is published.
 
 For a v0.10.0 installation, remove the old product first:
 

@@ -45,7 +45,9 @@ Read [references/visual-explanations.md](references/visual-explanations.md) when
 
 ## Ask one alignment question
 
-After visual learning, guided learning, or review, ask one question that reveals whether the user has the key relationship, not whether they remember wording. Prefer a prediction, causal contrast, or short teach-back over trivia or yes/no confirmation.
+After visual learning, guided learning, or review, ask one question that reveals whether the user has the key relationship, not whether they remember wording. Skip this step when the user's supplied answer already demonstrates the current objective; finish if the requested scope is complete. Prefer a prediction, causal contrast, or short teach-back over trivia or yes/no confirmation.
+
+Before asking, fix the minimum evidence of understanding: the outcome or relationship and its essential reason. Ground it in the available evidence, state necessary conditions, and keep explanatory detail out of the acceptance criteria. Accept equivalent language without adding requirements after the answer. Use a changed scenario when it helps distinguish application from repetition; preserve simpler support and question opt-outs. See [references/guided-learning.md](references/guided-learning.md).
 
 One focused question means one response demand. Do not stack a prediction, a separate “why?”, and another task in the same turn. When reasoning is essential, combine it into one prompt such as “Which path occurs, and what in the diagram causes it?” Ask once, then stop the turn.
 
@@ -55,7 +57,9 @@ Do not ask a learner question when the user requests a finished audience-ready a
 
 Advance only when the user's answer demonstrates the current learning objective's key relationship without contradicting it. This is observable alignment on the current objective, not a claim that the model can measure total or permanent mastery.
 
-- **Correct**: Briefly identify what in the answer shows understanding, then continue to the next objective.
+Before diagnosing a mismatch, check the question, evidence, and expected answer themselves. Repair an invalid or underspecified question without labeling the user wrong or claiming understanding was established. Understanding actual behavior, approving intended behavior, and verifying correctness are separate outcomes. When evidence or assumptions change, revisit only affected conclusions; these learning checks never become a quiz or an extra approval gate for implementation work.
+
+- **Correct**: Briefly identify what in the answer shows understanding, then continue to the next objective within the requested scope, or finish. Do not invent another objective to keep the dialogue going.
 - **Partly correct**: Preserve the correct part, identify the missing or confused link, and ask a narrower question about the same objective.
 - **Misconception**: Do not treat the answer as correct and do not introduce the next concept. Gently name the mismatch, replace or redraw the misunderstood part with a smaller visual, counterexample, or different representation, then ask one focused question that checks the same idea again.
 - **Uncertain or no answer**: Lower the difficulty with a concrete example, constrained choice, or worked first step, then re-check the same objective.

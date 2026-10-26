@@ -282,7 +282,7 @@ export function buildLiveCommand({
 }
 
 export async function runProcess(
-  { command, args, cwd, env = process.env },
+  { command, args, cwd, env = process.env, input },
   timeoutMs,
   killGraceMs = 2000
 ) {
@@ -291,7 +291,7 @@ export async function runProcess(
     const child = spawn(command, args, {
       cwd,
       env,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: [input === undefined ? "ignore" : "pipe", "pipe", "pipe"],
       detached: process.platform !== "win32",
     });
     const stdoutChunks = [];
@@ -301,6 +301,10 @@ export async function runProcess(
     let harnessStderr = "";
     let timedOut = false;
     let spawnError = null;
+    if (input !== undefined) {
+      child.stdin.on("error", (error) => { spawnError = error; });
+      child.stdin.end(input);
+    }
     let settled = false;
     let killTimer = null;
     let forceTimer = null;

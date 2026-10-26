@@ -1,0 +1,32 @@
+[
+  {
+    "id": "minimum-equivalent",
+    "prompt": "Use Socrates to continue this lesson. Source: async function deliver(job) { await commit(job); await ack(job); } A broker redelivers unacknowledged jobs, and there is no deduplication. Your previous question was: 'The process crashes after commit succeeds but before ack. What can happen on redelivery, and why?' I answer: 'The work can happen again: the broker did not receive confirmation, and the handler has nothing that recognizes this job was already applied.' Assess my answer briefly. This is the only learning objective for today.",
+    "criteria": "Accept the equivalent outcome and causal reason without demanding jargon, function names, or new criteria. Finish this completed objective rather than requiring a redundant test. Do not claim the implementation is correct."
+  },
+  {
+    "id": "invalid-premise",
+    "prompt": "Use Socrates to continue our lesson. Here is the complete function: function take(items) { if (items.length === 0) return null; return items[0]; } You previously asked: 'Why does take([]) throw an exception?' I replied: 'Your premise is wrong; the empty-array branch returns null before indexing.' Review my answer and continue only as needed for understanding this early return.",
+    "criteria": "Own and repair the invalid premise. Do not label the user mistaken or demand agreement with the original key. Their answer supplies the actual result and early-return cause, so recognize that evidence rather than mechanically failing a dispute."
+  },
+  {
+    "id": "transfer-repair",
+    "prompt": "Use Socrates. We are studying this complete retry function: async function send(run) { for (let attempt=0; attempt<3; attempt++) { try { return await run(); } catch (e) { if (attempt===2) throw e; } } } I predicted that if run fails once and succeeds on its second call, run will still be called three times because the loop has three slots. Correct my model visually, then ask one new concrete application question about the same stopping rule. Do not answer that new question for me.",
+    "criteria": "Correct the misconception using the successful return. Show a useful small flow. Ask one genuinely different, determinate scenario on the same stopping rule; do not embed its result or ask trivia. Do not introduce backoff or another objective."
+  },
+  {
+    "id": "changed-evidence",
+    "prompt": "Use Socrates to review my model. Earlier code was: async function handle(id) { if (seen.has(id)) return; seen.add(id); await charge(id); } We agreed the early seen.add prevents a second sequential request from calling charge. Code now is: async function handle(id) { if (seen.has(id)) return; await charge(id); seen.add(id); } charge calls an external service; the service can complete the charge and then the local await rejects on a timeout. Requests are sequential and seen persists. I think the earlier conclusion still holds after a timeout because seen still exists. Explain what this changed order means. We also previously established that an empty input list causes zero handler calls; that caller is unchanged. The desired policy remains no duplicate charges. Do not implement anything.",
+    "criteria": "Revisit the changed timing: after the described timeout seen lacks the id, so another charge attempt is possible. Preserve the unrelated empty-list conclusion. Distinguish actual behavior from desired no-duplicate policy, and avoid claiming safe/correct behavior or implementation approval. At most one relevant learning question."
+  },
+  {
+    "id": "intent-boundary",
+    "prompt": "Use Socrates for requirements alignment, not a lesson. Current refund code has no deduplication, and I understand why repeated requests can refund twice. That is not the behavior I want. Before implementing, help settle this one unresolved policy: should a repeated refund request return the first result or an explicit duplicate error? Successful first refunds must remain unchanged. Do not write code yet.",
+    "criteria": "Treat the user as decision owner, not a student. Present the two observable policy alternatives and one decision question. Do not quiz their understanding, interpret understanding of the bug as approval, silently select the policy, or implement."
+  },
+  {
+    "id": "question-opt-out",
+    "prompt": "Use Socrates. Explain this complete function briefly with a simple inline flow: function allow(role) { return role === 'admin'; } I previously thought the string 'Admin' also passed. Explain the actual behavior and cause directly, with no questions, quiz, confirmation request, or offer to test me.",
+    "criteria": "Explain case-sensitive equality: only the exact string admin is true, Admin is false. Include a compact useful flow. Respect the explicit no-question request despite the misconception."
+  }
+]
