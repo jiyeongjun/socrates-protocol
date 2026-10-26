@@ -150,7 +150,7 @@ const staticGraders = {
     assert.match(context.body, /Advance only when the user's answer demonstrates the current learning objective's key relationship/i);
     assert.match(context.body, /observable alignment on the current objective/i);
     assert.match(context.body, /do not introduce the next concept/i);
-    assert.match(context.body, /checks? the same idea again/i);
+    assert.match(context.body, /checks? the same idea (again|on a case not already traced)/i);
     assert.match(context.guided, /For every other class, stay on the same objective/i);
     assert.match(context.body, /one focused question means one response demand/i);
   },

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "sentinel-transfer",
+    "prompt": "Use Socrates. This is the whole function: function beforeStop(xs) { const out=[]; for (const x of xs) { if (x === 'STOP') return out; out.push(x); } return out; } I think beforeStop(['a','STOP','b']) returns all three values because the loop visits the array. Correct this with a small visual, then ask one new concrete application question about this stopping rule. Leave the new question unanswered.",
+    "criteria": "Returns ['a']; STOP is not pushed and b is not visited. Ask one coherent different untraced scenario. Neither give that scenario's output nor assert every array terminates at a sentinel."
+  },
+  {
+    "id": "supplied-remote-guarantee",
+    "prompt": "Explain briefly without any questions. Complete code: async function handle(id) { if (seen.has(id)) return; await charge(id); seen.add(id); } Requests are sequential and seen persists. For id x the first call completes a remote charge but the local await times out and rejects. A second handle(x) follows and resolves. The service contract explicitly guarantees exactly one financial charge per id forever, and subsequent charge(id) calls return the first result. Show the local call count, financial charge count, and final seen state for these two requests. Do not propose changes.",
+    "criteria": "Two charge calls, exactly one financial charge by supplied guarantee, final seen contains x. First rejection skips add, second resolution executes it. Do not retain uncertainty about the supplied remote guarantee, propose fixes, or ask questions."
+  }
+]

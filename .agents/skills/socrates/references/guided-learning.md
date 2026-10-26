@@ -22,6 +22,8 @@ Before seeing the answer, establish the minimum observable outcome or relationsh
 
 Verify the premise and expected answer against available evidence. For code, distinguish observed behavior from intended policy, and inspect relevant callers, dependencies, or tests when the conclusion depends on them. Ask a neutral question with enough conditions to determine an answer; do not reveal the result in wording such as “Why does the retry stay safe?” If evidence cannot settle the question, investigate or make that uncertainty explicit rather than invent a key.
 
+Use the same evidence boundary in prose and visuals. Trace the relevant branch through its return, throw, or continuation; check a boundary counterexample before saying “only,” “always,” or “never.” State what the shown code establishes and stop at an unobserved dependency: a request or retry can be certain while the external effect is conditional. A diagram arrow must not turn that possibility into a guaranteed effect. If the dependency's behavior is explicitly supplied, use it rather than retaining unnecessary uncertainty.
+
 These are lightweight preparation notes, not a required rubric file, hidden exam protocol, or independent-agent call. Use them only when a learning question is appropriate, not for ordinary edits, audience-ready artifacts, or requirements decisions.
 
 ## Question ladder
@@ -40,7 +42,13 @@ Ask for one learner response at a time. Do not follow a choice or prediction wit
 
 Before asking for a prediction, check that the stated initial conditions and timeline determine the answer. Supply a missing condition when it matters. If identifying insufficient information is the learning objective, make that explicit and accept a justified “not enough information.”
 
-When application is the objective, change one meaningful input, ordering, or boundary from the explained example and ask the learner to apply the same relationship. Choose that scenario before expanding the explanation, so a worked example, table, or visual does not already give its answer. Avoid mere paraphrase or copying the answer from the visual. Do not introduce an unrelated concept to make the question harder, and do not require a second test once the current answer already demonstrates the objective. Recognition and worked examples remain useful support when a transfer question is too difficult.
+When application is the objective, prepare the next question before drafting the explanation:
+
+- Choose one concrete case that changes a meaningful input, ordering, or boundary while testing the same relationship. State the new case on its own; do not splice incompatible events from the previous case into it.
+- Check that this case has a determinate outcome under the stated assumptions. Keep the outcome and essential cause as the minimum criteria.
+- Explain the learner's original case and the governing rule. Leave the new case's specific outcome out of the prose, worked examples, and diagram labels. Teaching a general rule is necessary support, not answer leakage; repeating an already solved condition-and-outcome pair is not a new application.
+
+Do not add another concept just to make the question harder, and do not require a second test once the current answer already demonstrates the objective. If the learner needs recognition or a worked first step, use that simpler support deliberately rather than presenting it as a transfer test. Avoid exhaustive tables of cases when one trace explains the misconception.
 
 ## Diagnose before responding
 
@@ -57,7 +65,7 @@ For a correct answer, give brief evidence-based acknowledgment and advance. For 
 
 Accurately predicting a bug demonstrates understanding of actual behavior; it does not establish that the behavior is desired, safe, or correct. Keep those conclusions separate. If the code, source, or assumptions later change, update the affected explanation and criteria and revisit only conclusions that depended on the change. Preserve unrelated understanding and respect a request to stop questions.
 
-Keep the correction within the demonstrated mechanism and stated conditions. Extra advice about concurrency, other input types, external guarantees, or proposed fixes needs its own evidence and should appear only when it helps the current goal. Distinguish a repeated external call from a repeated external effect unless the latter is established. Do not use an explanation request to reopen a policy the user already settled.
+Keep the correction within the demonstrated mechanism and stated conditions. Include an adjacent caveat only when it changes the answer or prevents a likely false inference; otherwise omit it. An accurate answer does not need another input-type lesson. Reviewing a misconception does not call for a fix menu or a new policy choice: explain the relevant risk and keep the already stated goal intact. Shift to implementation alignment only when the user requests that work.
 
 ## Repair patterns
 
