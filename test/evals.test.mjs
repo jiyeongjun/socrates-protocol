@@ -853,16 +853,17 @@ test(
         command: process.execPath,
         args: [
           "-e",
-          "const { spawn } = require('node:child_process'); const escaped = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 3000)'], { detached: true, stdio: ['ignore', process.stdout, process.stderr] }); escaped.unref(); process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)",
+          "const { spawn } = require('node:child_process'); const escaped = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 5000)'], { detached: true, stdio: ['ignore', process.stdout, process.stderr] }); escaped.unref(); process.on('SIGTERM', () => {}); console.log('READY'); setInterval(() => {}, 1000)",
         ],
         cwd: repoRoot,
         env: process.env,
       },
-      50,
+      500,
       50
     );
+    assert.match(result.stdout, /READY/, "fixture must initialize its signal handler and descendant before timeout");
     assert.equal(result.timedOut, true);
     assert.equal(result.signal, "SIGKILL");
-    assert.ok(Date.now() - startedAt < 1000, "timeout must not wait on escaped pipes");
+    assert.ok(Date.now() - startedAt < 2500, "timeout must not wait on escaped pipes");
   }
 );

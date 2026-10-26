@@ -51,6 +51,13 @@ console.log('PASS: partial failure, ordering, sequential execution, duplicates a
     turns: [{ prompt: "캐시는 원본 데이터가 바뀌면 아무 신호나 확인 없이도 즉시 그 변경을 알아차린다고 이해했어. 내 이해를 확인해줘.", mutation: false }],
   },
   {
+    id: "guided-continuation",
+    turns: [
+      { prompt: "Use Socrates for this one learning objective. Complete code: function beforeStop(xs) { const out=[]; for (const x of xs) { if (x === 'STOP') return out; out.push(x); } return out; } I think ['a','STOP','b'] is returned unchanged because the loop visits all elements. Explain the stopping rule with a small flow. Then ask me to apply it to ['STOP','b'], leaving that answer to me.", mutation: false },
+      { prompt: "For ['STOP','b'], it returns an empty array: the first item matches STOP, so return exits before pushing that item or visiting b. This was our only learning objective; briefly assess my answer and finish.", mutation: false },
+    ],
+  },
+  {
     id: "learning-opt-out",
     turns: [{ prompt: "데이터베이스 트랜잭션의 원자성을 간단히 설명해줘. 질문이나 퀴즈 없이 답만 줘.", mutation: false }],
   },

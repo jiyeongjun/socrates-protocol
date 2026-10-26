@@ -46,6 +46,7 @@ test("generated layout is minimal and rejects unsafe names", () => {
     "audience-calibration.md",
     "guided-learning.md",
     "implementation-alignment.md",
+    "response-review.md",
     "visual-explanations.md",
   ]);
   assert.deepEqual(skillScriptNames, []);
