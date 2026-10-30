@@ -121,6 +121,9 @@ export function validateSkillLayout(parsed) {
     throw new Error("reference/skill-layout.json must contain an object");
   }
   return {
+    socratesStepReferences: parsed.socratesStepReferences === undefined
+      ? null
+      : validateFilenameArray(parsed.socratesStepReferences, "socratesStepReferences"),
     skillReferences: validateFilenameArray(
       parsed.skillReferences,
       "skillReferences"
@@ -129,6 +132,22 @@ export function validateSkillLayout(parsed) {
     codexAgents: validateFilenameArray(parsed.codexAgents ?? [], "codexAgents"),
     claudeAgents: validateFilenameArray(parsed.claudeAgents, "claudeAgents"),
   };
+}
+
+function stepSourcePrefix(platform) {
+  return platform === "codex"
+    ? ".agents/skills/socrates-step/"
+    : ".claude/skills/socrates-step/";
+}
+
+function stepAssetSources(platform, layout) {
+  if (layout.socratesStepReferences === null) return [];
+  const dir = stepSourcePrefix(platform);
+  return [
+    `${dir}SKILL.md`,
+    ...(platform === "codex" ? [`${dir}agents/openai.yaml`] : []),
+    ...layout.socratesStepReferences.map((name) => `${dir}references/${name}`),
+  ];
 }
 
 export function listReleaseAssetPaths(rawSkillLayout) {
@@ -170,6 +189,8 @@ export function listReleaseAssetPaths(rawSkillLayout) {
     ...Object.values(claudeReferenceAssets),
     ...Object.values(claudeScriptAssets),
     ...Object.values(claudeAgentAssets),
+    ...stepAssetSources("codex", skillLayout),
+    ...stepAssetSources("claude", skillLayout),
   ];
 }
 
@@ -430,6 +451,9 @@ function listInstallAssetSources(platforms, layout) {
       sources.add(`${ASSETS.claudeAgentsDir}/${name}`);
     }
   }
+  for (const platform of platforms) {
+    for (const source of stepAssetSources(platform, layout)) sources.add(source);
+  }
   return [...sources];
 }
 
@@ -546,11 +570,11 @@ async function resolveCodexSkillDirs(options, ops) {
     "skills",
     "socrates"
   );
-  const [hasCanonical, hasLegacy] = await Promise.all([
-    pathExists(canonical, ops),
+  const [hasLegacy, hasStepLegacy] = await Promise.all([
     pathExists(legacy, ops),
+    pathExists(path.join(path.dirname(legacy), "socrates-step"), ops),
   ]);
-  if ((hasLegacy || options.codexHomeExplicit) && legacy !== canonical) {
+  if ((hasLegacy || hasStepLegacy || options.codexHomeExplicit) && legacy !== canonical) {
     return [canonical, legacy];
   }
   return [canonical];
@@ -868,6 +892,9 @@ function allowedTransactionTargets(options, platforms, installerPaths = null) {
       names: KNOWN_SHARED_AGENTS.claude,
       safeRoot: repoRoot ?? options.homeDir,
     });
+  }
+  for (const [skillDir, safeRoot] of [...skillRoots]) {
+    skillRoots.set(path.join(path.dirname(skillDir), "socrates-step"), safeRoot);
   }
   return { skillRoots, agentRoots, ledgerTargets };
 }
@@ -1295,6 +1322,13 @@ function buildManifest(descriptor, options, installedAt) {
 }
 
 function trustedInternalManifestPair(asset, platform) {
+  const stepPrefix = stepSourcePrefix(platform);
+  if (asset.source.startsWith(stepPrefix)) {
+    return trustedInternalManifestPair({
+      ...asset,
+      source: asset.source.replace(stepPrefix, stepPrefix.replace("socrates-step/", "socrates/")),
+    }, platform);
+  }
   const exactPairs =
     platform === "codex"
       ? new Map([
@@ -1823,6 +1857,18 @@ async function createDescriptors(options, platforms, layout, loaded, ops) {
         options.scope === "repo" ? path.resolve(options.targetRepo) : options.homeDir,
       ...buildClaudeAssets(skillDir, agentDir, layout, loaded),
     });
+  }
+  if (layout.socratesStepReferences !== null) {
+    for (const descriptor of [...descriptors]) {
+      const skillDir = path.join(path.dirname(descriptor.skillDir), "socrates-step");
+      const prefix = stepSourcePrefix(descriptor.platform);
+      const internal = stepAssetSources(descriptor.platform, layout).map((source) => {
+        const asset = makeInternalAsset(source, source.slice(prefix.length), loaded);
+        asset.target = path.join(skillDir, asset.relativeTarget);
+        return asset;
+      });
+      descriptors.push({ ...descriptor, skillDir, managesExternal: false, internal, external: [] });
+    }
   }
   return descriptors;
 }
@@ -2777,6 +2823,13 @@ export async function uninstallSocrates(rawOptions = {}, dependencies = {}) {
       });
     }
 
+    for (const target of [...targets]) {
+      targets.push({
+        ...target,
+        skillDir: path.join(path.dirname(target.skillDir), "socrates-step"),
+        managesExternal: false,
+      });
+    }
     const assetUnits = [];
     const prune = [];
     for (const target of targets) {

@@ -18,6 +18,20 @@ export const skillLayoutPath = path.join(__dirname, "skill-layout.json");
 
 const skillLayout = readSkillLayout();
 
+export const socratesStepReferenceNames = skillLayout.socratesStepReferences;
+export const socratesStepSourceDir = path.join(__dirname, "socrates-step");
+export const socratesStepTargets = {
+  codex: path.resolve(__dirname, "../.agents/skills/socrates-step"),
+  claude: path.resolve(__dirname, "../.claude/skills/socrates-step"),
+};
+export function socratesStepFiles(platform) {
+  return [
+    "SKILL.md",
+    ...(platform === "codex" ? ["agents/openai.yaml"] : []),
+    ...socratesStepReferenceNames.map((name) => `references/${name}`),
+  ];
+}
+
 export const skillReferenceNames = skillLayout.skillReferences;
 export const skillScriptNames = skillLayout.skillScripts;
 export const claudeAgentNames = skillLayout.claudeAgents;
@@ -126,6 +140,11 @@ export function validateGeneratedSkillLayout(parsed) {
   }
 
   return {
+    socratesStepReferences: validateGeneratedArray(
+      parsed.socratesStepReferences ?? [],
+      "socratesStepReferences",
+      "md"
+    ),
     skillReferences: validateGeneratedArray(
       parsed.skillReferences,
       "skillReferences",
@@ -207,6 +226,23 @@ export function buildOpenAIYaml({ promptSource }) {
 
 function generatedDirectorySpecs() {
   return [
+    ...Object.entries(socratesStepTargets).flatMap(([platform, dir]) => [
+      {
+        dir,
+        expected: new Set(["SKILL.md", "references", ...(platform === "codex" ? ["agents"] : [])]),
+        managed: () => true,
+      },
+      {
+        dir: path.join(dir, "references"),
+        expected: new Set(socratesStepReferenceNames),
+        managed: () => true,
+      },
+      {
+        dir: path.join(dir, "agents"),
+        expected: new Set(platform === "codex" ? ["openai.yaml"] : []),
+        managed: () => true,
+      },
+    ]),
     {
       dir: path.dirname(skillTargets.codex.path),
       expected: new Set(["SKILL.md", "agents", "references"]),

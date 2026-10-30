@@ -56,6 +56,8 @@ test("release asset manifest stays aligned with package version and shipped file
   assert.equal(assetPaths.some((asset) => asset.includes("model-policy")), false);
   assert.equal(assetPaths.includes(".agents/skills/socrates/SKILL.md"), true);
   assert.equal(assetPaths.includes(".claude/skills/socrates/SKILL.md"), true);
+  assert.equal(assetPaths.includes(".agents/skills/socrates-step/SKILL.md"), true);
+  assert.equal(assetPaths.includes(".claude/skills/socrates-step/SKILL.md"), true);
   assert.equal(
     assetPaths.includes(
       ".agents/skills/socrates/references/guided-learning.md"

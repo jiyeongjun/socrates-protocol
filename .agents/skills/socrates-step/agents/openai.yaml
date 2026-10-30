@@ -1,0 +1,4 @@
+interface:
+  display_name: "Socrates Step"
+  short_description: "Align, implement, and verify one small behavior at a time"
+  default_prompt: "Use $socrates-step to propose the next small behavior, confirm it with me, then implement and verify it before continuing."

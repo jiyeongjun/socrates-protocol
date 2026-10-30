@@ -260,6 +260,9 @@ test("explicit CODEX_HOME receives a compatibility copy without native agents", 
   await assert.doesNotReject(() =>
     readFile(path.join(codexHome, "skills", "socrates", "SKILL.md"), "utf8")
   );
+  for (const dir of [path.join(fakeHome, ".agents"), codexHome]) {
+    await access(path.join(dir, "skills", "socrates-step", "SKILL.md"));
+  }
   await assertMissing(path.join(codexHome, "agents"));
 });
 
@@ -705,4 +708,97 @@ test("local source inference is limited to direct complete-repository execution"
 
 test.after(async () => {
   await rm(testInstallerStateRoot, { recursive: true, force: true });
+});
+
+test("socrates-step installs alongside Socrates on both hosts and uninstalls only managed files", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-step-install-"));
+  const options = { platform: "both", scope: "repo", targetRepo: root, sourceRoot: repoRoot };
+  await installSocrates(options);
+  for (const host of [".agents", ".claude"]) {
+    const dir = path.join(root, host, "skills", "socrates-step");
+    assert.equal(await readFile(path.join(dir, "SKILL.md"), "utf8"),
+      await readFile(path.join(repoRoot, host, "skills", "socrates-step", "SKILL.md"), "utf8"));
+    const manifest = JSON.parse(await readFile(path.join(dir, INSTALL_MANIFEST_NAME), "utf8"));
+    assert.ok(manifest.assets.every((asset) => asset.source.startsWith(`${host}/skills/socrates-step/`)));
+    await writeFile(path.join(dir, "personal-note.txt"), "keep me\n");
+  }
+  await uninstallSocrates(options);
+  for (const host of [".agents", ".claude"]) {
+    const dir = path.join(root, host, "skills", "socrates-step");
+    await assertMissing(path.join(dir, "SKILL.md"));
+    assert.equal(await readFile(path.join(dir, "personal-note.txt"), "utf8"), "keep me\n");
+    await assertMissing(path.join(root, host, "skills", "socrates", "SKILL.md"));
+  }
+});
+
+test("modified socrates-step blocks uninstall before changing either skill", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-step-modified-"));
+  const options = { platform: "codex", scope: "repo", targetRepo: root, sourceRoot: repoRoot };
+  await installSocrates(options);
+  const socrates = path.join(root, codexSkillRelative, "SKILL.md");
+  const original = await readFile(socrates, "utf8");
+  const step = path.join(root, ".agents", "skills", "socrates-step", "SKILL.md");
+  await writeFile(step, "user customization\n");
+  await assert.rejects(() => uninstallSocrates(options), /modified/i);
+  assert.equal(await readFile(socrates, "utf8"), original);
+  assert.equal(await readFile(step, "utf8"), "user customization\n");
+});
+
+test("legacy source layouts remain installable without the sibling skill", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-step-legacy-"));
+  const options = { platform: "codex", scope: "repo", targetRepo: root, sourceRoot: repoRoot };
+  const loadAsset = async (relativePath) => {
+    const contents = await readFile(path.join(repoRoot, relativePath), "utf8");
+    if (relativePath !== "reference/skill-layout.json") return contents;
+    const layout = JSON.parse(contents);
+    delete layout.socratesStepReferences;
+    return JSON.stringify(layout);
+  };
+  await installSocrates(options, { loadAsset });
+  await access(path.join(root, codexSkillRelative, "SKILL.md"));
+  await assertMissing(path.join(root, ".agents", "skills", "socrates-step"));
+});
+
+test("sibling activation failure rolls back both skill directories and ownership", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-step-rollback-"));
+  const options = { platform: "codex", scope: "repo", targetRepo: root, sourceRoot: repoRoot };
+  await installSocrates(options);
+  const skillDirs = [codexSkillRelative, path.join(".agents", "skills", "socrates-step")];
+  const tracked = skillDirs.flatMap((dir) => [
+    path.join(root, dir, "SKILL.md"),
+    path.join(root, dir, INSTALL_MANIFEST_NAME),
+  ]);
+  tracked.push(installerPaths(root).ledgerPath);
+  const previous = await Promise.all(tracked.map((file) => readFile(file, "utf8")));
+  let injected = false;
+  await assert.rejects(() => installSocrates(options, {
+    loadAsset: async (source) => {
+      const contents = await readFile(path.join(repoRoot, source), "utf8");
+      return source.endsWith("/SKILL.md") ? `${contents}\nUpdated skill content.\n` : contents;
+    },
+    rename: async (source, target) => {
+      if (!injected && source.includes(".socrates.stage-") && target.endsWith("/socrates-step")) {
+        injected = true;
+        throw new Error("injected sibling activation failure");
+      }
+      return rename(source, target);
+    },
+  }), /injected sibling activation failure/);
+  assert.equal(injected, true);
+  assert.deepEqual(await Promise.all(tracked.map((file) => readFile(file, "utf8"))), previous);
+  await assertMissing(installerPaths(root).journalPath);
+  await uninstallSocrates(options);
+});
+
+test("sibling manifests cannot transfer ownership between skill directories", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "socrates-step-ownership-"));
+  const options = { platform: "codex", scope: "repo", targetRepo: root, sourceRoot: repoRoot };
+  await installSocrates(options);
+  const originalDir = path.join(root, codexSkillRelative);
+  const stepDir = path.join(root, ".agents", "skills", "socrates-step");
+  const originalManifest = await readFile(path.join(originalDir, INSTALL_MANIFEST_NAME), "utf8");
+  const previous = await Promise.all([originalDir, stepDir].map((dir) => readFile(path.join(dir, "SKILL.md"), "utf8")));
+  await writeFile(path.join(stepDir, INSTALL_MANIFEST_NAME), originalManifest);
+  await assert.rejects(() => uninstallSocrates(options), /trusted Socrates ownership ledger/);
+  assert.deepEqual(await Promise.all([originalDir, stepDir].map((dir) => readFile(path.join(dir, "SKILL.md"), "utf8"))), previous);
 });

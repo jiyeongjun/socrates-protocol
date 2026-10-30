@@ -1,5 +1,9 @@
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import {
+  socratesStepSourceDir,
+  socratesStepTargets,
+  socratesStepFiles,
   agentTargetPath,
   buildOpenAIYaml,
   buildSkillDocument,
@@ -101,6 +105,16 @@ const actualAgent = await readFile(agentTargetPath, "utf8");
 if (actualAgent !== expectedAgent) {
   hasMismatch = true;
   console.error("openai agent yaml is out of sync with reference/openai-default-prompt.txt");
+}
+
+for (const [platform, dir] of Object.entries(socratesStepTargets)) {
+  for (const name of socratesStepFiles(platform)) {
+    const expected = `${(await readFile(path.join(socratesStepSourceDir, name), "utf8")).trimEnd()}\n`;
+    if (await readFile(path.join(dir, name), "utf8") !== expected) {
+      hasMismatch = true;
+      console.error(`${platform} socrates-step ${name} is out of sync`);
+    }
+  }
 }
 
 if (hasMismatch) {

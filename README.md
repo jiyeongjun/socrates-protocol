@@ -8,6 +8,23 @@
 
 Socrates aligns natural-language intent with code for Codex and Claude Code. It inspects existing context, asks about consequential gaps, makes the proposed behavior and design reviewable, and carries the confirmed scope through implementation and verification. It also remains a **visual-first learning skill** for concepts, code, trade-offs, and incidents.
 
+## Socrates Step: implement one agreed behavior at a time
+
+Use `$socrates-step` in Codex or `/socrates-step` in Claude Code to propose a small behavior, confirm it, then test, implement, and assess the structure before the next proposal. Explicit delegation of a bounded scope avoids repeated confirmation. A direct request for a concrete small change also authorizes that step, unless the user explicitly requires confirmation each time. A broad goal starts with code and constraint discovery and a useful first behavior.
+
+Socrates aligns requirements and design; Socrates Step maintains alignment during implementation. Either skill works independently. First implementations, feature additions, bug fixes, refactors, and measured performance work use the same loop. Explanation-only requests do not enter implementation.
+
+```text
+Goal and evidence → Small proposal → User confirmation
+    → Test and implement → Necessary cleanup → Result and next proposal
+```
+
+Example: `$socrates-step Grow this task app into a team work tracker.` No product code, tests, or configuration are edited while step approval is pending. Tests and local cleanup within an approved step proceed together. Refactoring addresses demonstrated obstacles rather than adding speculative abstractions.
+
+See the [skill source](reference/socrates-step/SKILL.md), [worked cases](reference/socrates-step/references/worked-cases.md), and [source analysis](reference/socrates-step/references/sources.md). This is an independent adaptation of Kent Beck's published practices, not an official Kent Beck package.
+
+The local-source installer below now installs both Socrates and Socrates Step. Existing published release tags may not include the new skill.
+
 ## Align a coding request
 
 ```text
