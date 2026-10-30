@@ -8,5 +8,9 @@
   ],
   "skillScripts": [],
   "codexAgents": [],
-  "claudeAgents": []
+  "claudeAgents": [],
+  "socratesStepReferences": [
+    "worked-cases.md",
+    "sources.md"
+  ]
 }

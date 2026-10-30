@@ -1,6 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+  socratesStepSourceDir,
+  socratesStepTargets,
+  socratesStepFiles,
   agentTargetPath,
   buildOpenAIYaml,
   buildSkillDocument,
@@ -70,4 +73,10 @@ for (const name of codexAgentNames) {
   await writeTextFile(codexAgentTargets[name], contents);
 }
 
+for (const [platform, dir] of Object.entries(socratesStepTargets)) {
+  for (const name of socratesStepFiles(platform)) {
+    const contents = await readFile(path.join(socratesStepSourceDir, name), "utf8");
+    await writeTextFile(path.join(dir, name), contents.trimEnd());
+  }
+}
 await pruneUnexpectedGeneratedPaths();

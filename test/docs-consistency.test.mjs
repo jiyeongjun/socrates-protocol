@@ -61,6 +61,7 @@ test("generated layout is minimal and rejects unsafe names", () => {
   };
   for (const invalid of [
     { ...base, skillReferences: ["../escape.md"] },
+    { ...base, socratesStepReferences: ["../escape.md"] },
     { ...base, skillReferences: ["nested/one.md"] },
     { ...base, codexAgents: ["/absolute.toml"] },
     { ...base, claudeAgents: ["dup.md", "DUP.md"] },
@@ -197,7 +198,7 @@ test("Codex UI metadata invokes the renamed skill explicitly", async () => {
   assert.match(yaml, /allow_implicit_invocation: true/);
 });
 
-test("release manifest ships only the Socrates package", async () => {
+test("release manifest ships Socrates and Socrates Step without removed packages", async () => {
   const layout = JSON.parse(await readRepoFile("reference/skill-layout.json"));
   const assets = listReleaseAssetPaths(layout);
   assert.equal(assets.includes(".agents/skills/socrates/SKILL.md"), true);
